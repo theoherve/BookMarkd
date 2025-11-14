@@ -4,6 +4,11 @@ import type { Metadata } from "next";
 import AppShell from "@/components/layout/app-shell";
 import { prisma } from "@/lib/prisma/client";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import ReadingStatusForm from "@/components/books/reading-status-form";
 import RatingForm from "@/components/books/rating-form";
 import ReviewForm from "@/components/books/review-form";
@@ -397,10 +402,19 @@ const BookPage = async ({ params }: BookPageProps) => {
             </p>
             <div className="flex flex-wrap gap-2">
               {typeof book.average_rating === "number" ? (
-                <Badge className="text-sm font-medium">
-                  {formatRating(book.average_rating)} / 5 (
-                  {book.ratings_count ?? 0} votes)
-                </Badge>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge className="text-sm font-medium">
+                      {formatRating(book.average_rating)} / 5
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      {book.ratings_count ?? 0}{" "}
+                      {(book.ratings_count ?? 0) === 1 ? "vote" : "votes"}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
               ) : null}
               {tags.map(
                 (tag) =>
@@ -420,8 +434,8 @@ const BookPage = async ({ params }: BookPageProps) => {
             </div>
           </div>
 
-          <div className="relative mx-auto w-full max-w-[200px] shrink-0 overflow-hidden rounded-lg border border-border/60 bg-muted shadow-sm lg:mx-0">
-            <div className="aspect-3/4">
+          <div className="relative mx-auto w-full max-w-[200px] shrink-0 overflow-hidden border border-border/60 bg-muted shadow-sm lg:mx-0">
+            <div>
               {book.cover_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img

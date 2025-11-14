@@ -30,6 +30,7 @@ export type RecentActivity = {
     | "follow"
     | "top_book_update";
   bookTitle: string | null;
+  bookSlug: string | null;
   listTitle: string | null;
   note: string | null;
   rating: number | null;

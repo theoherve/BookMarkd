@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { formatRelativeTimeFromNow } from "@/lib/datetime";
 import { formatRating } from "@/lib/utils";
 import type { RecentActivity } from "@/features/profile/types";
@@ -24,6 +27,10 @@ const actionLabels: Record<RecentActivity["type"], string> = {
 };
 
 const RecentActivitiesSection = ({ activities }: RecentActivitiesSectionProps) => {
+  const [displayedCount, setDisplayedCount] = useState(3);
+  const INITIAL_COUNT = 3;
+  const INCREMENT_COUNT = 5;
+
   if (activities.length === 0) {
     return (
       <Card className="border-border/60 bg-card/80 backdrop-blur">
@@ -44,6 +51,18 @@ const RecentActivitiesSection = ({ activities }: RecentActivitiesSectionProps) =
     );
   }
 
+  const displayedActivities = activities.slice(0, displayedCount);
+  const hasMore = displayedCount < activities.length;
+  const showLessButton = displayedCount > INITIAL_COUNT;
+
+  const handleLoadMore = () => {
+    setDisplayedCount((prev) => Math.min(prev + INCREMENT_COUNT, activities.length));
+  };
+
+  const handleShowLess = () => {
+    setDisplayedCount(INITIAL_COUNT);
+  };
+
   return (
     <Card className="border-border/60 bg-card/80 backdrop-blur">
       <CardHeader>
@@ -55,7 +74,7 @@ const RecentActivitiesSection = ({ activities }: RecentActivitiesSectionProps) =
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        {activities.slice(0, 10).map((activity) => {
+        {displayedActivities.map((activity) => {
           const occurredAtLabel = formatRelativeTimeFromNow(activity.occurredAt);
           const ratingStars =
             typeof activity.rating === "number" && activity.rating > 0
@@ -64,11 +83,8 @@ const RecentActivitiesSection = ({ activities }: RecentActivitiesSectionProps) =
                 )}`
               : null;
 
-          return (
-            <div
-              key={activity.id}
-              className="flex flex-col gap-3 rounded-lg border border-border/50 bg-background/60 p-3 sm:flex-row sm:items-start"
-            >
+          const ActivityCardContent = (
+            <div className="flex flex-col gap-3 rounded-lg border border-border/50 bg-background/60 p-3 sm:flex-row sm:items-start">
               <div className="flex-1 space-y-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm font-semibold text-foreground">
@@ -137,7 +153,53 @@ const RecentActivitiesSection = ({ activities }: RecentActivitiesSectionProps) =
               </span>
             </div>
           );
+
+          // Si l'activité a un bookSlug, rendre la carte cliquable
+          if (activity.bookSlug) {
+            return (
+              <Link
+                key={activity.id}
+                href={`/books/${activity.bookSlug}`}
+                className="block transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-lg"
+                aria-label={`Voir le livre ${activity.bookTitle}`}
+              >
+                {ActivityCardContent}
+              </Link>
+            );
+          }
+
+          // Sinon, rendre la carte normale (non cliquable)
+          return (
+            <div key={activity.id}>
+              {ActivityCardContent}
+            </div>
+          );
         })}
+        {(hasMore || showLessButton) && (
+          <div className="flex justify-center pt-2">
+            {hasMore && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLoadMore}
+                aria-label="Charger plus d'activités"
+              >
+                Voir plus ({activities.length - displayedCount} restantes)
+              </Button>
+            )}
+            {showLessButton && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleShowLess}
+                aria-label="Afficher moins d'activités"
+                className="ml-2"
+              >
+                Voir moins
+              </Button>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
