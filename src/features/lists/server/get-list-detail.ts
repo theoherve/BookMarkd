@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 
 import { prisma } from "@/lib/prisma/client";
 
-import type { ListDetail, ViewerRole } from "../types";
+import type { CollaboratorRole, ListDetail, ViewerRole } from "../types";
 
 
 const inferViewerRole = (
@@ -91,7 +91,7 @@ export const getListDetail = async (
     userId: entry.user.id,
     displayName: entry.user.displayName ?? "Collaborateur·rice",
     avatarUrl: entry.user.avatarUrl ?? null,
-    role: entry.role,
+    role: entry.role as CollaboratorRole,
   }));
 
   const items = list.items

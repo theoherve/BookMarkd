@@ -258,7 +258,11 @@ export async function GET() {
     const formattedActivities: FeedActivity[] = activities.map((item) => {
       const payload = item.payload ?? {};
       const normalizedPayload =
-        typeof payload === "object" && payload !== null ? payload : {};
+        typeof payload === "object" &&
+        payload !== null &&
+        !Array.isArray(payload)
+          ? (payload as Record<string, unknown>)
+          : {};
 
       return {
         id: item.id,
@@ -300,7 +304,11 @@ export async function GET() {
 
         const metadata = item.metadata ?? {};
         const normalizedMetadata =
-          typeof metadata === "object" && metadata !== null ? metadata : {};
+          typeof metadata === "object" &&
+          metadata !== null &&
+          !Array.isArray(metadata)
+            ? (metadata as Record<string, unknown>)
+            : {};
 
         return {
           id: item.id,
