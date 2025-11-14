@@ -565,7 +565,6 @@ export const getProfileDashboard = async (
       readList,
     };
   } catch (error) {
-    console.error("[getProfileDashboard] Database connection error:", error);
     throw error;
   }
 };

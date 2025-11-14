@@ -120,7 +120,6 @@ const getBookDetail = async (
 }> => {
   // S'assurer que slug est valide
   if (!slug || typeof slug !== "string") {
-    console.error("[book] getBookDetail: invalid slug", slug);
     return {
       book: null,
       viewer: {
@@ -154,7 +153,6 @@ const getBookDetail = async (
       });
 
       if (!allBooks || allBooks.length === 0) {
-        console.log("[book] getBookDetail: no books found in database");
         return {
           book: null,
           viewer: {
@@ -171,7 +169,6 @@ const getBookDetail = async (
       });
 
       if (!matchingBook) {
-        console.log("[book] getBookDetail: no matching book found for slug", slug);
         return {
           book: null,
           viewer: {
@@ -339,8 +336,7 @@ const getBookDetail = async (
         rating: userBook?.rating ? Number(userBook.rating) : null,
       },
     };
-  } catch (error) {
-    console.error("[book] getBookDetail unexpected error:", error);
+  } catch {
     return {
       book: null,
       viewer: {
