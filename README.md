@@ -19,7 +19,6 @@ Ensuite, rendez-vous sur [http://localhost:3000](http://localhost:3000) pour exp
 - `docs/PAGES.md` – plan des routes Next.js
 - `docs/API.md` – design des endpoints
 - `docs/DB_SCHEMA.md` – schéma de base de données
-- `docs/task-list/TASKS.md` – suivi opérationnel des chantiers
 - `supabase/schema.sql` – création du schéma Postgres (tables + RLS)
 - `supabase/seed.sql` – données de démonstration (utilisateur test)
 - `docs/task-list/TASKS.md` – suivi opérationnel des chantiers
@@ -29,8 +28,8 @@ Ensuite, rendez-vous sur [http://localhost:3000](http://localhost:3000) pour exp
 - Next.js 16 (App Router, Server Components, Server Actions)
 - TypeScript strict
 - TailwindCSS 4 + shadcn/ui
-- Zustand & TanStack Query (mise en place planifiée)
-- Supabase / PostgreSQL + Drizzle (à intégrer)
+- Zustand + TanStack Query
+- Supabase / PostgreSQL (schéma + policies actifs)
 - NextAuth (auth email + OAuth futur), Stripe (abonnement) en option
 
 ## Authentification
@@ -61,4 +60,4 @@ pnpm run build   # build de production
 pnpm run start   # serveur Next.js en mode production
 ```
 
-Prochaines étapes : mettre en place l’authentification, connecter la base de données décrite dans `docs/DB_SCHEMA.md` et brancher les données réelles sur le feed.
+Prochaines étapes : étendre le schéma Supabase (commentaires, listes collaboratives), brancher la recherche avancée et sécuriser les mutations (Server Actions + policies RLS affinées).

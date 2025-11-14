@@ -5,6 +5,7 @@ import "./globals.css";
 
 import AuthSessionProvider from "@/components/layout/session-provider";
 import { getCurrentSession } from "@/lib/auth/session";
+import QueryProvider from "@/components/providers/query-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -56,7 +57,9 @@ const RootLayout = async ({ children }: RootLayoutProps) => {
           "antialiased",
         ].join(" ")}
       >
-        <AuthSessionProvider session={session}>{children}</AuthSessionProvider>
+        <AuthSessionProvider session={session}>
+          <QueryProvider>{children}</QueryProvider>
+        </AuthSessionProvider>
       </body>
     </html>
   );

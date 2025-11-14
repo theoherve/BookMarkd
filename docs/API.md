@@ -42,7 +42,7 @@ Next.js App Router fournit les handlers API (`app/api`). Les mutations critiques
 
 | Endpoint | Méthode | Description | Payload | Réponse |
 |----------|---------|-------------|---------|---------|
-| `/api/feed` | GET | Feed combiné | query : `cursor` | `FeedColumnData` |
+| `/api/feed` | GET | Feed combiné (activités + lectures amis + recommandations) | — | `FeedResponse` (`activities`, `friendsBooks`, `recommendations`) |
 | `/api/recommendations` | GET | Suggestions personnalisées | query : `type` (`friends`, `global`, `similar`) | `Recommendation[]` |
 
 ## Likes & Interactions
