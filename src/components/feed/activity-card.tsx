@@ -6,31 +6,36 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { ActivityItem } from "@/data/mock-feed";
+import { formatRelativeTimeFromNow } from "@/lib/datetime";
+import type { FeedActivity } from "@/features/feed/types";
 
 type ActivityCardProps = {
-  item: ActivityItem;
+  item: FeedActivity;
 };
 
-const actionLabels: Record<ActivityItem["action"], string> = {
-  rated: "a noté",
-  commented: "a commenté",
-  finished: "a terminé",
+const actionLabels: Record<FeedActivity["type"], string> = {
+  rating: "a noté",
+  review: "a publié une critique",
+  status_change: "a mis à jour son statut",
+  list_update: "a mis à jour une liste",
+  follow: "a suivi un profil",
 };
 
 const ActivityCard = ({ item }: ActivityCardProps) => {
   const ratingStars =
-    typeof item.rating === "number"
+    typeof item.rating === "number" && item.rating > 0
       ? `${"★".repeat(Math.round(item.rating))}${"☆".repeat(
           5 - Math.round(item.rating),
         )}`
       : null;
 
+  const occurredAtLabel = formatRelativeTimeFromNow(item.occurredAt);
+
   return (
     <Card
       role="article"
       tabIndex={0}
-      aria-label={`${item.userName} ${actionLabels[item.action]} ${item.bookTitle}`}
+      aria-label={`${item.userName} ${actionLabels[item.type]} ${item.bookTitle ?? "contenu"}`}
       className="transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-accent"
     >
       <CardHeader className="flex flex-col gap-3">
@@ -38,19 +43,19 @@ const ActivityCard = ({ item }: ActivityCardProps) => {
           <p className="text-sm font-semibold text-foreground">
             {item.userName}{" "}
             <span className="font-normal text-muted-foreground">
-              {actionLabels[item.action]}
+              {actionLabels[item.type]}
             </span>
           </p>
           <CardDescription className="text-xs text-muted-foreground">
-            {item.occurredAt}
+            {occurredAtLabel}
           </CardDescription>
         </div>
         <CardTitle className="text-base font-semibold text-foreground">
-          {item.bookTitle}
+          {item.bookTitle ?? "Nouvelle activité"}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {typeof item.rating === "number" ? (
+        {typeof item.rating === "number" && item.rating > 0 ? (
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <Badge
               variant="secondary"
@@ -72,7 +77,8 @@ const ActivityCard = ({ item }: ActivityCardProps) => {
         ) : null}
         {!item.note && typeof item.rating !== "number" ? (
           <p className="text-sm text-muted-foreground">
-            {item.userName} {actionLabels[item.action]} {item.bookTitle}.
+            {item.userName} {actionLabels[item.type]}{" "}
+            {item.bookTitle ?? "ce contenu"}.
           </p>
         ) : null}
       </CardContent>

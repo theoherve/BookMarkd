@@ -1,0 +1,156 @@
+"use client";
+
+import { useMemo } from "react";
+
+import FeedSection from "@/components/feed/feed-section";
+import ActivityCard from "@/components/feed/activity-card";
+import BookFeedCard from "@/components/feed/book-feed-card";
+import RecommendationCard from "@/components/feed/recommendation-card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { useFeedQuery } from "@/features/feed/api/use-feed-query";
+import { useFeedFiltersStore } from "@/stores/feed-filters";
+
+const FeedClient = () => {
+  const { data, isLoading, isError, refetch, isRefetching } = useFeedQuery();
+  const { recommendationSource, setRecommendationSource } =
+    useFeedFiltersStore();
+
+  const filteredRecommendations = useMemo(() => {
+    if (!data) {
+      return [];
+    }
+
+    if (recommendationSource === "all") {
+      return data.recommendations;
+    }
+
+    return data.recommendations.filter(
+      (item) => item.source === recommendationSource,
+    );
+  }, [data, recommendationSource]);
+
+  if (isLoading) {
+    return (
+      <div className="grid gap-6 lg:grid-cols-3">
+        {[...Array(3)].map((_, columnIndex) => (
+          <FeedSectionSkeleton key={columnIndex} />
+        ))}
+      </div>
+    );
+  }
+
+  if (isError || !data) {
+    return (
+      <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-destructive">
+        <p className="text-sm font-medium">
+          Impossible de charger le feed pour le moment.
+        </p>
+        <Button
+          variant="outline"
+          className="mt-4"
+          onClick={() => refetch()}
+          disabled={isRefetching}
+        >
+          Réessayer
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-center gap-4">
+        <p className="text-sm text-muted-foreground">
+          Affiner les recommandations
+        </p>
+        <div className="flex gap-2">
+          {(["all", "friends", "global", "similar"] as const).map((source) => (
+            <Button
+              key={source}
+              variant={recommendationSource === source ? "default" : "outline"}
+              size="sm"
+              onClick={() => setRecommendationSource(source)}
+              aria-pressed={recommendationSource === source}
+            >
+              {source === "all"
+                ? "Tous"
+                : source === "friends"
+                  ? "Amis"
+                  : source === "global"
+                    ? "Tendances"
+                    : "Similaires"}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <FeedSection
+          title="Activités récentes"
+          description="Ce que votre cercle lecture a partagé ces derniers jours."
+        >
+          {data.activities.length === 0 ? (
+            <EmptyState message="Aucune activité récente. Ajoutez vos premières notes !" />
+          ) : (
+            data.activities.map((activity) => (
+              <ActivityCard key={activity.id} item={activity} />
+            ))
+          )}
+        </FeedSection>
+
+        <FeedSection
+          title="Lectures des amis"
+          description="Les titres qui occupent les bibliothèques de vos ami·e·s."
+        >
+          {data.friendsBooks.length === 0 ? (
+            <EmptyState message="Ajoutez des ami·e·s pour suivre leurs lectures." />
+          ) : (
+            data.friendsBooks.map((book) => (
+              <BookFeedCard key={book.id} item={book} />
+            ))
+          )}
+        </FeedSection>
+
+        <FeedSection
+          title="Recommandations pour vous"
+          description="Suggestions basées sur vos goûts et ce que lit votre réseau."
+        >
+          {filteredRecommendations.length === 0 ? (
+            <EmptyState message="Aucune recommandation pour ce filtre pour le moment." />
+          ) : (
+            filteredRecommendations.map((recommendation) => (
+              <RecommendationCard
+                key={recommendation.id}
+                item={recommendation}
+              />
+            ))
+          )}
+        </FeedSection>
+      </div>
+    </div>
+  );
+};
+
+const FeedSectionSkeleton = () => {
+  return (
+    <FeedSection title="Chargement..." description="">
+      {[...Array(3)].map((_, index) => (
+        <Skeleton key={index} className="h-32 w-full rounded-2xl" />
+      ))}
+    </FeedSection>
+  );
+};
+
+type EmptyStateProps = {
+  message: string;
+};
+
+const EmptyState = ({ message }: EmptyStateProps) => (
+  <div className="rounded-xl border border-dashed border-border/60 bg-card/60 p-6 text-sm text-muted-foreground">
+    {message}
+  </div>
+);
+
+export default FeedClient;
+

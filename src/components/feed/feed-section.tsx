@@ -15,7 +15,10 @@ type FeedSectionProps = {
 };
 
 const FeedSection = ({ title, description, children }: FeedSectionProps) => {
-  const sectionId = title.toLowerCase().replace(/\s+/g, "-");
+  const sectionId = title
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9_-]/g, "");
 
   return (
     <section aria-labelledby={`${sectionId}-title`} className="h-full">

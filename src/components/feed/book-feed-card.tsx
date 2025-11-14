@@ -1,7 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,31 +10,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { BookFeedItem } from "@/data/mock-feed";
+import { formatRelativeTimeFromNow } from "@/lib/datetime";
+import type { FeedFriendBook } from "@/features/feed/types";
 
 type BookFeedCardProps = {
-  item: BookFeedItem;
+  item: FeedFriendBook;
+};
+
+const statusLabels: Record<FeedFriendBook["status"], string> = {
+  to_read: "Dans la liste à lire",
+  reading: "Lecture en cours",
+  finished: "Lecture terminée",
 };
 
 const BookFeedCard = ({ item }: BookFeedCardProps) => {
-  const readersLabel = useMemo(() => {
-    if (item.readers.length === 0) {
-      return "Pas encore de lecteurs";
-    }
-
-    if (item.readers.length === 1) {
-      return `${item.readers[0]} l’a lu`;
-    }
-
-    if (item.readers.length === 2) {
-      return `${item.readers[0]} et ${item.readers[1]} l’ont lu`;
-    }
-
-    return `${item.readers[0]}, ${item.readers[1]} et ${
-      item.readers.length - 2
-    } autres`;
-  }, [item.readers]);
-
   const handleAddToList = () => {
     console.info(`Ajouter ${item.title} à la liste.`);
   };
@@ -49,6 +36,8 @@ const BookFeedCard = ({ item }: BookFeedCardProps) => {
     console.info(`Commenter ${item.title}.`);
   };
 
+  const updatedAtLabel = formatRelativeTimeFromNow(item.updatedAt);
+
   return (
     <Card
       role="article"
@@ -60,7 +49,7 @@ const BookFeedCard = ({ item }: BookFeedCardProps) => {
           variant="secondary"
           className="w-fit rounded-full bg-accent/20 px-3 py-1 text-[11px] uppercase tracking-[0.35em] text-accent-foreground"
         >
-          Highlight
+          {statusLabels[item.status]}
         </Badge>
         <div className="space-y-1">
           <CardTitle className="text-lg font-semibold text-foreground">
@@ -72,11 +61,21 @@ const BookFeedCard = ({ item }: BookFeedCardProps) => {
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-sm font-medium text-accent-foreground">
-          Note moyenne : {item.averageRating.toFixed(1)}/5
+        <p className="text-sm text-muted-foreground">
+          {item.readerName} — {updatedAtLabel}
         </p>
-        <p className="text-sm text-muted-foreground">{readersLabel}</p>
-        <p className="text-sm text-muted-foreground">{item.highlight}</p>
+        {typeof item.averageRating === "number" ? (
+          <p className="text-sm font-medium text-accent-foreground">
+            Note moyenne : {item.averageRating.toFixed(1)}/5
+          </p>
+        ) : null}
+        <p className="text-sm text-muted-foreground">
+          {item.status === "finished"
+            ? `${item.readerName} vient d'achever cette lecture.`
+            : item.status === "reading"
+              ? `${item.readerName} est plongé·e dedans en ce moment.`
+              : `${item.readerName} a ajouté ce livre à sa pile à lire.`}
+        </p>
       </CardContent>
       <CardFooter className="flex flex-wrap gap-2 pt-0">
         <Button

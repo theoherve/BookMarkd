@@ -36,7 +36,7 @@ export const authOptions: NextAuthOptions = {
 
         const authenticatedUser = await authenticateWithCredentials(
           credentials.email,
-          credentials.password,
+          credentials.password
         );
 
         if (!authenticatedUser) {
@@ -60,7 +60,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.name = user.name;
         token.email = user.email;
-        token.picture = user.image;
+        token.picture = user.image ?? undefined;
       }
 
       return token;
@@ -77,4 +77,3 @@ export const authOptions: NextAuthOptions = {
     },
   },
 };
-

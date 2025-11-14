@@ -6,13 +6,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { RecommendationItem } from "@/data/mock-feed";
+import type { FeedRecommendation } from "@/features/feed/types";
 
 type RecommendationCardProps = {
-  item: RecommendationItem;
+  item: FeedRecommendation;
 };
 
 const RecommendationCard = ({ item }: RecommendationCardProps) => {
+  const sourceLabel =
+    item.source === "friends"
+      ? "Recommandé par vos amis"
+      : item.source === "global"
+        ? "Tendances BookMarkd"
+        : "Parce que vous avez aimé un titre similaire";
+
   return (
     <Card
       role="article"
@@ -35,13 +42,21 @@ const RecommendationCard = ({ item }: RecommendationCardProps) => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-sm text-muted-foreground">{item.reason}</p>
+        <p className="text-sm text-muted-foreground">
+          {item.reason ?? sourceLabel}
+        </p>
+        <Badge
+          variant="outline"
+          className="w-fit rounded-full border-dashed px-3 py-1 text-[11px] uppercase tracking-[0.35em] text-muted-foreground"
+        >
+          {sourceLabel}
+        </Badge>
         <Badge
           variant="secondary"
           className="w-fit rounded-full bg-accent/20 px-3 py-1 text-xs font-medium text-accent-foreground"
-          aria-label={`Affinité estimée ${item.matchScore} pour cent`}
+          aria-label={`Affinité estimée ${item.score} pour cent`}
         >
-          Affinité estimée : {item.matchScore}%
+          Affinité estimée : {item.score}%
         </Badge>
       </CardContent>
     </Card>
