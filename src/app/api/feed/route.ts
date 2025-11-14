@@ -120,6 +120,107 @@ export async function GET() {
       recommendationsQuery,
     ]);
 
+    const recommendationBookIds =
+      recommendations.data
+        ?.map((item) => {
+          const book = Array.isArray(item.book) ? item.book[0] : item.book;
+          return book?.id ?? null;
+        })
+        .filter((id): id is string => Boolean(id)) ?? [];
+
+    let viewerReadlistBooks = new Set<string>();
+    if (viewerId && recommendationBookIds.length > 0) {
+      const { data: viewerEntries } = await supabase
+        .from("user_books")
+        .select("book_id")
+        .eq("user_id", viewerId)
+        .in("book_id", recommendationBookIds);
+      viewerReadlistBooks = new Set(
+        viewerEntries?.map((entry) => entry.book_id ?? "").filter(Boolean),
+      );
+    }
+
+    const friendContextByBook = new Map<
+      string,
+      { names: string[]; count: number; highlights: string[] }
+    >();
+    if (followingIds.length > 0 && recommendationBookIds.length > 0) {
+      const { data: friendEntries } = await supabase
+        .from("user_books")
+        .select(
+          `
+            book_id,
+            status,
+            user:users!user_books_user_id_fkey(
+              id,
+              display_name
+            )
+          `,
+        )
+        .in("user_id", followingIds)
+        .in("book_id", recommendationBookIds);
+
+      friendEntries?.forEach((entry) => {
+        const bookId = entry.book_id;
+        if (!bookId) {
+          return;
+        }
+        const friendName = Array.isArray(entry.user)
+          ? entry.user[0]?.display_name
+          : entry.user?.display_name;
+        if (!friendName) {
+          return;
+        }
+        const statusLabel =
+          entry.status === "finished"
+            ? `${friendName} l’a terminé`
+            : entry.status === "reading"
+              ? `${friendName} est en cours de lecture`
+              : `${friendName} l’a ajouté à sa liste`;
+        const existing = friendContextByBook.get(bookId);
+        if (existing) {
+          existing.names.push(friendName);
+          existing.count += 1;
+          if (existing.highlights.length < 3) {
+            existing.highlights.push(statusLabel);
+          }
+        } else {
+          friendContextByBook.set(bookId, {
+            names: [friendName],
+            count: 1,
+            highlights: [statusLabel],
+          });
+        }
+      });
+    }
+
+    const tagsByBook = new Map<string, string[]>();
+    if (recommendationBookIds.length > 0) {
+      const { data: tagRelations } = await supabase
+        .from("book_tags")
+        .select(
+          `
+            book_id,
+            tag:tags(name)
+          `,
+        )
+        .in("book_id", recommendationBookIds);
+
+      tagRelations?.forEach((relation) => {
+        const bookId = relation.book_id;
+        const tagName = relation.tag?.name;
+        if (!bookId || !tagName) {
+          return;
+        }
+        const existing = tagsByBook.get(bookId);
+        if (existing) {
+          existing.push(tagName);
+        } else {
+          tagsByBook.set(bookId, [tagName]);
+        }
+      });
+    }
+
     const formattedActivities: FeedActivity[] =
       activities.data?.map((item) => {
         const user = Array.isArray(item.user) ? item.user[0] : item.user;
@@ -162,6 +263,10 @@ export async function GET() {
     const formattedRecommendations: FeedRecommendation[] =
       recommendations.data?.map((item) => {
         const book = Array.isArray(item.book) ? item.book[0] : item.book;
+        const friendContext = book?.id
+          ? friendContextByBook.get(book.id)
+          : undefined;
+        const tags = book?.id ? tagsByBook.get(book.id) ?? [] : [];
 
         return {
           id: item.id,
@@ -176,6 +281,13 @@ export async function GET() {
             null,
           source: item.source,
           score: Number(item.score ?? 0),
+          friendNames: friendContext?.names ?? [],
+          friendCount: friendContext?.count ?? 0,
+          viewerHasInReadlist: book?.id
+            ? viewerReadlistBooks.has(book.id)
+            : false,
+          friendHighlights: friendContext?.highlights ?? [],
+          tags: tags.slice(0, 5),
         };
       }) ?? [];
 

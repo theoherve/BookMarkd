@@ -24,13 +24,11 @@ Catalogue des composants React (client/server) organisés par besoins métiers. 
 
 ## Modules Livre
 
-- `BookHeader` : visuel, titre, auteur, CTA.
-- `BookMetaGrid` : genres, tags, année, moyenne.
-- `ReadingStatusSelector` : options À lire / En cours / Lu.
-- `RatingInput` : notation 0.5 à 5.
-- `ReviewComposer` : éditeur commentaire (public / amis / privé).
-- `ReviewList` : affiche commentaires filtrables.
-- `ReaderList` : avatars des lecteurs.
+- `ReadingStatusForm` : boutons À lire / En cours / Terminé (Server Action).
+- `RatingForm` : notation étoilée + demi-point.
+- `ReviewForm` : rédaction d’un avis (spoiler, visibilité).
+- `ReviewsList` : affiche avis + commentaires imbriqués.
+- `AddToReadlistButton` : CTA rapide (présent aussi dans la recherche).
 
 ## Modules Profil
 
@@ -40,9 +38,15 @@ Catalogue des composants React (client/server) organisés par besoins métiers. 
 
 ## Modules Recherche
 
-- `SearchBar` : input + suggestions.
-- `FilterDrawer` : filtres genre, auteur, note, statut.
-- `ResultList` & `ResultCard`.
+- `SearchClient` : formulaire + filtres (genre, external).
+- `SearchResultCard` : carte mixte Supabase / Open Library.
+- `ImportOpenLibraryButton` : import direct d’un ouvrage externe.
+- `AddToReadlistButton` : réutilisé pour les résultats BookMarkd.
+
+## Auth
+
+- `LoginForm` : connexion credentials.
+- `SignUpForm` : création compte credentials (validation client + feedback).
 
 ## Modules Listes
 

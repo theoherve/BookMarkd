@@ -77,6 +77,14 @@ create table if not exists public.review_likes (
   created_at timestamptz not null default now(),
   primary key (review_id, user_id)
 );
+create table if not exists public.review_comments (
+  id uuid primary key default uuid_generate_v4(),
+  review_id uuid not null references public.reviews(id) on delete cascade,
+  user_id uuid not null references public.users(id) on delete cascade,
+  content text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
 create table if not exists public.lists (
   id uuid primary key default uuid_generate_v4(),
   owner_id uuid not null references public.users(id) on delete cascade,
@@ -96,6 +104,13 @@ create table if not exists public.list_items (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (list_id, book_id)
+);
+create table if not exists public.list_collaborators (
+  list_id uuid references public.lists(id) on delete cascade,
+  user_id uuid references public.users(id) on delete cascade,
+  role text not null check (role in ('editor', 'viewer')),
+  created_at timestamptz not null default now(),
+  primary key (list_id, user_id)
 );
 create table if not exists public.follows (
   follower_id uuid references public.users(id) on delete cascade,
@@ -133,6 +148,8 @@ create index if not exists idx_books_author on public.books using gin (to_tsvect
 create index if not exists idx_user_books_user_id_status on public.user_books (user_id, status);
 create index if not exists idx_reviews_book_id_visibility on public.reviews (book_id, visibility);
 create index if not exists idx_activities_created_at on public.activities (created_at desc);
+create index if not exists idx_review_comments_review_id on public.review_comments (review_id);
+create index if not exists idx_list_collaborators_list_id on public.list_collaborators (list_id);
 -- 4) Activation RLS ----------------------------------------------------------
 alter table public.books enable row level security;
 alter table public.book_tags enable row level security;
@@ -142,9 +159,11 @@ alter table public.reviews enable row level security;
 alter table public.review_likes enable row level security;
 alter table public.lists enable row level security;
 alter table public.list_items enable row level security;
+alter table public.list_collaborators enable row level security;
 alter table public.follows enable row level security;
 alter table public.activities enable row level security;
 alter table public.recommendations enable row level security;
+alter table public.review_comments enable row level security;
 -- 5) Policies minimales (à affiner selon produit) ----------------------------
 -- Books : lecture publique, écriture restreinte aux admins (placeholder).
 drop policy if exists "books_read_public" on public.books;
@@ -182,12 +201,49 @@ insert with check (auth.uid() = user_id);
 drop policy if exists "reviews_owner_update" on public.reviews;
 create policy "reviews_owner_update" on public.reviews for
 update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+-- review_comments : propriétaire review ou auteur du commentaire.
+drop policy if exists "review_comments_read" on public.review_comments;
+create policy "review_comments_read" on public.review_comments for
+select using (
+    exists (
+      select 1
+      from public.reviews r
+      where r.id = review_id
+        and (
+          r.visibility = 'public'
+          or auth.uid() = r.user_id
+          or auth.uid() = user_id
+        )
+    )
+  );
+drop policy if exists "review_comments_write" on public.review_comments;
+create policy "review_comments_write" on public.review_comments for
+insert with check (auth.uid() = user_id);
+drop policy if exists "review_comments_update" on public.review_comments;
+create policy "review_comments_update" on public.review_comments for
+update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "review_comments_delete" on public.review_comments;
+create policy "review_comments_delete" on public.review_comments for delete using (
+  auth.uid() = user_id
+  or exists (
+    select 1
+    from public.reviews r
+    where r.id = review_id
+      and auth.uid() = r.user_id
+  )
+);
 -- lists : visibilité gérée par colonne visibility (policies simples pour démarrer).
 drop policy if exists "lists_read_public_or_owner" on public.lists;
 create policy "lists_read_public_or_owner" on public.lists for
 select using (
     visibility = 'public'
     or auth.uid() = owner_id
+    or exists (
+      select 1
+      from public.list_collaborators c
+      where c.list_id = id
+        and c.user_id = auth.uid()
+    )
   );
 drop policy if exists "lists_owner_write" on public.lists;
 create policy "lists_owner_write" on public.lists for
@@ -208,6 +264,12 @@ select using (
         and (
           l.visibility = 'public'
           or auth.uid() = l.owner_id
+          or exists (
+            select 1
+            from public.list_collaborators c
+            where c.list_id = l.id
+              and c.user_id = auth.uid()
+          )
         )
     )
   );
@@ -218,7 +280,16 @@ insert with check (
       select 1
       from public.lists l
       where l.id = list_id
-        and auth.uid() = l.owner_id
+        and (
+          auth.uid() = l.owner_id
+          or exists (
+            select 1
+            from public.list_collaborators c
+            where c.list_id = l.id
+              and c.user_id = auth.uid()
+              and c.role = 'editor'
+          )
+        )
     )
   );
 drop policy if exists "list_items_owner_update" on public.list_items;
@@ -228,9 +299,49 @@ update using (
       select 1
       from public.lists l
       where l.id = list_id
-        and auth.uid() = l.owner_id
+        and (
+          auth.uid() = l.owner_id
+          or exists (
+            select 1
+            from public.list_collaborators c
+            where c.list_id = l.id
+              and c.user_id = auth.uid()
+              and c.role = 'editor'
+          )
+        )
     )
   ) with check (
+    exists (
+      select 1
+      from public.lists l
+      where l.id = list_id
+        and (
+          auth.uid() = l.owner_id
+          or exists (
+            select 1
+            from public.list_collaborators c
+            where c.list_id = l.id
+              and c.user_id = auth.uid()
+              and c.role = 'editor'
+          )
+        )
+    )
+  );
+-- list_collaborators : propriétaire ou collaborateur concerné.
+drop policy if exists "list_collaborators_read" on public.list_collaborators;
+create policy "list_collaborators_read" on public.list_collaborators for
+select using (
+    auth.uid() = user_id
+    or exists (
+      select 1
+      from public.lists l
+      where l.id = list_id
+        and auth.uid() = l.owner_id
+    )
+  );
+drop policy if exists "list_collaborators_write" on public.list_collaborators;
+create policy "list_collaborators_write" on public.list_collaborators for
+insert with check (
     exists (
       select 1
       from public.lists l
@@ -238,6 +349,16 @@ update using (
         and auth.uid() = l.owner_id
     )
   );
+drop policy if exists "list_collaborators_delete" on public.list_collaborators;
+create policy "list_collaborators_delete" on public.list_collaborators for delete using (
+  auth.uid() = user_id
+  or exists (
+    select 1
+    from public.lists l
+    where l.id = list_id
+      and auth.uid() = l.owner_id
+  )
+);
 -- follows : propriétaire seulement.
 drop policy if exists "follows_owner_read" on public.follows;
 create policy "follows_owner_read" on public.follows for

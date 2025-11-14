@@ -128,6 +128,17 @@ values (
     4.2,
     74,
     '7d9c7d7d-2fe3-4f7a-8dbe-6ae2f8dc6d3f'
+  ),
+  (
+    'c2a16dc6-0f8e-4c6a-9f29-6a96856c5af3',
+    'La Carte des jours',
+    'Ransom Riggs',
+    'https://images.unsplash.com/photo-1473862170180-61d3e1f6f5a3?auto=format&fit=crop&w=400&q=80',
+    2018,
+    'Jacob et les enfants particuliers partent en mission à travers l’Amérique des années 40.',
+    4.1,
+    65,
+    'c1f5c865-d7a5-4c3a-9bb1-9f1c668a9c22'
   ) on conflict (id) do
 update
 set title = excluded.title,
@@ -159,6 +170,10 @@ values (
   (
     'bfe5c9d9-2317-4db9-8a60-1b3e8aac4f7b',
     '42bd1b68-fa7b-48bb-9f0f-55c70a15c11e'
+  ),
+  (
+    'c2a16dc6-0f8e-4c6a-9f29-6a96856c5af3',
+    '9d2525d2-6fdb-4a4f-905f-1d7e95e0b7c6'
   ) on conflict (book_id, tag_id) do nothing;
 -- User books
 insert into public.user_books (id, user_id, book_id, status, rating, rated_at)
@@ -190,6 +205,138 @@ update
 set status = excluded.status,
   rating = excluded.rating,
   rated_at = excluded.rated_at,
+  updated_at = now();
+-- Lists & collaborations
+insert into public.lists (
+    id,
+    owner_id,
+    title,
+    description,
+    visibility,
+    is_collaborative
+  )
+values (
+    'a2d4fb57-8ab1-4223-8a8a-33d8a1497772',
+    '7d9c7d7d-2fe3-4f7a-8dbe-6ae2f8dc6d3f',
+    'Club lecture automne',
+    'Sélection cosy pour la saison.',
+    'unlisted',
+    true
+  ),
+  (
+    'b3c0f5b4-5a6d-4a39-8bbd-5dd6980a3f9d',
+    'c1f5c865-d7a5-4c3a-9bb1-9f1c668a9c22',
+    'Lectures engagées',
+    'Romans et essais pour nourrir les débats.',
+    'public',
+    true
+  ) on conflict (id) do
+update
+set title = excluded.title,
+  description = excluded.description,
+  visibility = excluded.visibility,
+  is_collaborative = excluded.is_collaborative,
+  updated_at = now();
+insert into public.list_collaborators (list_id, user_id, role)
+values (
+    'a2d4fb57-8ab1-4223-8a8a-33d8a1497772',
+    'c1f5c865-d7a5-4c3a-9bb1-9f1c668a9c22',
+    'editor'
+  ),
+  (
+    'b3c0f5b4-5a6d-4a39-8bbd-5dd6980a3f9d',
+    '7d9c7d7d-2fe3-4f7a-8dbe-6ae2f8dc6d3f',
+    'editor'
+  ),
+  (
+    'b3c0f5b4-5a6d-4a39-8bbd-5dd6980a3f9d',
+    'c1f5c865-d7a5-4c3a-9bb1-9f1c668a9c22',
+    'viewer'
+  ) on conflict (list_id, user_id) do
+update
+set role = excluded.role;
+insert into public.list_items (id, list_id, book_id, position, note)
+values (
+    'c8905996-92cf-44a7-81f0-4a354d0fe4df',
+    'a2d4fb57-8ab1-4223-8a8a-33d8a1497772',
+    'bfe5c9d9-2317-4db9-8a60-1b3e8aac4f7b',
+    1,
+    'Parfait pour Halloween.'
+  ),
+  (
+    'd4f3536c-5cc9-48a9-8a9a-3c7d8e43f1ae',
+    'a2d4fb57-8ab1-4223-8a8a-33d8a1497772',
+    'b0f68c32-521e-4a4d-8e77-7bcb80eb6f52',
+    2,
+    null
+  ),
+  (
+    'c3b39dd4-5406-4fcd-9a65-52db8c5f22b1',
+    'b3c0f5b4-5a6d-4a39-8bbd-5dd6980a3f9d',
+    'b4b079f0-0c80-4b8c-8aa3-c8d32956543a',
+    1,
+    'Pour lancer la discussion sur les migrations.'
+  ),
+  (
+    'b89b6f07-5d9b-4f2f-855d-9f4c3c9d45b1',
+    'b3c0f5b4-5a6d-4a39-8bbd-5dd6980a3f9d',
+    'c2a16dc6-0f8e-4c6a-9f29-6a96856c5af3',
+    2,
+    'Suite parfaite pour explorer la résistance.'
+  ) on conflict (id) do
+update
+set position = excluded.position,
+  note = excluded.note,
+  updated_at = now();
+-- Reviews & comments
+insert into public.reviews (
+    id,
+    user_id,
+    book_id,
+    visibility,
+    title,
+    content,
+    spoiler
+  )
+values (
+    'c0a1cf34-7f40-4f63-9c73-2c676f10c5ce',
+    '7d9c7d7d-2fe3-4f7a-8dbe-6ae2f8dc6d3f',
+    'b0f68c32-521e-4a4d-8e77-7bcb80eb6f52',
+    'public',
+    'Un conte lumineux',
+    'Ce roman m’a replongé dans l’émerveillement des contes avec une profondeur inattendue.',
+    false
+  ),
+  (
+    'd0e4a97c-7b12-47e0-b845-46448f9c42e4',
+    'c1f5c865-d7a5-4c3a-9bb1-9f1c668a9c22',
+    'b4b079f0-0c80-4b8c-8aa3-c8d32956543a',
+    'public',
+    'Chronique bouleversante',
+    'Chaque chapitre est une claque émotionnelle. Lecture essentielle.',
+    false
+  ) on conflict (id) do
+update
+set title = excluded.title,
+  content = excluded.content,
+  visibility = excluded.visibility,
+  spoiler = excluded.spoiler,
+  updated_at = now();
+insert into public.review_comments (id, review_id, user_id, content)
+values (
+    'f125a1d8-00a1-4bf1-a5f1-113a0c33233c',
+    'c0a1cf34-7f40-4f63-9c73-2c676f10c5ce',
+    'c1f5c865-d7a5-4c3a-9bb1-9f1c668a9c22',
+    'Merci pour la reco ! Je le mets dans ma pile à lire.'
+  ),
+  (
+    'e25c6504-1f6d-4420-90ff-50ac062e2f21',
+    'd0e4a97c-7b12-47e0-b845-46448f9c42e4',
+    '7d9c7d7d-2fe3-4f7a-8dbe-6ae2f8dc6d3f',
+    'Ton avis me donne envie de le relire immédiatement.'
+  ) on conflict (id) do
+update
+set content = excluded.content,
   updated_at = now();
 -- Activities
 insert into public.activities (id, user_id, type, payload, created_at)
@@ -270,3 +417,13 @@ update
 set score = excluded.score,
   metadata = excluded.metadata,
   created_at = excluded.created_at;
+-- Follows
+insert into public.follows (follower_id, following_id)
+values (
+    '7d9c7d7d-2fe3-4f7a-8dbe-6ae2f8dc6d3f',
+    'c1f5c865-d7a5-4c3a-9bb1-9f1c668a9c22'
+  ),
+  (
+    'c1f5c865-d7a5-4c3a-9bb1-9f1c668a9c22',
+    '7d9c7d7d-2fe3-4f7a-8dbe-6ae2f8dc6d3f'
+  ) on conflict (follower_id, following_id) do nothing;

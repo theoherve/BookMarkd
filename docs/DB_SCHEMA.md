@@ -69,6 +69,14 @@ Relation utilisateur ↔ livre + statut.
 - `user_id`
 - PK composite.
 
+### `review_comments`
+
+- `id`
+- `review_id`
+- `user_id`
+- `content`
+- timestamps
+
 ### `lists`
 
 - `id`
@@ -85,6 +93,12 @@ Relation utilisateur ↔ livre + statut.
 - `book_id`
 - `position` (int)
 - `note` (nullable)
+
+### `list_collaborators`
+
+- `list_id`
+- `user_id`
+- `role` (`editor`, `viewer`)
 
 ### `follows`
 
@@ -124,6 +138,8 @@ Relation utilisateur ↔ livre + statut.
 - `book_tags` index sur `tag_id` pour filtres.
 - `user_books` index composite (`user_id`, `status`).
 - `reviews` index sur `visibility`, `created_at`.
+- `review_comments` index sur `review_id`.
+- `list_collaborators` index sur `list_id`.
 - `activities` partitionnement futur par mois si volumétrie.
 
 ## Seed & Fixtures

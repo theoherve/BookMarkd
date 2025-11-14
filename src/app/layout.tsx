@@ -7,6 +7,9 @@ import AuthSessionProvider from "@/components/layout/session-provider";
 import { getCurrentSession } from "@/lib/auth/session";
 import QueryProvider from "@/components/providers/query-provider";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],

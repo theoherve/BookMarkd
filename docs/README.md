@@ -23,6 +23,12 @@ BookMarkd est une application web Next.js qui permet aux lectrices et lecteurs d
 - ORM : Drizzle (ou Prisma, cf. `ARCHITECTURE.md`).
 - Déploiement cible : Vercel + Supabase (Postgres, Auth, Storage).
 
+## Auth & inscription
+
+- Connexion : `/login` (credentials démo `camille@example.com` / `bookmarkd123`).
+- Inscription : `/signup` (Server Action `registerUser`, validation email/mot de passe).
+- Voir `docs/API.md` & `docs/GOOGLE_BOOKS_MIGRATION.md` pour les évolutions prévues.
+
 ## Getting Started
 
 ```bash

@@ -1,0 +1,104 @@
+import { notFound } from "next/navigation";
+
+import AddListItemForm from "@/components/lists/add-list-item-form";
+import CollaboratorsStack from "@/components/lists/collaborators-stack";
+import ListItemCard from "@/components/lists/list-item-card";
+
+import { getListDetail } from "@/features/lists/server/get-list-detail";
+import { getAvailableBooks } from "@/features/lists/server/get-available-books";
+
+import { getCurrentSession } from "@/lib/auth/session";
+
+type ListDetailPageProps = {
+  params: {
+    listId: string;
+  };
+};
+
+const ListDetailPage = async ({ params }: ListDetailPageProps) => {
+  const session = await getCurrentSession();
+  const viewerId = session?.user?.id ?? null;
+
+  const detail = await getListDetail(params.listId, viewerId);
+
+  if (!detail) {
+    notFound();
+  }
+
+  const canEdit = detail.viewerRole === "owner" || detail.viewerRole === "editor";
+  const availableBooks = canEdit
+    ? await getAvailableBooks(detail.items.map((item) => item.book.id))
+    : [];
+
+  return (
+    <section className="space-y-8">
+      <header className="space-y-4 rounded-xl border border-border/60 bg-card/80 p-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {detail.visibility === "public"
+              ? "Publique"
+              : detail.visibility === "unlisted"
+                ? "Non répertoriée"
+                : "Privée"}
+          </span>
+          {detail.isCollaborative ? (
+            <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Collaborative
+            </span>
+          ) : null}
+          <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {detail.viewerRole === "owner"
+              ? "Vous êtes propriétaire"
+              : detail.viewerRole === "editor"
+                ? "Vous pouvez éditer"
+                : "Consultation"}
+          </span>
+        </div>
+        <h1 className="text-3xl font-semibold text-foreground">{detail.title}</h1>
+        {detail.description ? (
+          <p className="text-sm text-muted-foreground">{detail.description}</p>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Aucun message de présentation pour cette liste.
+          </p>
+        )}
+        <div className="flex flex-col gap-3 text-sm text-muted-foreground">
+          <span>
+            <strong className="font-semibold text-foreground">{detail.items.length}</strong>{" "}
+            livre{detail.items.length > 1 ? "s" : ""} sélectionné{detail.items.length > 1 ? "s" : ""}.
+          </span>
+          <CollaboratorsStack owner={detail.owner} collaborators={detail.collaborators} />
+        </div>
+      </header>
+      <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+        <div className="space-y-4">
+          {detail.items.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border/60 bg-card/60 p-8 text-center text-sm text-muted-foreground">
+              Aucun livre n’a encore été ajouté à cette liste.
+            </div>
+          ) : (
+            detail.items.map((item, index) => (
+              <ListItemCard
+                key={item.id}
+                listId={detail.id}
+                item={item}
+                canEdit={canEdit}
+                positionLabel={`#${index + 1}`}
+              />
+            ))
+          )}
+        </div>
+        <aside className="space-y-4">
+          <AddListItemForm
+            listId={detail.id}
+            availableBooks={availableBooks}
+            canEdit={canEdit}
+          />
+        </aside>
+      </div>
+    </section>
+  );
+};
+
+export default ListDetailPage;
+

@@ -7,6 +7,7 @@ Next.js App Router fournit les handlers API (`app/api`). Les mutations critiques
 - Provider credentials (email + mot de passe).
 - OAuth (Google, Apple) – futur.
 - Sessions JWT + cookies sécurisés.
+- Server Action `registerUser` : création compte credentials (hash bcrypt, vérif unicité).
 
 ## Utilisateurs
 
@@ -21,12 +22,18 @@ Next.js App Router fournit les handlers API (`app/api`). Les mutations critiques
 
 | Endpoint | Méthode | Description | Payload | Réponse |
 |----------|---------|-------------|---------|---------|
-| `/api/books/search` | GET | Recherche avancée | query : `q`, `genre`, `status`, `rating`, `page` | `SearchResult[]` |
+| `/api/books/search` | GET | Recherche avancée (Supabase + Open Library) | query : `q`, `genre`, `external` (bool) | `{ books: SearchBook[], supabaseCount, externalCount }` |
 | `/api/books` | POST | Ajouter un livre manuel | `CreateBookInput` | `BookDetail` |
 | `/api/books/[bookId]` | GET | Détails livre | — | `BookDetail` |
 | `/api/books/[bookId]/rate` | POST | Noter | `{ rating }` | `RatingResponse` |
 | `/api/books/[bookId]/status` | POST | Mettre à jour statut | `{ status }` | `StatusResponse` |
 | `/api/books/[bookId]/reviews` | POST | Créer commentaire | `CreateReviewInput` | `Review` |
+| `/api/tags` | GET | Liste des tags disponibles | — | `{ tags: Tag[] }` |
+
+- Server Actions associées :
+  - `updateReadingStatus`, `rateBook`, `createReview`, `addReviewComment`.
+  - `addBookToReadlist` (readlist Supabase).
+  - `importOpenLibraryBook` pour ajouter un ouvrage externe au catalogue.
 
 ## Listes personnalisées
 
