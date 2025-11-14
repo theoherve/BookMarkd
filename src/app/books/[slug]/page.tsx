@@ -15,6 +15,8 @@ import ReviewForm from "@/components/books/review-form";
 import ReviewsList, {
   BookReview,
 } from "@/components/books/reviews-list";
+import BookReadersList from "@/components/books/book-readers-list";
+import { getBookReaders } from "@/features/books/server/get-book-readers";
 import { getCurrentSession } from "@/lib/auth/session";
 import { formatRating } from "@/lib/utils";
 import { generateBookSlug, extractBookIdFromSlug } from "@/lib/slug";
@@ -50,6 +52,13 @@ type RawBook = {
       id: string;
       display_name: string;
       avatar_url: string | null;
+    }> | null;
+    review_likes: Array<{
+      user: Array<{
+        id: string;
+        display_name: string;
+        avatar_url: string | null;
+      }> | null;
     }> | null;
     review_comments: Array<{
       id: string;
@@ -97,6 +106,11 @@ const mapReviews = (
         displayName: review.user?.[0]?.display_name ?? "Lectrice",
         avatarUrl: review.user?.[0]?.avatar_url ?? null,
       },
+      likes: review.review_likes?.map((like) => ({
+        id: like.user?.[0]?.id ?? "unknown",
+        displayName: like.user?.[0]?.display_name ?? "Lectrice",
+        avatarUrl: like.user?.[0]?.avatar_url ?? null,
+      })) ?? [],
       comments:
         review.review_comments?.map((comment) => ({
           id: comment.id,
@@ -215,6 +229,17 @@ const getBookDetail = async (
                 avatarUrl: true,
               },
             },
+            likes: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    displayName: true,
+                    avatarUrl: true,
+                  },
+                },
+              },
+            },
             comments: {
               include: {
                 user: {
@@ -289,6 +314,9 @@ const getBookDetail = async (
         visibility: string;
         spoiler: boolean;
         user: { id: string; displayName: string; avatarUrl: string | null };
+        likes: Array<{
+          user: { id: string; displayName: string; avatarUrl: string | null };
+        }>;
         comments: Array<{
           id: string;
           content: string;
@@ -309,6 +337,17 @@ const getBookDetail = async (
             avatar_url: review.user.avatarUrl,
           },
         ],
+        review_likes: review.likes.map((like: {
+          user: { id: string; displayName: string; avatarUrl: string | null };
+        }) => ({
+          user: [
+            {
+              id: like.user.id,
+              display_name: like.user.displayName,
+              avatar_url: like.user.avatarUrl,
+            },
+          ],
+        })),
         review_comments: review.comments.map((comment: {
           id: string;
           content: string;
@@ -383,6 +422,7 @@ const BookPage = async ({ params }: BookPageProps) => {
   const tags =
     book.book_tags?.map((relation) => relation.tag).filter(Boolean) ?? [];
   const reviews = mapReviews(book.reviews, viewerId);
+  const readers = await getBookReaders(book.id);
 
   return (
     <AppShell>
@@ -455,6 +495,10 @@ const BookPage = async ({ params }: BookPageProps) => {
               {book.summary ??
                 "Pas encore de résumé sur BookMarkd. Ajoutez votre avis après lecture pour aider la communauté."}
             </p>
+          </section>
+
+          <section className="space-y-6">
+            <BookReadersList readers={readers} />
           </section>
 
           <section className="space-y-6">

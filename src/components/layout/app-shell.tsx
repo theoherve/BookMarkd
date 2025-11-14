@@ -94,7 +94,7 @@ const AppShell = ({ children }: AppShellProps) => {
           <Link
             href="/"
             aria-label="Retourner à l'accueil BookMarkd"
-            className="rounded-full border border-border px-4 py-2 text-sm font-semibold tracking-wide uppercase text-accent-foreground transition hover:border-accent hover:bg-accent/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="rounded-full px-4 py-2 text-sm font-semibold tracking-wide uppercase text-accent-foreground transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             BookMarkd
           </Link>

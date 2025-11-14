@@ -47,7 +47,7 @@ const FeedClient = ({ limit }: FeedClientProps = {}) => {
 
   if (isLoading) {
     return (
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {[...Array(3)].map((_, columnIndex) => (
           <FeedSectionSkeleton key={columnIndex} />
         ))}
@@ -100,7 +100,7 @@ const FeedClient = ({ limit }: FeedClientProps = {}) => {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <FeedSection
           title="Activités récentes"
           description="Ce que votre cercle lecture a partagé ces derniers jours."
