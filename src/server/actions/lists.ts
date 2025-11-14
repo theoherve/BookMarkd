@@ -291,3 +291,65 @@ export const leaveList = async (
   redirect("/lists");
 };
 
+export const reorderListItems = async (
+  listId: string,
+  itemIds: string[],
+): Promise<BaseActionResult> => {
+  const userId = await assertAuthenticatedUser();
+
+  if (!userId) {
+    return {
+      success: false,
+      message: "Connectez-vous pour modifier cette liste.",
+    };
+  }
+
+  const membership = await loadListMembership(listId, userId);
+
+  if (!isEditorRole(membership)) {
+    return {
+      success: false,
+      message: "Vous n'avez pas les droits d'édition sur cette liste.",
+    };
+  }
+
+  try {
+    // Vérifier que tous les items appartiennent à la liste
+    const items = await prisma.listItem.findMany({
+      where: {
+        id: { in: itemIds },
+        listId,
+      },
+      select: { id: true },
+    });
+
+    if (items.length !== itemIds.length) {
+      return {
+        success: false,
+        message: "Certains éléments n'appartiennent pas à cette liste.",
+      };
+    }
+
+    // Mettre à jour les positions
+    await prisma.$transaction(
+      itemIds.map((itemId, index) =>
+        prisma.listItem.update({
+          where: { id: itemId },
+          data: { position: index + 1 },
+        }),
+      ),
+    );
+  } catch (error) {
+    console.error("[lists] reorderListItems error:", error);
+    return {
+      success: false,
+      message: "Impossible de réorganiser les éléments.",
+    };
+  }
+
+  revalidatePath(`/lists/${listId}`);
+  revalidatePath("/lists");
+
+  return { success: true };
+};
+

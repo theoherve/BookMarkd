@@ -787,7 +787,7 @@ Ce document liste toutes les fonctionnalités manquantes par rapport aux spécif
 8. ✅ Layout 3 colonnes du feed
 9. ✅ Filtres avancés de recherche (livres)
 10. ✅ Partage de listes
-11. ⚠️ Drag & drop pour listes
+11. ✅ Drag & drop pour listes
 12. ⚠️ Système de notifications
 
 ### Priorité Basse (Nice to have)

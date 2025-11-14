@@ -2,8 +2,8 @@ import { notFound } from "next/navigation";
 
 import AddListItemForm from "@/components/lists/add-list-item-form";
 import CollaboratorsStack from "@/components/lists/collaborators-stack";
-import ListItemCard from "@/components/lists/list-item-card";
 import ShareListButton from "@/components/lists/share-list-button";
+import SortableListItems from "@/components/lists/sortable-list-items";
 
 import { getListDetail } from "@/features/lists/server/get-list-detail";
 import { getAvailableBooks } from "@/features/lists/server/get-available-books";
@@ -75,21 +75,17 @@ const ListDetailPage = async ({ params }: ListDetailPageProps) => {
         </div>
       </header>
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <div className="space-y-4">
+        <div>
           {detail.items.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border/60 bg-card/60 p-8 text-center text-sm text-muted-foreground">
-              Aucun livre n’a encore été ajouté à cette liste.
+              Aucun livre n'a encore été ajouté à cette liste.
             </div>
           ) : (
-            detail.items.map((item, index) => (
-              <ListItemCard
-                key={item.id}
-                listId={detail.id}
-                item={item}
-                canEdit={canEdit}
-                positionLabel={`#${index + 1}`}
-              />
-            ))
+            <SortableListItems
+              listId={detail.id}
+              items={detail.items}
+              canEdit={canEdit}
+            />
           )}
         </div>
         <aside className="space-y-4">
