@@ -1,62 +1,9 @@
 import { notFound } from "next/navigation";
 
-import { createSupabaseServiceClient } from "@/lib/supabase/service-client";
+import { prisma } from "@/lib/prisma/client";
 
 import type { CollaboratorRole, ListDetail, ViewerRole } from "../types";
 
-type SupabaseUser = {
-  id: string;
-  display_name: string | null;
-  avatar_url: string | null;
-};
-
-type SupabaseCollaborator = {
-  user_id: string;
-  role: CollaboratorRole;
-  user?: SupabaseUser | SupabaseUser[] | null;
-};
-
-type SupabaseBook = {
-  id: string;
-  title: string;
-  author: string;
-  cover_url: string | null;
-  average_rating: number | null;
-};
-
-type SupabaseListItem = {
-  id: string;
-  position: number;
-  note: string | null;
-  book?: SupabaseBook | SupabaseBook[] | null;
-};
-
-type SupabaseListDetail = {
-  id: string;
-  title: string;
-  description: string | null;
-  visibility: ListDetail["visibility"];
-  is_collaborative: boolean | null;
-  owner_id: string;
-  updated_at: string;
-  owner?: SupabaseUser | SupabaseUser[] | null;
-  list_collaborators?: SupabaseCollaborator[] | null;
-  list_items?: SupabaseListItem[] | null;
-};
-
-const getFirstRelation = <T>(
-  value: T | T[] | null | undefined,
-): T | null => {
-  if (!value) {
-    return null;
-  }
-
-  if (Array.isArray(value)) {
-    return value[0] ?? null;
-  }
-
-  return value;
-};
 
 const inferViewerRole = (
   ownerId: string,
@@ -80,125 +27,105 @@ export const getListDetail = async (
   listId: string,
   viewerId: string | null,
 ): Promise<ListDetail> => {
-  const supabase = createSupabaseServiceClient();
+  const list = await prisma.list.findUnique({
+    where: { id: listId },
+    include: {
+      owner: {
+        select: {
+          id: true,
+          displayName: true,
+          avatarUrl: true,
+        },
+      },
+      collaborators: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              displayName: true,
+              avatarUrl: true,
+            },
+          },
+        },
+      },
+      items: {
+        include: {
+          book: {
+            select: {
+              id: true,
+              title: true,
+              author: true,
+              coverUrl: true,
+              averageRating: true,
+            },
+          },
+        },
+        orderBy: {
+          position: "asc",
+        },
+      },
+    },
+  });
 
-  const { data, error } = await supabase
-    .from("lists")
-    .select(
-      `
-        id,
-        title,
-        description,
-        visibility,
-        is_collaborative,
-        owner_id,
-        updated_at,
-        owner:users (
-          id,
-          display_name,
-          avatar_url
-        ),
-        list_collaborators (
-          user_id,
-          role,
-          user:users (
-            id,
-            display_name,
-            avatar_url
-          )
-        ),
-        list_items (
-          id,
-          position,
-          note,
-          book:books (
-            id,
-            title,
-            author,
-            cover_url,
-            average_rating
-          )
-        )
-      `,
-    )
-    .eq("id", listId)
-    .maybeSingle()
-    .returns<SupabaseListDetail>();
-
-  if (error) {
-    throw error;
-  }
-
-  if (!data) {
+  if (!list) {
     notFound();
   }
 
-  const rawCollaborators = data.list_collaborators ?? [];
+  const rawCollaborators = list.collaborators;
   const viewerRole = viewerId
     ? inferViewerRole(
-        data.owner_id,
+        list.ownerId,
         viewerId,
         rawCollaborators.map((entry) => ({
-          user_id: entry.user_id,
+          user_id: entry.userId,
           role: entry.role as ViewerRole,
         })),
       )
     : null;
 
-  if (!viewerRole && data.visibility !== "public") {
+  if (!viewerRole && list.visibility !== "public") {
     notFound();
   }
 
-  const owner = getFirstRelation(data.owner);
-  const collaborators = rawCollaborators.map((entry) => {
-    const collaboratorUser = getFirstRelation(entry.user);
-    return {
-      userId: collaboratorUser?.id ?? entry.user_id,
-      displayName: collaboratorUser?.display_name ?? "Collaborateur·rice",
-      avatarUrl: collaboratorUser?.avatar_url ?? null,
-      role: entry.role,
-    };
-  });
+  const collaborators = rawCollaborators.map((entry) => ({
+    userId: entry.user.id,
+    displayName: entry.user.displayName ?? "Collaborateur·rice",
+    avatarUrl: entry.user.avatarUrl ?? null,
+    role: entry.role as CollaboratorRole,
+  }));
 
-  const items = (data.list_items ?? [])
-    .map((item) => {
-      const book = getFirstRelation(item.book);
-      if (!book) {
-        return null;
-      }
-
-      return {
-        id: item.id,
-        position: item.position,
-        note: item.note ?? null,
-        book: {
-          id: book.id,
-          title: book.title,
-          author: book.author,
-          coverUrl: book.cover_url ?? null,
-          averageRating:
-            typeof book.average_rating === "number" ? book.average_rating : null,
-        },
-      };
-    })
-    .filter((item): item is NonNullable<typeof item> => Boolean(item))
+  const items = list.items
+    .map((item) => ({
+      id: item.id,
+      position: item.position,
+      note: item.note ?? null,
+      book: {
+        id: item.book.id,
+        title: item.book.title,
+        author: item.book.author,
+        coverUrl: item.book.coverUrl ?? null,
+        averageRating: item.book.averageRating
+          ? Number(item.book.averageRating)
+          : null,
+      },
+    }))
     .sort((left, right) => left.position - right.position);
 
   return {
-    id: data.id,
-    title: data.title,
-    description: data.description ?? null,
-    visibility: data.visibility,
-    isCollaborative: data.is_collaborative ?? false,
+    id: list.id,
+    title: list.title,
+    description: list.description ?? null,
+    visibility: list.visibility as ListDetail["visibility"],
+    isCollaborative: list.isCollaborative ?? false,
     owner: {
-      id: owner?.id ?? data.owner_id,
-      displayName: owner?.display_name ?? "Utilisateur·rice",
-      avatarUrl: owner?.avatar_url ?? null,
+      id: list.owner.id,
+      displayName: list.owner.displayName ?? "Utilisateur·rice",
+      avatarUrl: list.owner.avatarUrl ?? null,
     },
     collaborators,
     viewerRole: viewerRole ?? "viewer",
     items,
-    updatedAt: data.updated_at,
+    updatedAt: list.updatedAt.toISOString(),
   };
 };
 

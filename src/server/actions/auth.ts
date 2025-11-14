@@ -1,8 +1,7 @@
 "use server";
 
 import bcrypt from "bcryptjs";
-
-import { createSupabaseServiceClient } from "@/lib/supabase/service-client";
+import { prisma } from "@/lib/prisma/client";
 
 type RegisterInput = {
   email: string;
@@ -54,19 +53,18 @@ export const registerUser = async (
       };
     }
 
-    const supabase = createSupabaseServiceClient();
+    const passwordHash = await bcrypt.hash(input.password, 10);
 
-    const { data: existingUser, error: existingError } = await supabase
-      .from("users")
-      .select("id")
-      .eq("email", email)
-      .maybeSingle();
+    console.log("[auth] registerUser: Attempting to insert user", { email, displayName });
 
-    if (existingError) {
-      throw existingError;
-    }
+    // Utiliser Prisma pour contourner les problèmes de RLS
+    // Vérifier si l'utilisateur existe déjà avec Prisma
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
 
-    if (existingUser?.id) {
+    if (existingUser) {
       return {
         success: false,
         message:
@@ -74,21 +72,58 @@ export const registerUser = async (
       };
     }
 
-    const passwordHash = await bcrypt.hash(input.password, 10);
+    try {
+      const newUser = await prisma.user.create({
+        data: {
+          email,
+          displayName,
+          passwordHash,
+        },
+      });
 
-    const { error: insertError } = await supabase.from("users").insert({
-      email,
-      display_name: displayName,
-      password_hash: passwordHash,
-    });
-
-    if (insertError) {
-      throw insertError;
+      console.log("[auth] registerUser: User created successfully with Prisma", { userId: newUser.id });
+      return { success: true };
+    } catch (prismaError: unknown) {
+      console.error("[auth] registerUser Prisma error:", prismaError);
+      
+      // Gérer les erreurs Prisma spécifiques
+      if (prismaError && typeof prismaError === "object" && "code" in prismaError) {
+        const error = prismaError as { code?: string; message?: string };
+        
+        // Erreur de contrainte unique (email déjà existant)
+        if (error.code === "P2002") {
+          return {
+            success: false,
+            message: "Un compte existe déjà avec cette adresse e-mail.",
+          };
+        }
+        
+        // Erreur de validation
+        if (error.code === "P2003") {
+          return {
+            success: false,
+            message: "Erreur de validation des données.",
+          };
+        }
+      }
+      
+      // Si c'est une erreur Prisma, la relancer pour qu'elle soit catchée par le catch général
+      throw prismaError;
     }
-
-    return { success: true };
   } catch (error) {
     console.error("[auth] registerUser error:", error);
+    
+    // Retourner un message plus spécifique si possible
+    if (error && typeof error === "object" && "message" in error) {
+      const errorMessage = (error as { message?: string }).message;
+      if (errorMessage?.includes("permission") || errorMessage?.includes("policy")) {
+        return {
+          success: false,
+          message: "Erreur de permissions. Vérifiez que les policies RLS sont correctement configurées.",
+        };
+      }
+    }
+    
     return {
       success: false,
       message:

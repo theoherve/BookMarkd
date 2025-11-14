@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from "react";
 
-import { Button } from "@/components/ui/button";
 import { rateBook } from "@/server/actions/book";
+import { formatRating } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 type RatingFormProps = {
   bookId: string;
@@ -13,17 +14,54 @@ type RatingFormProps = {
 const stars = [1, 2, 3, 4, 5];
 
 const RatingForm = ({ bookId, currentRating }: RatingFormProps) => {
-  const [pendingRating, setPendingRating] = useState<number | null>(
+  const [selectedRating, setSelectedRating] = useState<number | null>(null);
+  const [confirmedRating, setConfirmedRating] = useState<number | null>(
     currentRating ?? null,
   );
   const [isPending, startTransition] = useTransition();
 
-  const handleRate = (value: number) => {
-    setPendingRating(value);
-    startTransition(() => {
-      rateBook(bookId, value);
-    });
+  // La note à afficher est soit la note sélectionnée (en attente), soit la note confirmée
+  const displayRating = selectedRating ?? confirmedRating ?? null;
+
+  const handleStarClick = (starValue: number) => {
+    const currentDisplay = selectedRating ?? confirmedRating ?? 0;
+    
+    // Si on clique sur la même étoile que la note actuellement affichée
+    if (currentDisplay === starValue) {
+      // Passer à la note avec 0.5
+      setSelectedRating(starValue - 0.5);
+    } else {
+      // Sinon, donner la note entière
+      setSelectedRating(starValue);
+    }
   };
+
+  const handleValidate = () => {
+    if (selectedRating === null) {
+      return;
+    }
+    
+    setConfirmedRating(selectedRating);
+    startTransition(() => {
+      rateBook(bookId, selectedRating);
+    });
+    // Réinitialiser la sélection après validation
+    setSelectedRating(null);
+  };
+
+  const getStarState = (starValue: number) => {
+    const rating = displayRating ?? 0;
+    
+    if (rating >= starValue) {
+      return "full";
+    }
+    if (rating >= starValue - 0.5) {
+      return "half";
+    }
+    return "empty";
+  };
+
+  const hasUnconfirmedSelection = selectedRating !== null && selectedRating !== confirmedRating;
 
   return (
     <div className="space-y-2">
@@ -31,32 +69,57 @@ const RatingForm = ({ bookId, currentRating }: RatingFormProps) => {
         Votre note
       </p>
       <div className="flex items-center gap-2">
-        {stars.map((star) => {
-          const active =
-            (pendingRating ?? 0) >= star || (currentRating ?? 0) >= star;
-          return (
-            <button
-              key={star}
-              type="button"
-              aria-label={`Noter ${star} sur 5`}
-              onClick={() => handleRate(star)}
-              disabled={isPending}
-              className={`text-2xl transition ${
-                active ? "text-accent-foreground" : "text-muted-foreground"
-              }`}
-            >
-              ★
-            </button>
-          );
-        })}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => handleRate(0.5)}
-          disabled={isPending}
-        >
-          0.5
-        </Button>
+        <div className="flex items-center gap-1">
+          {stars.map((star) => {
+            const state = getStarState(star);
+            
+            return (
+              <button
+                key={star}
+                type="button"
+                aria-label={`Noter ${star} sur 5`}
+                onClick={() => handleStarClick(star)}
+                disabled={isPending}
+                className="relative text-2xl transition hover:scale-110 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {/* Étoile de fond (vide) */}
+                <span className="text-muted-foreground">★</span>
+                {/* Étoile colorée (pleine ou partielle) */}
+                <span
+                  className={`absolute inset-0 overflow-hidden ${
+                    state === "full"
+                      ? "text-accent-foreground"
+                      : state === "half"
+                        ? "text-accent-foreground"
+                        : "text-transparent"
+                  }`}
+                  style={
+                    state === "half"
+                      ? { clipPath: "inset(0 50% 0 0)" }
+                      : undefined
+                  }
+                >
+                  ★
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {displayRating !== null && (
+          <span className="text-sm text-muted-foreground">
+            {formatRating(displayRating)}
+          </span>
+        )}
+        {hasUnconfirmedSelection && (
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleValidate}
+            disabled={isPending}
+          >
+            {isPending ? "Validation..." : "Valider"}
+          </Button>
+        )}
       </div>
     </div>
   );

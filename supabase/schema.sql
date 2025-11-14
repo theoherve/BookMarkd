@@ -151,6 +151,7 @@ create index if not exists idx_activities_created_at on public.activities (creat
 create index if not exists idx_review_comments_review_id on public.review_comments (review_id);
 create index if not exists idx_list_collaborators_list_id on public.list_collaborators (list_id);
 -- 4) Activation RLS ----------------------------------------------------------
+alter table public.users enable row level security;
 alter table public.books enable row level security;
 alter table public.book_tags enable row level security;
 alter table public.tags enable row level security;
@@ -165,6 +166,13 @@ alter table public.activities enable row level security;
 alter table public.recommendations enable row level security;
 alter table public.review_comments enable row level security;
 -- 5) Policies minimales (à affiner selon produit) ----------------------------
+-- Users : insertion publique (inscription), lecture publique (affichage profils), mise à jour propriétaire
+drop policy if exists "users_public_insert" on public.users;
+create policy "users_public_insert" on public.users for insert with check (true);
+drop policy if exists "users_public_read" on public.users;
+create policy "users_public_read" on public.users for select using (true);
+drop policy if exists "users_own_update" on public.users;
+create policy "users_own_update" on public.users for update using (auth.uid() = id) with check (auth.uid() = id);
 -- Books : lecture publique, écriture restreinte aux admins (placeholder).
 drop policy if exists "books_read_public" on public.books;
 create policy "books_read_public" on public.books for

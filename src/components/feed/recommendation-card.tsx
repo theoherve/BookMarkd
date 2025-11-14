@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -8,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import AddToReadlistButton from "@/components/search/add-to-readlist-button";
+import { generateBookSlug } from "@/lib/slug";
 import type { FeedRecommendation } from "@/features/feed/types";
 import {
   Tooltip,
@@ -27,6 +29,8 @@ const RecommendationCard = ({ item }: RecommendationCardProps) => {
         ? "Tendances BookMarkd"
         : "Parce que vous avez aimé un titre similaire";
 
+  const bookSlug = generateBookSlug(item.title, item.author);
+
   return (
     <Card
       role="article"
@@ -42,7 +46,13 @@ const RecommendationCard = ({ item }: RecommendationCardProps) => {
           Suggestion
         </Badge>
         <CardTitle className="text-base font-semibold text-foreground">
-          {item.title}
+          <Link
+            href={`/books/${bookSlug}`}
+            className="hover:text-accent-foreground transition-colors"
+            aria-label={`Voir les détails de ${item.title}`}
+          >
+            {item.title}
+          </Link>
         </CardTitle>
         <CardDescription className="text-sm text-muted-foreground">
           par {item.author}

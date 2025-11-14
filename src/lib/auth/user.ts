@@ -1,6 +1,6 @@
 import type { Session } from "next-auth";
 
-import { createSupabaseServiceClient } from "@/lib/supabase/service-client";
+import { prisma } from "@/lib/prisma/client";
 
 export const resolveSessionUserId = async (
   session: Session | null,
@@ -17,13 +17,11 @@ export const resolveSessionUserId = async (
     return null;
   }
 
-  const supabase = createSupabaseServiceClient();
-  const { data } = await supabase
-    .from("users")
-    .select("id")
-    .eq("email", session.user.email)
-    .maybeSingle();
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+    select: { id: true },
+  });
 
-  return data?.id ?? null;
+  return user?.id ?? null;
 };
 

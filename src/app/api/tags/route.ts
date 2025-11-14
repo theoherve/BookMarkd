@@ -1,22 +1,23 @@
 import { NextResponse } from "next/server";
 
-import { createSupabaseServiceClient } from "@/lib/supabase/service-client";
+import { prisma } from "@/lib/prisma/client";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const supabase = createSupabaseServiceClient();
-    const { data, error } = await supabase
-      .from("tags")
-      .select("id, name, slug")
-      .order("name", { ascending: true });
+    const tags = await prisma.tag.findMany({
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+      },
+      orderBy: {
+        name: "asc",
+      },
+    });
 
-    if (error) {
-      throw error;
-    }
-
-    return NextResponse.json({ tags: data ?? [] });
+    return NextResponse.json({ tags });
   } catch (error) {
     console.error("[tags] GET error:", error);
     return NextResponse.json(

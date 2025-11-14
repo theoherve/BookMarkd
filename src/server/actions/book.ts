@@ -1,9 +1,10 @@
 'use server';
 
 import { revalidatePath } from "next/cache";
+import { Decimal } from "@prisma/client/runtime/library";
 
 import { getCurrentSession } from "@/lib/auth/session";
-import { createSupabaseServiceClient } from "@/lib/supabase/service-client";
+import { prisma } from "@/lib/prisma/client";
 
 type ActionResult =
   | { success: true }
@@ -29,23 +30,35 @@ export const updateReadingStatus = async (
 ): Promise<ActionResult> => {
   try {
     const userId = await requireSession();
-    const supabase = createSupabaseServiceClient();
-    const { error } = await supabase
-      .from("user_books")
-      .upsert(
-        [
-          {
-            user_id: userId,
-            book_id: bookId,
-            status,
-          },
-        ],
-        { onConflict: "user_id,book_id" },
-      );
+    
+    // Récupérer l'enregistrement existant pour préserver le rating s'il existe
+    const existing = await prisma.userBook.findUnique({
+      where: {
+        userId_bookId: {
+          userId,
+          bookId,
+        },
+      },
+    });
 
-    if (error) {
-      throw error;
-    }
+    await prisma.userBook.upsert({
+      where: {
+        userId_bookId: {
+          userId,
+          bookId,
+        },
+      },
+      update: {
+        status,
+        // Préserver le rating s'il existe
+        rating: existing?.rating ?? null,
+      },
+      create: {
+        userId,
+        bookId,
+        status,
+      },
+    });
 
     revalidateBook(bookId);
     return { success: true };
@@ -76,24 +89,76 @@ export const rateBook = async (
       };
     }
     const userId = await requireSession();
-    const supabase = createSupabaseServiceClient();
-    const { error } = await supabase
-      .from("user_books")
-      .upsert(
-        [
-          {
-            user_id: userId,
-            book_id: bookId,
-            rating,
-            rated_at: new Date().toISOString(),
-          },
-        ],
-        { onConflict: "user_id,book_id" },
-      );
+    
+    // Récupérer l'enregistrement existant pour préserver le status s'il existe
+    const existing = await prisma.userBook.findUnique({
+      where: {
+        userId_bookId: {
+          userId,
+          bookId,
+        },
+      },
+    });
 
-    if (error) {
-      throw error;
+    // Convertir le rating en Decimal pour Prisma
+    const ratingDecimal = new Decimal(rating);
+
+    // Upsert avec Prisma : met à jour le rating et rated_at, préserve le status s'il existe
+    // Si le livre n'a pas encore de statut, mettre "finished" automatiquement
+    await prisma.userBook.upsert({
+      where: {
+        userId_bookId: {
+          userId,
+          bookId,
+        },
+      },
+      update: {
+        rating: ratingDecimal,
+        ratedAt: new Date(),
+        // Préserver le status s'il existe, sinon utiliser 'finished' par défaut
+        status: (existing?.status as "to_read" | "reading" | "finished") ?? "finished",
+      },
+      create: {
+        userId,
+        bookId,
+        status: "finished", // Status par défaut si création (noter un livre = l'avoir terminé)
+        rating: ratingDecimal,
+        ratedAt: new Date(),
+      },
+    });
+
+    // Mettre à jour les statistiques du livre (ratings_count et average_rating)
+    const allRatings = await prisma.userBook.findMany({
+      where: {
+        bookId,
+        rating: { not: null },
+      },
+      select: {
+        rating: true,
+      },
+    });
+
+    const ratingsCount = allRatings.length;
+    let averageRating: Decimal | null = null;
+
+    if (ratingsCount > 0) {
+      const sum = allRatings.reduce((acc, ub) => {
+        if (ub.rating) {
+          return acc.plus(ub.rating);
+        }
+        return acc;
+      }, new Decimal(0));
+      averageRating = sum.dividedBy(ratingsCount);
     }
+
+    // Mettre à jour le livre avec les nouvelles statistiques
+    await prisma.book.update({
+      where: { id: bookId },
+      data: {
+        ratingsCount,
+        averageRating: averageRating ?? new Decimal(0),
+      },
+    });
 
     revalidateBook(bookId);
     return { success: true };
@@ -107,7 +172,7 @@ export const rateBook = async (
     console.error("[book] rateBook error:", error);
     return {
       success: false,
-      message: "Impossible d’enregistrer votre note.",
+      message: "Impossible d'enregistrer votre note.",
     };
   }
 };
@@ -135,19 +200,17 @@ export const createReview = async ({
       };
     }
     const userId = await requireSession();
-    const supabase = createSupabaseServiceClient();
-    const { error } = await supabase.from("reviews").insert({
-      user_id: userId,
-      book_id: bookId,
-      visibility,
-      title,
-      content,
-      spoiler: Boolean(spoiler),
+    
+    await prisma.review.create({
+      data: {
+        userId,
+        bookId,
+        visibility,
+        title: title || null,
+        content,
+        spoiler: Boolean(spoiler),
+      },
     });
-
-    if (error) {
-      throw error;
-    }
 
     revalidateBook(bookId);
     return { success: true };
@@ -178,28 +241,29 @@ export const addReviewComment = async (
       };
     }
     const userId = await requireSession();
-    const supabase = createSupabaseServiceClient();
-    const { data: review, error: reviewError } = await supabase
-      .from("reviews")
-      .select("book_id")
-      .eq("id", reviewId)
-      .maybeSingle();
-
-    if (reviewError || !review) {
-      throw reviewError ?? new Error("REVIEW_NOT_FOUND");
-    }
-
-    const { error } = await supabase.from("review_comments").insert({
-      review_id: reviewId,
-      user_id: userId,
-      content,
+    
+    // Vérifier que la review existe et récupérer le bookId
+    const review = await prisma.review.findUnique({
+      where: { id: reviewId },
+      select: { bookId: true },
     });
 
-    if (error) {
-      throw error;
+    if (!review) {
+      return {
+        success: false,
+        message: "L'avis n'a pas été trouvé.",
+      };
     }
 
-    revalidateBook(review.book_id);
+    await prisma.reviewComment.create({
+      data: {
+        reviewId,
+        userId,
+        content,
+      },
+    });
+
+    revalidateBook(review.bookId);
     return { success: true };
   } catch (error) {
     if ((error as Error).message === "AUTH_REQUIRED") {
@@ -211,7 +275,86 @@ export const addReviewComment = async (
     console.error("[book] addReviewComment error:", error);
     return {
       success: false,
-      message: "Impossible d’ajouter ce commentaire.",
+      message: "Impossible d'ajouter ce commentaire.",
+    };
+  }
+};
+
+type CreateBookResult =
+  | { success: true; bookId: string }
+  | { success: false; message: string };
+
+export const createBook = async (
+  formData: FormData,
+): Promise<CreateBookResult> => {
+  try {
+    const userId = await requireSession();
+
+    // Vérifier que l'utilisateur existe dans la base de données
+    const userExists = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    if (!userExists) {
+      return {
+        success: false,
+        message: "Utilisateur non trouvé dans la base de données.",
+      };
+    }
+
+    const title = formData.get("title")?.toString().trim();
+    const author = formData.get("author")?.toString().trim();
+    const coverUrl = formData.get("coverUrl")?.toString().trim() || null;
+    const publicationYearStr = formData.get("publicationYear")?.toString().trim();
+    const publicationYear = publicationYearStr
+      ? parseInt(publicationYearStr, 10)
+      : null;
+    const summary = formData.get("summary")?.toString().trim() || null;
+
+    if (!title || !author) {
+      return {
+        success: false,
+        message: "Le titre et l'auteur sont requis.",
+      };
+    }
+
+    if (publicationYear && (isNaN(publicationYear) || publicationYear < 0 || publicationYear > new Date().getFullYear() + 10)) {
+      return {
+        success: false,
+        message: "L'année de publication doit être valide.",
+      };
+    }
+
+    const newBook = await prisma.book.create({
+      data: {
+        title,
+        author,
+        coverUrl,
+        publicationYear,
+        summary,
+        createdBy: userId,
+        ratingsCount: 0,
+        averageRating: new Decimal(0),
+      },
+    });
+
+    revalidatePath("/search");
+    revalidatePath(`/books/${newBook.id}`);
+
+    return { success: true, bookId: newBook.id };
+  } catch (error) {
+    if ((error as Error).message === "AUTH_REQUIRED") {
+      return {
+        success: false,
+        message: "Vous devez être connecté·e pour ajouter un livre.",
+      };
+    }
+    
+    console.error("[book] createBook error:", error);
+    return {
+      success: false,
+      message: "Impossible de créer ce livre. Veuillez réessayer.",
     };
   }
 };

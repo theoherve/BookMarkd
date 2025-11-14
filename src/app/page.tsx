@@ -32,7 +32,7 @@ const HomePage = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button asChild className="w-full">
+                <Button asChild className="w-full text-primary-foreground!">
                   <Link href="/feed" aria-label="Ouvrir le fil d’actualité">
                     Ouvrir le feed
                   </Link>

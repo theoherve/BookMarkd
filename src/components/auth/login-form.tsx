@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,15 +13,15 @@ type LoginFormProps = {
 };
 
 const LoginForm = ({ callbackUrl }: LoginFormProps) => {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const safeCallbackUrl = useMemo(() => {
-    if (!callbackUrl || typeof callbackUrl !== "string") {
-      return "/";
-    }
+    // Priorité au prop callbackUrl, puis aux searchParams, puis "/"
+    const urlFromProp = callbackUrl && typeof callbackUrl === "string" ? callbackUrl : null;
+    const urlFromParams = searchParams.get("callbackUrl");
+    const finalUrl = urlFromProp ?? urlFromParams ?? "/";
 
-    return callbackUrl.startsWith("/") ? callbackUrl : "/";
-  }, [callbackUrl]);
+    return finalUrl.startsWith("/") ? finalUrl : "/";
+  }, [callbackUrl, searchParams]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -59,8 +59,9 @@ const LoginForm = ({ callbackUrl }: LoginFormProps) => {
       return;
     }
 
-    router.push(safeCallbackUrl);
-    router.refresh();
+    // Utiliser window.location.href pour forcer un rechargement complet
+    // et garantir que la session est disponible côté serveur
+    window.location.href = safeCallbackUrl;
   };
 
   const errorFromParams = searchParams.get("error");
