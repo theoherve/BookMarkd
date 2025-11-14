@@ -78,7 +78,7 @@ const ListDetailPage = async ({ params }: ListDetailPageProps) => {
         <div>
           {detail.items.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border/60 bg-card/60 p-8 text-center text-sm text-muted-foreground">
-              Aucun livre n'a encore été ajouté à cette liste.
+              Aucun livre n&apos;a encore été ajouté à cette liste.
             </div>
           ) : (
             <SortableListItems

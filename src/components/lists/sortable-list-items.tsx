@@ -107,7 +107,7 @@ const SortableListItems = ({
   items,
   canEdit,
 }: SortableListItemsProps) => {
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const [localItems, setLocalItems] = useState(items);
 
   useEffect(() => {
