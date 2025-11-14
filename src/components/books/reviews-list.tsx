@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { formatRelativeTimeFromNow } from "@/lib/datetime";
+import ReviewLikeButton from "@/components/books/review-like-button";
 
 type ReviewUser = {
   id: string;
@@ -30,6 +31,7 @@ export type BookReview = {
   spoiler: boolean;
   visibility: "public" | "friends" | "private";
   user: ReviewUser;
+  likes: ReviewUser[];
   comments: ReviewComment[];
 };
 
@@ -159,6 +161,13 @@ const ReviewItem = ({
         ) : (
           <p className="leading-6">{review.content}</p>
         )}
+      </div>
+      <div className="flex items-center gap-3">
+        <ReviewLikeButton
+          reviewId={review.id}
+          initialLikesCount={review.likes.length}
+          initialHasLiked={review.likes.some((like) => like.id === viewerId)}
+        />
       </div>
       {review.comments.length > 0 ? (
         <div className="space-y-3 rounded-2xl border border-border/40 bg-card/50 p-4">

@@ -55,7 +55,38 @@ export const registerUser = async (
 
     const passwordHash = await bcrypt.hash(input.password, 10);
 
-    console.log("[auth] registerUser: Attempting to insert user", { email, displayName });
+    // Générer un username unique à partir de l'email
+    const generateUsername = (email: string, displayName: string): string => {
+      const base = displayName
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]/g, "")
+        .slice(0, 20) || email.split("@")[0]?.slice(0, 20) || "user";
+      
+      return base;
+    };
+
+    let username = generateUsername(email, displayName);
+    let usernameAttempts = 0;
+    const maxAttempts = 10;
+
+    // Vérifier l'unicité du username et ajouter un suffixe si nécessaire
+    while (usernameAttempts < maxAttempts) {
+      const existingUsername = await prisma.user.findUnique({
+        where: { username },
+        select: { id: true },
+      });
+
+      if (!existingUsername) {
+        break;
+      }
+
+      username = `${generateUsername(email, displayName)}${usernameAttempts + 1}`;
+      usernameAttempts++;
+    }
+
+    console.log("[auth] registerUser: Attempting to insert user", { email, displayName, username });
 
     // Utiliser Prisma pour contourner les problèmes de RLS
     // Vérifier si l'utilisateur existe déjà avec Prisma
@@ -76,6 +107,7 @@ export const registerUser = async (
       const newUser = await prisma.user.create({
         data: {
           email,
+          username,
           displayName,
           passwordHash,
         },

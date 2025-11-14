@@ -13,6 +13,7 @@ import TopBooksSelector from "@/components/profile/top-books-selector";
 import RecentActivitiesSection from "@/components/profile/recent-activities-section";
 import ReadListSection from "@/components/profile/read-list-section";
 import ProfileEditButton from "@/components/profile/profile-edit-button";
+import FollowRequestsPanel from "@/components/profile/follow-requests-panel";
 
 import { getCurrentSession } from "@/lib/auth/session";
 import { resolveSessionUserId } from "@/lib/auth/user";
@@ -119,6 +120,10 @@ const ProfilePage = async () => {
 
         <section className="space-y-6">
           <TopBooksSelector initialTopBooks={dashboard.topBooks} />
+        </section>
+
+        <section className="space-y-6">
+          <FollowRequestsPanel />
         </section>
 
         <section className="space-y-6 md:grid md:grid-cols-[1fr_1fr] md:gap-6 md:space-y-0">
