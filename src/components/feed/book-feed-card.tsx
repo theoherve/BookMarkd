@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +12,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { formatRelativeTimeFromNow } from "@/lib/datetime";
+import { formatRating } from "@/lib/utils";
+import { generateBookSlug } from "@/lib/slug";
 import type { FeedFriendBook } from "@/features/feed/types";
 
 type BookFeedCardProps = {
@@ -37,6 +40,7 @@ const BookFeedCard = ({ item }: BookFeedCardProps) => {
   };
 
   const updatedAtLabel = formatRelativeTimeFromNow(item.updatedAt);
+  const bookSlug = generateBookSlug(item.title, item.author);
 
   return (
     <Card
@@ -53,7 +57,13 @@ const BookFeedCard = ({ item }: BookFeedCardProps) => {
         </Badge>
         <div className="space-y-1">
           <CardTitle className="text-lg font-semibold text-foreground">
-            {item.title}
+            <Link
+              href={`/books/${bookSlug}`}
+              className="hover:text-accent-foreground transition-colors"
+              aria-label={`Voir les détails de ${item.title}`}
+            >
+              {item.title}
+            </Link>
           </CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
             par {item.author}
@@ -66,7 +76,7 @@ const BookFeedCard = ({ item }: BookFeedCardProps) => {
         </p>
         {typeof item.averageRating === "number" ? (
           <p className="text-sm font-medium text-accent-foreground">
-            Note moyenne : {item.averageRating.toFixed(1)}/5
+            Note moyenne : {formatRating(item.averageRating)}/5
           </p>
         ) : null}
         <p className="text-sm text-muted-foreground">

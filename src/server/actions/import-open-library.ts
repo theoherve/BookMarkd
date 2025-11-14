@@ -1,8 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { Decimal } from "@prisma/client/runtime/library";
 
-import { createSupabaseServiceClient } from "@/lib/supabase/service-client";
+import { prisma } from "@/lib/prisma/client";
 import { fetchOpenLibraryWorkDetails } from "@/lib/open-library";
 
 type ImportPayload = {
@@ -30,13 +31,11 @@ export const importOpenLibraryBook = async (
   payload: ImportPayload,
 ): Promise<ImportResult> => {
   try {
-    const supabase = createSupabaseServiceClient();
-
-    const { data: existing } = await supabase
-      .from("books")
-      .select("id")
-      .eq("open_library_id", payload.openLibraryId)
-      .maybeSingle();
+    // Vérifier si le livre existe déjà
+    const existing = await prisma.book.findUnique({
+      where: { openLibraryId: payload.openLibraryId },
+      select: { id: true },
+    });
 
     if (existing?.id) {
       return { success: true, bookId: existing.id };
@@ -46,22 +45,19 @@ export const importOpenLibraryBook = async (
     const summary = payload.summary ?? (workDetails.description ?? null);
     const coverUrl = payload.coverUrl ?? workDetails.coverUrl ?? payload.coverUrl;
 
-    const newBookId = crypto.randomUUID();
-    const { error } = await supabase.from("books").insert({
-      id: newBookId,
-      open_library_id: payload.openLibraryId,
-      title: payload.title,
-      author: payload.author,
-      cover_url: coverUrl,
-      publication_year: payload.publicationYear,
-      summary,
-      ratings_count: 0,
-      average_rating: 0,
+    // Créer le livre
+    const newBook = await prisma.book.create({
+      data: {
+        openLibraryId: payload.openLibraryId,
+        title: payload.title,
+        author: payload.author,
+        coverUrl,
+        publicationYear: payload.publicationYear,
+        summary,
+        ratingsCount: 0,
+        averageRating: new Decimal(0),
+      },
     });
-
-    if (error) {
-      throw error;
-    }
 
     const subjects = workDetails.subjects ?? [];
     if (subjects.length > 0) {
@@ -74,53 +70,63 @@ export const importOpenLibraryBook = async (
         .map(([slug, name]) => ({ slug, name }));
 
       if (uniqueSubjects.length > 0) {
-        await supabase
-          .from("tags")
-          .upsert(
-            uniqueSubjects.map((subject) => ({
+        // Créer ou mettre à jour les tags
+        for (const subject of uniqueSubjects) {
+          await prisma.tag.upsert({
+            where: { slug: subject.slug },
+            update: { name: subject.name },
+            create: {
               name: subject.name,
               slug: subject.slug,
-            })),
-            { onConflict: "slug" },
-          );
+            },
+          });
+        }
 
-        const { data: tagRows } = await supabase
-          .from("tags")
-          .select("id, slug")
-          .in(
-            "slug",
-            uniqueSubjects.map((subject) => subject.slug),
-          );
+        // Récupérer les IDs des tags
+        const tagRows = await prisma.tag.findMany({
+          where: {
+            slug: {
+              in: uniqueSubjects.map((subject) => subject.slug),
+            },
+          },
+          select: {
+            id: true,
+            slug: true,
+          },
+        });
 
-        const tagMap = new Map(tagRows?.map((row) => [row.slug, row.id]));
+        const tagMap = new Map(tagRows.map((row) => [row.slug, row.id]));
 
-        const bookTagPayload = uniqueSubjects
+        // Créer les relations book_tags
+        const bookTagData = uniqueSubjects
           .map((subject) => {
             const tagId = tagMap.get(subject.slug);
             if (!tagId) {
               return null;
             }
             return {
-              book_id: newBookId,
-              tag_id: tagId,
+              bookId: newBook.id,
+              tagId,
             };
           })
-          .filter((row): row is { book_id: string; tag_id: string } =>
+          .filter((row): row is { bookId: string; tagId: string } =>
             Boolean(row),
           );
 
-        if (bookTagPayload.length > 0) {
-          await supabase
-            .from("book_tags")
-            .upsert(bookTagPayload, { onConflict: "book_id,tag_id" });
+        // Créer les relations (Prisma gère automatiquement les conflits avec createMany + skipDuplicates)
+        if (bookTagData.length > 0) {
+          await prisma.bookTag.createMany({
+            data: bookTagData,
+            skipDuplicates: true,
+          });
         }
       }
     }
 
     revalidatePath("/search");
-    revalidatePath(`/books/${newBookId}`);
+    revalidatePath(`/books/${newBook.id}`);
 
-    return { success: true, bookId: newBookId };
+    return { success: true, bookId: newBook.id };
   } catch (error) {
     console.error("[import-open-library] error:", error);
     return {

@@ -1,4 +1,4 @@
-import { createSupabaseServiceClient } from "@/lib/supabase/service-client";
+import { prisma } from "@/lib/prisma/client";
 
 import type { ProfileDashboard, ReadingStats } from "../types";
 
@@ -31,62 +31,50 @@ const buildReadingStats = (rows: Array<{ status: string | null }>): ReadingStats
 };
 
 export const getProfileDashboard = async (userId: string): Promise<ProfileDashboard> => {
-  const supabase = createSupabaseServiceClient();
-
   const [
-    { data: userRow, error: userError },
-    ownedListsResponse,
-    collaborationsResponse,
-    { data: readingRows, error: readingError },
-    recommendationsResponse,
+    user,
+    ownedListsCount,
+    collaborativeListsCount,
+    readingRows,
+    recommendationsCount,
   ] = await Promise.all([
-    supabase
-      .from("users")
-      .select("display_name, email, bio, avatar_url")
-      .eq("id", userId)
-      .maybeSingle(),
-    supabase
-      .from("lists")
-      .select("id", { count: "exact", head: true })
-      .eq("owner_id", userId),
-    supabase
-      .from("list_collaborators")
-      .select("list_id", { count: "exact", head: true })
-      .eq("user_id", userId),
-    supabase
-      .from("user_books")
-      .select("status")
-      .eq("user_id", userId),
-    supabase
-      .from("recommendations")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        displayName: true,
+        email: true,
+        bio: true,
+        avatarUrl: true,
+      },
+    }),
+    prisma.list.count({
+      where: { ownerId: userId },
+    }),
+    prisma.listCollaborator.count({
+      where: { userId },
+    }),
+    prisma.userBook.findMany({
+      where: { userId },
+      select: { status: true },
+    }),
+    prisma.recommendation.count({
+      where: { userId },
+    }),
   ]);
 
-  if (userError) {
-    throw userError;
-  }
-
-  if (!userRow) {
+  if (!user) {
     throw new Error("Utilisateur introuvable.");
   }
 
-  if (readingError) {
-    throw readingError;
-  }
-
-  const ownedLists = ownedListsResponse.count ?? 0;
-  const collaborativeLists = collaborationsResponse.count ?? 0;
-  const recommendationsCount = recommendationsResponse.count ?? 0;
-  const readingStats = buildReadingStats(readingRows ?? []);
+  const readingStats = buildReadingStats(readingRows);
 
   return {
-    displayName: userRow.display_name ?? "Utilisateur·rice",
-    email: userRow.email ?? "",
-    bio: userRow.bio ?? null,
-    avatarUrl: userRow.avatar_url ?? null,
-    ownedLists,
-    collaborativeLists,
+    displayName: user.displayName ?? "Utilisateur·rice",
+    email: user.email ?? "",
+    bio: user.bio ?? null,
+    avatarUrl: user.avatarUrl ?? null,
+    ownedLists: ownedListsCount,
+    collaborativeLists: collaborativeListsCount,
     recommendationsCount,
     readingStats,
   };

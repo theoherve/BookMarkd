@@ -1,11 +1,10 @@
 "use server";
 
-import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getCurrentSession } from "@/lib/auth/session";
-import { createSupabaseServiceClient } from "@/lib/supabase/service-client";
+import { prisma } from "@/lib/prisma/client";
 import { resolveSessionUserId } from "@/lib/auth/user";
 
 type BaseActionResult =
@@ -26,33 +25,28 @@ const loadListMembership = async (
   listId: string,
   userId: string,
 ) => {
-  const supabase = createSupabaseServiceClient();
-  const { data, error } = await supabase
-    .from("lists")
-    .select(
-      `
-      owner_id,
-      list_collaborators ( user_id, role )
-    `,
-    )
-    .eq("id", listId)
-    .maybeSingle();
+  const list = await prisma.list.findUnique({
+    where: { id: listId },
+    include: {
+      collaborators: {
+        where: { userId },
+        select: {
+          userId: true,
+          role: true,
+        },
+      },
+    },
+  });
 
-  if (error) {
-    throw error;
-  }
-
-  if (!data) {
+  if (!list) {
     return null;
   }
 
-  if (data.owner_id === userId) {
+  if (list.ownerId === userId) {
     return "owner" as const;
   }
 
-  const collaborator = (data.list_collaborators ?? []).find(
-    (entry) => entry.user_id === userId,
-  );
+  const collaborator = list.collaborators[0];
 
   if (!collaborator) {
     return null;
@@ -101,41 +95,30 @@ export const createList = async (formData: FormData): Promise<CreateListResult> 
     };
   }
 
-  const supabase = createSupabaseServiceClient();
+  try {
+    const newList = await prisma.list.create({
+      data: {
+        ownerId: userId,
+        title: title.trim(),
+        description: typeof description === "string" ? description.trim() : null,
+        visibility,
+        isCollaborative,
+      },
+    });
 
-  const { data, error } = await supabase
-    .from("lists")
-    .insert({
-      owner_id: userId,
-      title: title.trim(),
-      description: typeof description === "string" ? description.trim() : null,
-      visibility,
-      is_collaborative: isCollaborative,
-    })
-    .select("id")
-    .single();
+    revalidatePath("/lists");
 
-  if (error) {
+    return {
+      success: true,
+      listId: newList.id,
+    };
+  } catch (error) {
     console.error("[lists] createList error:", error);
     return {
       success: false,
       message: "Impossible de créer la liste pour le moment.",
     };
   }
-
-  revalidatePath("/lists");
-
-  if (!data?.id) {
-    return {
-      success: false,
-      message: "La création de la liste a échoué.",
-    };
-  }
-
-  return {
-    success: true,
-    listId: data.id,
-  };
 };
 
 export const addBookToList = async (
@@ -161,63 +144,47 @@ export const addBookToList = async (
     };
   }
 
-  const supabase = createSupabaseServiceClient();
+  try {
+    // Vérifier si le livre est déjà dans la liste
+    const existingItem = await prisma.listItem.findFirst({
+      where: {
+        listId,
+        bookId,
+      },
+      select: { id: true },
+    });
 
-  const { data: existingItem, error: existingError } = await supabase
-    .from("list_items")
-    .select("id")
-    .eq("list_id", listId)
-    .eq("book_id", bookId)
-    .maybeSingle();
+    if (existingItem) {
+      return {
+        success: false,
+        message: "Ce livre est déjà présent dans la liste.",
+      };
+    }
 
-  if (existingError) {
-    console.error("[lists] addBookToList existingError:", existingError);
+    // Trouver la dernière position
+    const lastPositionRow = await prisma.listItem.findFirst({
+      where: { listId },
+      orderBy: { position: "desc" },
+      select: { position: true },
+    });
+
+    const nextPosition = lastPositionRow?.position
+      ? lastPositionRow.position + 1
+      : 1;
+
+    await prisma.listItem.create({
+      data: {
+        listId,
+        bookId,
+        position: nextPosition,
+        note: note ? note.trim() : null,
+      },
+    });
+  } catch (error) {
+    console.error("[lists] addBookToList error:", error);
     return {
       success: false,
-      message: "Impossible de vérifier la liste.",
-    };
-  }
-
-  if (existingItem) {
-    return {
-      success: false,
-      message: "Ce livre est déjà présent dans la liste.",
-    };
-  }
-
-  const { data: lastPositionRow, error: positionError } = await supabase
-    .from("list_items")
-    .select("position")
-    .eq("list_id", listId)
-    .order("position", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (positionError) {
-    console.error("[lists] addBookToList positionError:", positionError);
-    return {
-      success: false,
-      message: "Impossible de déterminer la position du nouvel élément.",
-    };
-  }
-
-  const nextPosition = lastPositionRow?.position
-    ? lastPositionRow.position + 1
-    : 1;
-
-  const { error } = await supabase.from("list_items").insert({
-    id: randomUUID(),
-    list_id: listId,
-    book_id: bookId,
-    position: nextPosition,
-    note: note ? note.trim() : null,
-  });
-
-  if (error) {
-    console.error("[lists] addBookToList insert error:", error);
-    return {
-      success: false,
-      message: "Impossible d’ajouter ce livre pour le moment.",
+      message: "Impossible d'ajouter ce livre pour le moment.",
     };
   }
 
@@ -249,14 +216,24 @@ export const removeListItem = async (
     };
   }
 
-  const supabase = createSupabaseServiceClient();
-  const { error } = await supabase
-    .from("list_items")
-    .delete()
-    .eq("id", listItemId)
-    .eq("list_id", listId);
+  try {
+    // Vérifier que l'élément appartient bien à la liste avant de le supprimer
+    const item = await prisma.listItem.findUnique({
+      where: { id: listItemId },
+      select: { listId: true },
+    });
 
-  if (error) {
+    if (!item || item.listId !== listId) {
+      return {
+        success: false,
+        message: "Cet élément n'appartient pas à cette liste.",
+      };
+    }
+
+    await prisma.listItem.delete({
+      where: { id: listItemId },
+    });
+  } catch (error) {
     console.error("[lists] removeListItem error:", error);
     return {
       success: false,
@@ -291,14 +268,16 @@ export const leaveList = async (
     };
   }
 
-  const supabase = createSupabaseServiceClient();
-  const { error } = await supabase
-    .from("list_collaborators")
-    .delete()
-    .eq("list_id", listId)
-    .eq("user_id", userId);
-
-  if (error) {
+  try {
+    await prisma.listCollaborator.delete({
+      where: {
+        listId_userId: {
+          listId,
+          userId,
+        },
+      },
+    });
+  } catch (error) {
     console.error("[lists] leaveList error:", error);
     return {
       success: false,

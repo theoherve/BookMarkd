@@ -1,45 +1,11 @@
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 
-import { createSupabaseServiceClient } from "@/lib/supabase/service-client";
+import { prisma } from "@/lib/prisma/client";
 import { searchOpenLibrary } from "@/lib/open-library";
 import type { SearchBook, SearchResponse } from "@/features/search/types";
 
-type SupabaseTag = {
-  id: string;
-  name: string;
-  slug: string;
-};
-
-type SupabaseTagRelation = {
-  tag?: SupabaseTag | SupabaseTag[] | null;
-};
-
-type SupabaseSearchBook = {
-  id: string;
-  title: string;
-  author: string;
-  cover_url: string | null;
-  summary: string | null;
-  average_rating: number | null;
-  publication_year: number | null;
-  book_tags?: SupabaseTagRelation[] | null;
-};
-
-const extractTagFromRelation = (
-  relation: SupabaseTagRelation | null | undefined,
-): SupabaseTag | null => {
-  if (!relation?.tag) {
-    return null;
-  }
-
-  if (Array.isArray(relation.tag)) {
-    return relation.tag[0] ?? null;
-  }
-
-  return relation.tag;
-};
-
-const SUPABASE_LIMIT = 12;
+const DB_LIMIT = 12;
 const OPEN_LIBRARY_LIMIT = 6;
 
 export const dynamic = "force-dynamic";
@@ -52,100 +18,75 @@ export async function GET(request: Request) {
     url.searchParams.get("external") !== "false" && query.length > 0;
 
   try {
-    const supabase = createSupabaseServiceClient();
+    // Construire la condition de recherche
+    const whereCondition: Prisma.BookWhereInput = {};
 
-    const booksQuery = supabase
-      .from("books")
-      .select(
-        `
-          id,
-          title,
-          author,
-          cover_url,
-          summary,
-          average_rating,
-          publication_year,
-          book_tags:book_tags(
-            tag:tags(
-              id,
-              name,
-              slug
-            )
-          )
-        `,
-      )
-      .limit(SUPABASE_LIMIT)
-      .order("average_rating", { ascending: false });
-
+    // Recherche par titre ou auteur
     if (query) {
-      booksQuery.or(
-        `title.ilike.%${query}%,author.ilike.%${query}%`,
-      );
+      whereCondition.OR = [
+        { title: { contains: query, mode: "insensitive" } },
+        { author: { contains: query, mode: "insensitive" } },
+      ];
     }
 
-    const { data: supabaseBooksRaw, error } =
-      await booksQuery.returns<SupabaseSearchBook[]>();
-
-    if (error) {
-      throw error;
+    // Filtre par genre
+    if (genre) {
+      const normalizedGenre = genre.toLowerCase();
+      whereCondition.bookTags = {
+        some: {
+          tag: {
+            OR: [
+              { slug: genre },
+              { name: { contains: normalizedGenre, mode: "insensitive" } },
+            ],
+          },
+        },
+      };
     }
 
-    const filteredSupabaseBooks =
-      supabaseBooksRaw?.filter((book) => {
-        if (!genre) {
-          return true;
-        }
+    // Récupérer les livres avec Prisma
+    const dbBooks = await prisma.book.findMany({
+      where: whereCondition,
+      include: {
+        bookTags: {
+          include: {
+            tag: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        averageRating: "desc",
+      },
+      take: DB_LIMIT,
+    });
 
-        const tags = Array.isArray(book.book_tags) ? book.book_tags : [];
-        const normalizedGenre = genre.toLowerCase();
-
-        return tags.some((tagRelation) => {
-          const tag = extractTagFromRelation(tagRelation);
-          if (!tag) {
-            return false;
-          }
-
-          if (tag.slug === genre) {
-            return true;
-          }
-
-          return tag.name?.toLowerCase() === normalizedGenre;
-        });
-      }) ?? [];
-
-    const formattedSupabaseBooks: SearchBook[] = filteredSupabaseBooks.map(
-      (book) => ({
-        id: book.id,
-        title: book.title,
-        author: book.author,
-        coverUrl: book.cover_url,
-        summary: book.summary,
-        averageRating: book.average_rating,
-        publicationYear: book.publication_year,
-        tags:
-          book.book_tags
-            ?.map((relation) => {
-              const tag = extractTagFromRelation(relation);
-              if (!tag) {
-                return null;
-              }
-
-              return {
-                id: tag.id,
-                name: tag.name,
-                slug: tag.slug,
-              };
-            })
-            .filter((tag): tag is SupabaseTag => Boolean(tag)) ?? [],
-        source: "supabase",
-      }),
-    );
+    const formattedDbBooks: SearchBook[] = dbBooks.map((book) => ({
+      id: book.id,
+      title: book.title,
+      author: book.author,
+      coverUrl: book.coverUrl,
+      summary: book.summary,
+      averageRating: book.averageRating ? Number(book.averageRating) : null,
+      publicationYear: book.publicationYear,
+      tags: book.bookTags.map((bt) => ({
+        id: bt.tag.id,
+        name: bt.tag.name,
+        slug: bt.tag.slug,
+      })),
+      source: "supabase",
+    }));
 
     let externalBooks: SearchBook[] = [];
 
     if (
       includeExternal &&
-      formattedSupabaseBooks.length < SUPABASE_LIMIT
+      formattedDbBooks.length < DB_LIMIT
     ) {
       const openLibraryResults = await searchOpenLibrary(
         query,
@@ -165,8 +106,8 @@ export async function GET(request: Request) {
     }
 
     const payload: SearchResponse = {
-      books: [...formattedSupabaseBooks, ...externalBooks],
-      supabaseCount: formattedSupabaseBooks.length,
+      books: [...formattedDbBooks, ...externalBooks],
+      supabaseCount: formattedDbBooks.length,
       externalCount: externalBooks.length,
     };
 

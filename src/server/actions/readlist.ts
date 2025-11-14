@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { getCurrentSession } from "@/lib/auth/session";
-import { createSupabaseServiceClient } from "@/lib/supabase/service-client";
+import { prisma } from "@/lib/prisma/client";
 import { resolveSessionUserId } from "@/lib/auth/user";
 
 type AddBookToReadlistResult =
@@ -25,27 +25,35 @@ export const addBookToReadlist = async (
   }
 
   try {
-    const supabase = createSupabaseServiceClient();
-    const { error } = await supabase
-      .from("user_books")
-      .upsert(
-        [
-          {
-            user_id: userId,
-            book_id: bookId,
-            status: "to_read",
-            rating: null,
-            rated_at: null,
-          },
-        ],
-        {
-          onConflict: "user_id,book_id",
+    // Récupérer l'enregistrement existant pour préserver le rating s'il existe
+    const existing = await prisma.userBook.findUnique({
+      where: {
+        userId_bookId: {
+          userId,
+          bookId,
         },
-      );
+      },
+    });
 
-    if (error) {
-      throw error;
-    }
+    await prisma.userBook.upsert({
+      where: {
+        userId_bookId: {
+          userId,
+          bookId,
+        },
+      },
+      update: {
+        // Si le status existe déjà, on le préserve, sinon on met "to_read"
+        status: existing?.status ?? "to_read",
+        // Préserver le rating s'il existe
+        rating: existing?.rating ?? null,
+      },
+      create: {
+        userId,
+        bookId,
+        status: "to_read",
+      },
+    });
 
     revalidatePath("/"); // feed
     revalidatePath("/search");
@@ -56,7 +64,7 @@ export const addBookToReadlist = async (
     console.error("[readlist] addBookToReadlist error:", error);
     return {
       success: false,
-      message: "Impossible d’ajouter ce livre à votre readlist.",
+      message: "Impossible d'ajouter ce livre à votre readlist.",
     };
   }
 };

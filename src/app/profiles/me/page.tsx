@@ -80,13 +80,18 @@ const ProfilePage = async () => {
                 {dashboard.bio ?? "Ajoutez une bio depuis votre profil pour partager votre univers littéraire."}
               </p>
               <div className="flex flex-wrap gap-3">
-                <Button asChild>
+                <Button asChild className="text-primary-foreground!">
                   <Link href="/lists" aria-label="Gérer vos listes">
                     Gérer mes listes
                   </Link>
                 </Button>
                 <Button asChild variant="outline">
-                  <Link href="/feed" aria-label="Voir le fil d’actualité">
+                  <Link href="/lists/create" aria-label="Créer une nouvelle liste">
+                    Créer une liste
+                  </Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href="/feed" aria-label="Voir le fil d'actualité">
                     Voir le feed
                   </Link>
                 </Button>

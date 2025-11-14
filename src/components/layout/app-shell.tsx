@@ -31,19 +31,19 @@ const AppShell = ({ children }: AppShellProps) => {
     ? session.user.name.split(" ")[0]
     : null;
 
-  const handleOpenCreateList = () => {
+  const handleAddBook = () => {
     if (!session?.user) {
-      router.push("/login?callbackUrl=/lists/create");
+      router.push("/login?callbackUrl=/books/create");
       return;
     }
 
-    router.push("/lists/create");
+    router.push("/books/create");
   };
 
-  const handleCreateKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+  const handleAddBookKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      handleOpenCreateList();
+      handleAddBook();
     }
   };
 
@@ -118,11 +118,11 @@ const AppShell = ({ children }: AppShellProps) => {
               </>
             )}
             <Button
-              aria-label="Créer une nouvelle liste personnalisée"
-              onClick={handleOpenCreateList}
-              onKeyDown={handleCreateKeyDown}
+              aria-label="Ajouter un livre"
+              onClick={handleAddBook}
+              onKeyDown={handleAddBookKeyDown}
             >
-              Nouvelle liste
+              Ajouter un livre
             </Button>
           </div>
         </div>

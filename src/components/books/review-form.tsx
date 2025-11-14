@@ -15,7 +15,6 @@ const ReviewForm = ({ bookId }: ReviewFormProps) => {
   const [visibility, setVisibility] = useState<
     "public" | "friends" | "private"
   >("public");
-  const [title, setTitle] = useState("");
   const [spoiler, setSpoiler] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -26,13 +25,11 @@ const ReviewForm = ({ bookId }: ReviewFormProps) => {
       const result = await createReview({
         bookId,
         visibility,
-        title,
         content,
         spoiler,
       });
       if (result.success) {
         setContent("");
-        setTitle("");
         setFeedback("Avis publié ✅");
       } else {
         setFeedback(result.message);
@@ -45,17 +42,6 @@ const ReviewForm = ({ bookId }: ReviewFormProps) => {
       onSubmit={handleSubmit}
       className="space-y-4 rounded-3xl border border-border/60 bg-card/60 p-6"
     >
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-muted-foreground">
-          Titre
-        </label>
-        <Textarea
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          placeholder="Titre de votre avis (facultatif)"
-          rows={1}
-        />
-      </div>
       <div className="space-y-2">
         <label className="text-sm font-medium text-muted-foreground">
           Votre commentaire

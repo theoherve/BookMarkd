@@ -18,7 +18,14 @@ const LoginPage = async ({ searchParams }: LoginPageProps) => {
   const session = await getCurrentSession();
 
   if (session?.user) {
-    redirect("/");
+    const callbackUrlRaw = searchParams?.callbackUrl;
+    const callbackUrl = Array.isArray(callbackUrlRaw)
+      ? callbackUrlRaw[0]
+      : callbackUrlRaw;
+    const redirectUrl = callbackUrl && typeof callbackUrl === "string" && callbackUrl.startsWith("/")
+      ? callbackUrl
+      : "/";
+    redirect(redirectUrl);
   }
 
   const callbackUrlRaw = searchParams?.callbackUrl;

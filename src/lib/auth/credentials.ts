@@ -1,6 +1,5 @@
 import bcrypt from "bcryptjs";
-
-import { createSupabaseServiceClient } from "@/lib/supabase/service-client";
+import { prisma } from "@/lib/prisma/client";
 
 export const verifyPassword = async (
   plainPassword: string,
@@ -23,11 +22,11 @@ export const authenticateWithCredentials = async (
     return null;
   }
 
-  if (!user.password_hash) {
+  if (!user.passwordHash) {
     return null;
   }
 
-  const isValidPassword = await verifyPassword(password, user.password_hash);
+  const isValidPassword = await verifyPassword(password, user.passwordHash);
 
   if (!isValidPassword) {
     return null;
@@ -36,31 +35,47 @@ export const authenticateWithCredentials = async (
   return user;
 };
 
-type SupabaseUserRow = {
+type UserRow = {
   id: string;
   email: string;
-  password_hash: string;
-  display_name: string;
-  avatar_url: string | null;
+  passwordHash: string;
+  displayName: string;
+  avatarUrl: string | null;
   bio: string | null;
 };
 
-const fetchUserByEmail = async (email: string) => {
-  const supabase = createSupabaseServiceClient();
-  const { data, error } = await supabase
-    .from("users")
-    .select(
-      "id, email, password_hash, display_name, avatar_url, bio",
-    )
-    .eq("email", email)
-    .maybeSingle();
+const fetchUserByEmail = async (email: string): Promise<UserRow | null> => {
+  try {
+    const normalizedEmail = email.trim().toLowerCase();
+    
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+      select: {
+        id: true,
+        email: true,
+        passwordHash: true,
+        displayName: true,
+        avatarUrl: true,
+        bio: true,
+      },
+    });
 
-  if (error) {
-    console.error("Supabase error while fetching user:", error);
+    if (!user) {
+      return null;
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      passwordHash: user.passwordHash,
+      displayName: user.displayName,
+      avatarUrl: user.avatarUrl,
+      bio: user.bio,
+    };
+  } catch (error) {
+    console.error("Prisma error while fetching user:", error);
     return null;
   }
-
-  return data as SupabaseUserRow | null;
 };
 
 export type PublicUser = {
@@ -71,11 +86,11 @@ export type PublicUser = {
   bio?: string | null;
 };
 
-export const toPublicUser = (user: SupabaseUserRow): PublicUser => ({
+export const toPublicUser = (user: UserRow): PublicUser => ({
   id: user.id,
-  name: user.display_name,
+  name: user.displayName,
   email: user.email,
-  avatarUrl: user.avatar_url,
+  avatarUrl: user.avatarUrl,
   bio: user.bio,
 });
 

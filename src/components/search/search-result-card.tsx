@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
+import { formatRating } from "@/lib/utils";
+import { generateBookSlug } from "@/lib/slug";
 import {
   Card,
   CardContent,
@@ -66,7 +68,7 @@ const SearchResultCard = ({ book }: SearchResultCardProps) => {
             </Badge>
             {typeof book.averageRating === "number" ? (
               <Badge className="text-xs font-medium">
-                {book.averageRating.toFixed(1)} / 5
+                {formatRating(book.averageRating)} / 5
               </Badge>
             ) : null}
             {book.tags?.slice(0, 2).map((tag) => (
@@ -99,7 +101,7 @@ const SearchResultCard = ({ book }: SearchResultCardProps) => {
           <>
             <AddToReadlistButton bookId={book.id} />
             <Button variant="outline" asChild>
-              <Link href={`/books/${book.id}`} aria-label={`Voir ${book.title}`}>
+              <Link href={`/books/${generateBookSlug(book.title, book.author)}`} aria-label={`Voir ${book.title}`}>
                 Voir la fiche détaillée
               </Link>
             </Button>

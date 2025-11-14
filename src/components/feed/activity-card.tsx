@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -7,6 +8,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { formatRelativeTimeFromNow } from "@/lib/datetime";
+import { formatRating } from "@/lib/utils";
+import { generateBookSlug } from "@/lib/slug";
 import type { FeedActivity } from "@/features/feed/types";
 
 type ActivityCardProps = {
@@ -30,6 +33,8 @@ const ActivityCard = ({ item }: ActivityCardProps) => {
       : null;
 
   const occurredAtLabel = formatRelativeTimeFromNow(item.occurredAt);
+  // Pour les activités, on n'a pas toujours l'auteur, donc on ne peut pas générer le slug
+  // On rendra juste le titre cliquable si on a un bookId dans le payload (à implémenter plus tard)
 
   return (
     <Card
@@ -59,10 +64,10 @@ const ActivityCard = ({ item }: ActivityCardProps) => {
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <Badge
               variant="secondary"
-              aria-label={`Note ${item.rating.toFixed(1)} sur 5`}
+              aria-label={`Note ${formatRating(item.rating)} sur 5`}
               className="rounded-full px-3 py-1 text-muted-foreground"
             >
-              {item.rating.toFixed(1)}/5
+              {formatRating(item.rating)}/5
             </Badge>
             <span
               aria-hidden="true"
