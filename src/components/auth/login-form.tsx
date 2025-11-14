@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,6 @@ type LoginFormProps = {
 };
 
 const LoginForm = ({ callbackUrl }: LoginFormProps) => {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const safeCallbackUrl = useMemo(() => {
     // Priorité au prop callbackUrl, puis aux searchParams, puis "/"

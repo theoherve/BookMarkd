@@ -50,7 +50,7 @@ const BookCreateForm = () => {
       <CardHeader>
         <CardTitle className="text-2xl font-semibold text-foreground">Nouveau livre</CardTitle>
         <CardDescription className="text-sm text-muted-foreground">
-          Renseignez les informations du livre pour l'ajouter au catalogue.
+          Renseignez les informations du livre pour l&apos;ajouter au catalogue.
         </CardDescription>
       </CardHeader>
       <CardContent>

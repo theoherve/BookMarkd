@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -9,7 +8,6 @@ import {
 } from "@/components/ui/card";
 import { formatRelativeTimeFromNow } from "@/lib/datetime";
 import { formatRating } from "@/lib/utils";
-import { generateBookSlug } from "@/lib/slug";
 import type { FeedActivity } from "@/features/feed/types";
 
 type ActivityCardProps = {
