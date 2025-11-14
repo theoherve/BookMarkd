@@ -67,7 +67,7 @@ src/
 
 ## Configuration environnement
 
-- `DATABASE_URL` (PostgreSQL)
+- `BOOK_MARKD_POSTGRES_URL_NON_POOLING` (PostgreSQL)
 - `NEXTAUTH_SECRET`, `NEXTAUTH_URL`
 - `OPEN_LIBRARY_API_URL`
 - `SUPABASE_*` si usage Supabase client
@@ -79,5 +79,3 @@ src/
 - Vitest + React Testing Library.
 - Storybook pour composants UI.
 - CI (GitHub Actions) : lint, test, build, preview deploy.
-
-

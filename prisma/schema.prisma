@@ -24,6 +24,7 @@ model User {
   // Relations
   booksCreated    Book[]           @relation("BookCreator")
   userBooks       UserBook[]
+  topBooks        UserTopBook[]
   reviews         Review[]
   reviewLikes     ReviewLike[]
   reviewComments  ReviewComment[]
@@ -55,6 +56,7 @@ model Book {
   creator       User?         @relation("BookCreator", fields: [createdBy], references: [id], onDelete: SetNull)
   bookTags      BookTag[]
   userBooks     UserBook[]
+  topBooks      UserTopBook[]
   reviews       Review[]
   listItems     ListItem[]
   recommendations Recommendation[]
@@ -104,6 +106,23 @@ model UserBook {
 
   @@unique([userId, bookId])
   @@map("user_books")
+}
+
+model UserTopBook {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  bookId    String   @map("book_id") @db.Uuid
+  position  Int      // 1, 2, or 3
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, position])
+  @@unique([userId, bookId])
+  @@map("user_top_books")
 }
 
 model Review {

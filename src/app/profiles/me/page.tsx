@@ -9,6 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { getProfileDashboard } from "@/features/profile/server/get-profile-dashboard";
+import TopBooksSelector from "@/components/profile/top-books-selector";
+import RecentActivitiesSection from "@/components/profile/recent-activities-section";
+import ReadListSection from "@/components/profile/read-list-section";
+import ProfileEditButton from "@/components/profile/profile-edit-button";
 
 import { getCurrentSession } from "@/lib/auth/session";
 import { resolveSessionUserId } from "@/lib/auth/user";
@@ -52,9 +56,17 @@ const ProfilePage = async () => {
     <AppShell>
       <div className="space-y-10">
         <header className="flex flex-col gap-6 rounded-2xl border border-border/60 bg-card/80 p-8 shadow-sm">
-          <Badge className="w-fit bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
-            Profil
-          </Badge>
+          <div className="flex items-center justify-between">
+            <Badge className="w-fit bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+              Profil
+            </Badge>
+            <ProfileEditButton
+              initialDisplayName={dashboard.displayName}
+              initialBio={dashboard.bio}
+              initialAvatarUrl={dashboard.avatarUrl}
+              avatarInitials={avatarInitials}
+            />
+          </div>
           <div className="flex flex-col gap-6 md:flex-row md:items-center">
             <div className="relative h-24 w-24 overflow-hidden rounded-full border-2 border-border bg-muted">
               {dashboard.avatarUrl ? (
@@ -104,6 +116,15 @@ const ProfilePage = async () => {
             </div>
           </div>
         </header>
+
+        <section className="space-y-6">
+          <TopBooksSelector initialTopBooks={dashboard.topBooks} />
+        </section>
+
+        <section className="space-y-6 md:grid md:grid-cols-[1fr_1fr] md:gap-6 md:space-y-0">
+          <RecentActivitiesSection activities={dashboard.recentActivities} />
+          <ReadListSection readList={dashboard.readList} />
+        </section>
 
         <section className="grid gap-4 md:grid-cols-3">
           <Card className="border-border/60 bg-card/80 backdrop-blur">
@@ -183,7 +204,7 @@ const ProfilePage = async () => {
             <CardContent className="space-y-3 text-sm text-muted-foreground">
               <p>• Invitez un ami à collaborer sur une liste partagée.</p>
               <p>• Ajoutez une note personnalisée à vos lectures en cours.</p>
-              <p>• Filtrez le feed par recommandations “Similaires” pour découvrir des pépites.</p>
+              <p>• Filtrez le feed par recommandations &quot;Similaires&quot; pour découvrir des pépites.</p>
             </CardContent>
           </Card>
         </section>
