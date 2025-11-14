@@ -4,6 +4,41 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service-client";
 import { searchOpenLibrary } from "@/lib/open-library";
 import type { SearchBook, SearchResponse } from "@/features/search/types";
 
+type SupabaseTag = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
+type SupabaseTagRelation = {
+  tag?: SupabaseTag | SupabaseTag[] | null;
+};
+
+type SupabaseSearchBook = {
+  id: string;
+  title: string;
+  author: string;
+  cover_url: string | null;
+  summary: string | null;
+  average_rating: number | null;
+  publication_year: number | null;
+  book_tags?: SupabaseTagRelation[] | null;
+};
+
+const extractTagFromRelation = (
+  relation: SupabaseTagRelation | null | undefined,
+): SupabaseTag | null => {
+  if (!relation?.tag) {
+    return null;
+  }
+
+  if (Array.isArray(relation.tag)) {
+    return relation.tag[0] ?? null;
+  }
+
+  return relation.tag;
+};
+
 const SUPABASE_LIMIT = 12;
 const OPEN_LIBRARY_LIMIT = 6;
 
@@ -48,7 +83,8 @@ export async function GET(request: Request) {
       );
     }
 
-    const { data: supabaseBooksRaw, error } = await booksQuery;
+    const { data: supabaseBooksRaw, error } =
+      await booksQuery.returns<SupabaseSearchBook[]>();
 
     if (error) {
       throw error;
@@ -60,15 +96,21 @@ export async function GET(request: Request) {
           return true;
         }
 
-        const tags = Array.isArray(book.book_tags)
-          ? book.book_tags
-          : [];
+        const tags = Array.isArray(book.book_tags) ? book.book_tags : [];
+        const normalizedGenre = genre.toLowerCase();
 
-        return tags.some(
-          (tagRelation) =>
-            tagRelation?.tag?.slug === genre ||
-            tagRelation?.tag?.name?.toLowerCase() === genre.toLowerCase(),
-        );
+        return tags.some((tagRelation) => {
+          const tag = extractTagFromRelation(tagRelation);
+          if (!tag) {
+            return false;
+          }
+
+          if (tag.slug === genre) {
+            return true;
+          }
+
+          return tag.name?.toLowerCase() === normalizedGenre;
+        });
       }) ?? [];
 
     const formattedSupabaseBooks: SearchBook[] = filteredSupabaseBooks.map(
@@ -81,11 +123,20 @@ export async function GET(request: Request) {
         averageRating: book.average_rating,
         publicationYear: book.publication_year,
         tags:
-          book.book_tags?.map((relation) => ({
-            id: relation.tag?.id ?? "",
-            name: relation.tag?.name ?? "",
-            slug: relation.tag?.slug ?? "",
-          })) ?? [],
+          book.book_tags
+            ?.map((relation) => {
+              const tag = extractTagFromRelation(relation);
+              if (!tag) {
+                return null;
+              }
+
+              return {
+                id: tag.id,
+                name: tag.name,
+                slug: tag.slug,
+              };
+            })
+            .filter((tag): tag is SupabaseTag => Boolean(tag)) ?? [],
         source: "supabase",
       }),
     );

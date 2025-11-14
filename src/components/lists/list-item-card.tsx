@@ -20,6 +20,7 @@ type ListItemCardProps = {
 const ListItemCard = ({ listId, item, canEdit, positionLabel }: ListItemCardProps) => {
   const [isPending, startTransition] = useTransition();
   const hasAverageRating = typeof item.book.averageRating === "number";
+  const averageRating = hasAverageRating ? item.book.averageRating : null;
 
   const handleRemove = () => {
     startTransition(async () => {
@@ -50,7 +51,9 @@ const ListItemCard = ({ listId, item, canEdit, positionLabel }: ListItemCardProp
           {item.book.author}
         </CardDescription>
         <CardContent className="p-0 text-sm text-muted-foreground">
-          {hasAverageRating ? `Note moyenne : ${item.book.averageRating.toFixed(1)}/5` : "Pas encore de note collective."}
+          {hasAverageRating && averageRating !== null
+            ? `Note moyenne : ${averageRating.toFixed(1)}/5`
+            : "Pas encore de note collective."}
         </CardContent>
         {item.note ? (
           <p className="mt-2 rounded-md bg-muted/70 px-3 py-2 text-sm text-foreground">{item.note}</p>

@@ -8,6 +8,127 @@ import type {
 } from "@/features/feed/types";
 import { getCurrentSession } from "@/lib/auth/session";
 
+type SupabaseUser = {
+  id: string;
+  display_name: string;
+  avatar_url: string | null;
+};
+
+type SupabaseActivity = {
+  id: string;
+  type: string;
+  payload: Record<string, unknown> | null;
+  created_at: string;
+  user?: SupabaseUser | SupabaseUser[] | null;
+};
+
+type SupabaseFriendBook = {
+  id: string;
+  status: "to_read" | "reading" | "finished";
+  rating: number | null;
+  updated_at: string;
+  book?:
+    | {
+        id: string;
+        title: string;
+        author: string;
+        cover_url: string | null;
+        average_rating: number | null;
+      }
+    | Array<{
+        id: string;
+        title: string;
+        author: string;
+        cover_url: string | null;
+        average_rating: number | null;
+      }>
+    | null;
+  user?: SupabaseUser | SupabaseUser[] | null;
+};
+
+type SupabaseRecommendation = {
+  id: string;
+  source: string;
+  score: number | null;
+  metadata: Record<string, unknown> | null;
+  user_id: string;
+  book?:
+    | {
+        id: string;
+        title: string;
+        author: string;
+        cover_url: string | null;
+      }
+    | Array<{
+        id: string;
+        title: string;
+        author: string;
+        cover_url: string | null;
+      }>
+    | null;
+};
+
+type SupabaseFriendEntry = {
+  book_id: string | null;
+  status: "to_read" | "reading" | "finished" | null;
+  user?:
+    | Pick<SupabaseUser, "id" | "display_name">
+    | Array<Pick<SupabaseUser, "id" | "display_name">>
+    | null;
+};
+
+type SupabaseRecommendationTagRelation = {
+  book_id: string | null;
+  tag?:
+    | {
+        name: string | null;
+      }
+    | Array<{
+        name: string | null;
+      }>
+    | null;
+};
+
+const getFirstRelation = <T>(
+  value: T | T[] | null | undefined,
+): T | null => {
+  if (!value) {
+    return null;
+  }
+
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value;
+};
+
+const ACTIVITY_TYPES: FeedActivity["type"][] = [
+  "rating",
+  "review",
+  "status_change",
+  "list_update",
+  "follow",
+];
+
+const isActivityType = (value: string): value is FeedActivity["type"] => {
+  return ACTIVITY_TYPES.includes(value as FeedActivity["type"]);
+};
+
+const RECOMMENDATION_SOURCES: FeedRecommendation["source"][] = [
+  "friends",
+  "global",
+  "similar",
+];
+
+const isRecommendationSource = (
+  value: string,
+): value is FeedRecommendation["source"] => {
+  return RECOMMENDATION_SOURCES.includes(
+    value as FeedRecommendation["source"],
+  );
+};
+
 const ACTIVITY_LIMIT = 6;
 const FRIENDS_BOOKS_LIMIT = 6;
 const RECOMMENDATIONS_LIMIT = 6;
@@ -115,9 +236,9 @@ export async function GET() {
     }
 
     const [activities, friendsBooks, recommendations] = await Promise.all([
-      activitiesQuery,
-      friendsBooksQuery,
-      recommendationsQuery,
+      activitiesQuery.returns<SupabaseActivity[]>(),
+      friendsBooksQuery.returns<SupabaseFriendBook[]>(),
+      recommendationsQuery.returns<SupabaseRecommendation[]>(),
     ]);
 
     const recommendationBookIds =
@@ -158,25 +279,28 @@ export async function GET() {
           `,
         )
         .in("user_id", followingIds)
-        .in("book_id", recommendationBookIds);
+        .in("book_id", recommendationBookIds)
+        .returns<SupabaseFriendEntry[]>();
 
       friendEntries?.forEach((entry) => {
         const bookId = entry.book_id;
         if (!bookId) {
           return;
         }
-        const friendName = Array.isArray(entry.user)
-          ? entry.user[0]?.display_name
-          : entry.user?.display_name;
+
+        const user = getFirstRelation(entry.user);
+        const friendName = user?.display_name ?? null;
         if (!friendName) {
           return;
         }
+
         const statusLabel =
           entry.status === "finished"
             ? `${friendName} l’a terminé`
             : entry.status === "reading"
               ? `${friendName} est en cours de lecture`
               : `${friendName} l’a ajouté à sa liste`;
+
         const existing = friendContextByBook.get(bookId);
         if (existing) {
           existing.names.push(friendName);
@@ -184,13 +308,14 @@ export async function GET() {
           if (existing.highlights.length < 3) {
             existing.highlights.push(statusLabel);
           }
-        } else {
-          friendContextByBook.set(bookId, {
-            names: [friendName],
-            count: 1,
-            highlights: [statusLabel],
-          });
+          return;
         }
+
+        friendContextByBook.set(bookId, {
+          names: [friendName],
+          count: 1,
+          highlights: [statusLabel],
+        });
       });
     }
 
@@ -204,47 +329,56 @@ export async function GET() {
             tag:tags(name)
           `,
         )
-        .in("book_id", recommendationBookIds);
+        .in("book_id", recommendationBookIds)
+        .returns<SupabaseRecommendationTagRelation[]>();
 
       tagRelations?.forEach((relation) => {
         const bookId = relation.book_id;
-        const tagName = relation.tag?.name;
+        const tag = getFirstRelation(relation.tag);
+        const tagName = tag?.name ?? null;
         if (!bookId || !tagName) {
           return;
         }
+
         const existing = tagsByBook.get(bookId);
         if (existing) {
           existing.push(tagName);
-        } else {
-          tagsByBook.set(bookId, [tagName]);
+          return;
         }
+
+        tagsByBook.set(bookId, [tagName]);
       });
     }
 
     const formattedActivities: FeedActivity[] =
       activities.data?.map((item) => {
-        const user = Array.isArray(item.user) ? item.user[0] : item.user;
+        const user = getFirstRelation(item.user);
+        const payload = item.payload ?? {};
+        const normalizedPayload =
+          typeof payload === "object" && payload !== null ? payload : {};
 
         return {
           id: item.id,
-          type: item.type,
+          type: isActivityType(item.type) ? item.type : "list_update",
           userName: user?.display_name ?? "Lectrice anonyme",
           userAvatarUrl: user?.avatar_url ?? null,
-          bookTitle: item.payload?.book_title ?? null,
+          bookTitle:
+            (normalizedPayload.book_title as string | null | undefined) ?? null,
           note:
-            item.payload?.note ??
-            item.payload?.review_snippet ??
-            item.payload?.status_note ??
+            (normalizedPayload.note as string | null | undefined) ??
+            (normalizedPayload.review_snippet as string | null | undefined) ??
+            (normalizedPayload.status_note as string | null | undefined) ??
             null,
-          rating: item.payload?.rating ?? null,
+          rating:
+            (normalizedPayload.rating as number | null | undefined) ?? null,
           occurredAt: item.created_at,
         };
       }) ?? [];
 
     const formattedFriendsBooks: FeedFriendBook[] =
       friendsBooks.data?.map((item) => {
-        const user = Array.isArray(item.user) ? item.user[0] : item.user;
-        const book = Array.isArray(item.book) ? item.book[0] : item.book;
+        const user = getFirstRelation(item.user);
+        const book = getFirstRelation(item.book);
 
         return {
           id: item.id,
@@ -262,11 +396,15 @@ export async function GET() {
 
     const formattedRecommendations: FeedRecommendation[] =
       recommendations.data?.map((item) => {
-        const book = Array.isArray(item.book) ? item.book[0] : item.book;
+        const book = getFirstRelation(item.book);
         const friendContext = book?.id
           ? friendContextByBook.get(book.id)
           : undefined;
         const tags = book?.id ? tagsByBook.get(book.id) ?? [] : [];
+
+        const metadata = item.metadata ?? {};
+        const normalizedMetadata =
+          typeof metadata === "object" && metadata !== null ? metadata : {};
 
         return {
           id: item.id,
@@ -275,11 +413,15 @@ export async function GET() {
           author: book?.author ?? "Autrice inconnue",
           coverUrl: book?.cover_url ?? null,
           reason:
-            item.metadata?.reason ??
-            item.metadata?.explanation ??
-            item.metadata?.match ??
-            null,
-          source: item.source,
+            (normalizedMetadata.reason as string | null | undefined) ??
+            (normalizedMetadata.explanation as string | null | undefined) ??
+            (normalizedMetadata.match as string | null | undefined) ??
+            (friendContext
+              ? `${friendContext.names.slice(0, 2).join(", ")} l’a recommandé`
+              : null),
+          source: isRecommendationSource(item.source)
+            ? item.source
+            : "global",
           score: Number(item.score ?? 0),
           friendNames: friendContext?.names ?? [],
           friendCount: friendContext?.count ?? 0,

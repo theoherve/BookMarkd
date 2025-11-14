@@ -2,7 +2,61 @@ import { notFound } from "next/navigation";
 
 import { createSupabaseServiceClient } from "@/lib/supabase/service-client";
 
-import type { ListDetail, ViewerRole } from "../types";
+import type { CollaboratorRole, ListDetail, ViewerRole } from "../types";
+
+type SupabaseUser = {
+  id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+};
+
+type SupabaseCollaborator = {
+  user_id: string;
+  role: CollaboratorRole;
+  user?: SupabaseUser | SupabaseUser[] | null;
+};
+
+type SupabaseBook = {
+  id: string;
+  title: string;
+  author: string;
+  cover_url: string | null;
+  average_rating: number | null;
+};
+
+type SupabaseListItem = {
+  id: string;
+  position: number;
+  note: string | null;
+  book?: SupabaseBook | SupabaseBook[] | null;
+};
+
+type SupabaseListDetail = {
+  id: string;
+  title: string;
+  description: string | null;
+  visibility: ListDetail["visibility"];
+  is_collaborative: boolean | null;
+  owner_id: string;
+  updated_at: string;
+  owner?: SupabaseUser | SupabaseUser[] | null;
+  list_collaborators?: SupabaseCollaborator[] | null;
+  list_items?: SupabaseListItem[] | null;
+};
+
+const getFirstRelation = <T>(
+  value: T | T[] | null | undefined,
+): T | null => {
+  if (!value) {
+    return null;
+  }
+
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value;
+};
 
 const inferViewerRole = (
   ownerId: string,
@@ -68,7 +122,8 @@ export const getListDetail = async (
       `,
     )
     .eq("id", listId)
-    .maybeSingle();
+    .maybeSingle()
+    .returns<SupabaseListDetail>();
 
   if (error) {
     throw error;
@@ -85,7 +140,7 @@ export const getListDetail = async (
         viewerId,
         rawCollaborators.map((entry) => ({
           user_id: entry.user_id,
-          role: entry.role,
+          role: entry.role as ViewerRole,
         })),
       )
     : null;
@@ -94,6 +149,41 @@ export const getListDetail = async (
     notFound();
   }
 
+  const owner = getFirstRelation(data.owner);
+  const collaborators = rawCollaborators.map((entry) => {
+    const collaboratorUser = getFirstRelation(entry.user);
+    return {
+      userId: collaboratorUser?.id ?? entry.user_id,
+      displayName: collaboratorUser?.display_name ?? "Collaborateur·rice",
+      avatarUrl: collaboratorUser?.avatar_url ?? null,
+      role: entry.role,
+    };
+  });
+
+  const items = (data.list_items ?? [])
+    .map((item) => {
+      const book = getFirstRelation(item.book);
+      if (!book) {
+        return null;
+      }
+
+      return {
+        id: item.id,
+        position: item.position,
+        note: item.note ?? null,
+        book: {
+          id: book.id,
+          title: book.title,
+          author: book.author,
+          coverUrl: book.cover_url ?? null,
+          averageRating:
+            typeof book.average_rating === "number" ? book.average_rating : null,
+        },
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => Boolean(item))
+    .sort((left, right) => left.position - right.position);
+
   return {
     id: data.id,
     title: data.title,
@@ -101,32 +191,13 @@ export const getListDetail = async (
     visibility: data.visibility,
     isCollaborative: data.is_collaborative ?? false,
     owner: {
-      id: data.owner?.id ?? data.owner_id,
-      displayName: data.owner?.display_name ?? "Utilisateur·rice",
-      avatarUrl: data.owner?.avatar_url ?? null,
+      id: owner?.id ?? data.owner_id,
+      displayName: owner?.display_name ?? "Utilisateur·rice",
+      avatarUrl: owner?.avatar_url ?? null,
     },
-    collaborators: rawCollaborators.map((entry) => ({
-      userId: entry.user?.id ?? entry.user_id,
-      displayName: entry.user?.display_name ?? "Collaborateur·rice",
-      avatarUrl: entry.user?.avatar_url ?? null,
-      role: entry.role,
-    })),
+    collaborators,
     viewerRole: viewerRole ?? "viewer",
-    items: (data.list_items ?? [])
-      .filter((item) => item.book !== null)
-      .map((item) => ({
-        id: item.id,
-        position: item.position,
-        note: item.note ?? null,
-        book: {
-          id: item.book.id,
-          title: item.book.title,
-          author: item.book.author,
-          coverUrl: item.book.cover_url ?? null,
-          averageRating: typeof item.book.average_rating === "number" ? item.book.average_rating : null,
-        },
-      }))
-      .sort((left, right) => left.position - right.position),
+    items,
     updatedAt: data.updated_at,
   };
 };
