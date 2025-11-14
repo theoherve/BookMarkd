@@ -7,16 +7,24 @@ import type { SearchResponse } from "@/features/search/types";
 type SearchParams = {
   q: string;
   genre?: string;
+  minRating?: number;
+  readingStatus?: "to_read" | "reading" | "finished";
   includeExternal?: boolean;
 };
 
-const buildSearchPath = ({ q, genre, includeExternal = true }: SearchParams) => {
+const buildSearchPath = ({ q, genre, minRating, readingStatus, includeExternal = true }: SearchParams) => {
   const params = new URLSearchParams();
   if (q) {
     params.set("q", q);
   }
   if (genre) {
     params.set("genre", genre);
+  }
+  if (minRating !== undefined && minRating > 0) {
+    params.set("minRating", minRating.toString());
+  }
+  if (readingStatus) {
+    params.set("readingStatus", readingStatus);
   }
   if (includeExternal === false) {
     params.set("external", "false");

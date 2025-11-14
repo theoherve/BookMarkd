@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import AddListItemForm from "@/components/lists/add-list-item-form";
 import CollaboratorsStack from "@/components/lists/collaborators-stack";
 import ListItemCard from "@/components/lists/list-item-card";
+import ShareListButton from "@/components/lists/share-list-button";
 
 import { getListDetail } from "@/features/lists/server/get-list-detail";
 import { getAvailableBooks } from "@/features/lists/server/get-available-books";
@@ -54,7 +55,10 @@ const ListDetailPage = async ({ params }: ListDetailPageProps) => {
                 : "Consultation"}
           </span>
         </div>
-        <h1 className="text-3xl font-semibold text-foreground">{detail.title}</h1>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h1 className="text-3xl font-semibold text-foreground">{detail.title}</h1>
+          <ShareListButton listId={detail.id} listTitle={detail.title} />
+        </div>
         {detail.description ? (
           <p className="text-sm text-muted-foreground">{detail.description}</p>
         ) : (

@@ -20,6 +20,8 @@ const SearchClient = () => {
   const [query, setQuery] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [selectedGenre, setSelectedGenre] = useState<string | undefined>();
+  const [minRating, setMinRating] = useState<number | undefined>();
+  const [readingStatus, setReadingStatus] = useState<"to_read" | "reading" | "finished" | undefined>();
   const [includeExternal, setIncludeExternal] = useState(true);
 
   const { data: tagsData } = useTagsQuery();
@@ -34,9 +36,11 @@ const SearchClient = () => {
     {
       q: submittedQuery,
       genre: selectedGenre,
+      minRating,
+      readingStatus,
       includeExternal,
     },
-    Boolean((submittedQuery || selectedGenre) && activeTab === "books"),
+    Boolean((submittedQuery || selectedGenre || minRating || readingStatus) && activeTab === "books"),
   );
 
   const {
@@ -71,11 +75,22 @@ const SearchClient = () => {
       const tag = tagsData?.tags.find((item) => item.slug === selectedGenre);
       filters.push(tag?.name ?? selectedGenre);
     }
+    if (minRating && minRating > 0) {
+      filters.push(`Note min: ${minRating}/5`);
+    }
+    if (readingStatus) {
+      const statusLabels = {
+        to_read: "À lire",
+        reading: "En cours",
+        finished: "Terminé",
+      };
+      filters.push(`État: ${statusLabels[readingStatus]}`);
+    }
     if (!includeExternal) {
       filters.push("Catalogue BookMarkd uniquement");
     }
     return filters;
-  }, [selectedGenre, includeExternal, tagsData?.tags]);
+  }, [selectedGenre, minRating, readingStatus, includeExternal, tagsData?.tags]);
 
   return (
     <div className="space-y-8">
@@ -162,6 +177,52 @@ const SearchClient = () => {
                       {tag.name}
                     </option>
                   ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label
+                  htmlFor="minRating"
+                  className="text-sm font-medium text-muted-foreground"
+                >
+                  Note min.
+                </label>
+                <select
+                  id="minRating"
+                  className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  value={minRating ?? ""}
+                  onChange={(event) =>
+                    setMinRating(event.target.value ? parseFloat(event.target.value) : undefined)
+                  }
+                >
+                  <option value="">Toutes</option>
+                  <option value="1">1+ / 5</option>
+                  <option value="2">2+ / 5</option>
+                  <option value="3">3+ / 5</option>
+                  <option value="4">4+ / 5</option>
+                  <option value="4.5">4.5+ / 5</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label
+                  htmlFor="readingStatus"
+                  className="text-sm font-medium text-muted-foreground"
+                >
+                  État
+                </label>
+                <select
+                  id="readingStatus"
+                  className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  value={readingStatus ?? ""}
+                  onChange={(event) =>
+                    setReadingStatus(event.target.value as "to_read" | "reading" | "finished" | undefined || undefined)
+                  }
+                >
+                  <option value="">Tous</option>
+                  <option value="to_read">À lire</option>
+                  <option value="reading">En cours</option>
+                  <option value="finished">Terminé</option>
                 </select>
               </div>
 

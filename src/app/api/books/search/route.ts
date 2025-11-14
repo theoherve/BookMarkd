@@ -14,6 +14,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const query = url.searchParams.get("q") ?? "";
   const genre = url.searchParams.get("genre") ?? "";
+  const minRating = url.searchParams.get("minRating");
   const includeExternal =
     url.searchParams.get("external") !== "false" && query.length > 0;
 
@@ -43,6 +44,20 @@ export async function GET(request: Request) {
         },
       };
     }
+
+    // Filtre par note minimale
+    if (minRating) {
+      const ratingValue = parseFloat(minRating);
+      if (!isNaN(ratingValue) && ratingValue >= 0 && ratingValue <= 5) {
+        whereCondition.averageRating = {
+          gte: ratingValue,
+        };
+      }
+    }
+
+    // Filtre par état de lecture (nécessite une jointure avec userBooks)
+    // Note: Ce filtre nécessite un userId, donc on ne peut pas l'appliquer directement ici
+    // On le gérera côté client en filtrant les résultats
 
     // Récupérer les livres avec Prisma
     const dbBooks = await prisma.book.findMany({
