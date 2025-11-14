@@ -1,36 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BookMarkd
 
-## Getting Started
+BookMarkd est une application Next.js 14 construite autour de TailwindCSS 4 et shadcn/ui pour offrir un “Letterboxd des livres”. Elle permet de suivre ses lectures, voir celles de ses amis, noter, commenter et recevoir des recommandations contextuelles.
 
-First, run the development server:
+## Démarrage rapide
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+pnpm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Ensuite, rendez-vous sur [http://localhost:3000](http://localhost:3000) pour explorer le feed social de démonstration.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Documentation
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `docs/README.md` – vision produit & roadmap
+- `docs/ARCHITECTURE.md` – architecture applicative & choix techniques
+- `docs/COMPONENTS.md` – catalogue des composants UI
+- `docs/PAGES.md` – plan des routes Next.js
+- `docs/API.md` – design des endpoints
+- `docs/DB_SCHEMA.md` – schéma de base de données
+- `docs/task-list/TASKS.md` – suivi opérationnel des chantiers
+- `supabase/schema.sql` – création du schéma Postgres (tables + RLS)
+- `supabase/seed.sql` – données de démonstration (utilisateur test)
+- `docs/task-list/TASKS.md` – suivi opérationnel des chantiers
 
-## Learn More
+## Stack
 
-To learn more about Next.js, take a look at the following resources:
+- Next.js 16 (App Router, Server Components, Server Actions)
+- TypeScript strict
+- TailwindCSS 4 + shadcn/ui
+- Zustand & TanStack Query (mise en place planifiée)
+- Supabase / PostgreSQL + Drizzle (à intégrer)
+- NextAuth (auth email + OAuth futur), Stripe (abonnement) en option
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Authentification
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Page de connexion : `/login` (provider Credentials NextAuth).
+- Identifiants démo : `camille@example.com` / `bookmarkd123`.
+- Variables d’environnement requises :
 
-## Deploy on Vercel
+```bash
+NEXTAUTH_SECRET="openssl rand -base64 32"
+NEXTAUTH_URL="http://localhost:3000"
+SUPABASE_URL="https://<your-project>.supabase.co"
+SUPABASE_SERVICE_ROLE_KEY="..."
+NEXT_PUBLIC_SUPABASE_URL="https://<your-project>.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="..."
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Lancer `supabase/schema.sql` dans l’éditeur SQL Supabase pour créer les tables + policies de base.
+- Exécuter `supabase/seed.sql` pour créer le compte démo (mot de passe hashé).
+- RLS : prévoir des policies adaptées (ex. accès lecture publique sur les livres, restrictions par user_id).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Scripts utiles
+
+```bash
+pnpm run dev     # serveur de développement
+pnpm run lint    # linting ESLint
+pnpm run build   # build de production
+pnpm run start   # serveur Next.js en mode production
+```
+
+Prochaines étapes : mettre en place l’authentification, connecter la base de données décrite dans `docs/DB_SCHEMA.md` et brancher les données réelles sur le feed.
