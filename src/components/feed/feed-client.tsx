@@ -11,7 +11,19 @@ import { Button } from "@/components/ui/button";
 import { useFeedQuery } from "@/features/feed/api/use-feed-query";
 import { useFeedFiltersStore } from "@/stores/feed-filters";
 
-const FeedClient = () => {
+type FeedClientProps = {
+  limit?: number;
+};
+
+const applyLimit = <T,>(items: T[], limit?: number) => {
+  if (!limit) {
+    return items;
+  }
+
+  return items.slice(0, limit);
+};
+
+const FeedClient = ({ limit }: FeedClientProps = {}) => {
   const { data, isLoading, isError, refetch, isRefetching } = useFeedQuery();
   const { recommendationSource, setRecommendationSource } =
     useFeedFiltersStore();
@@ -25,10 +37,13 @@ const FeedClient = () => {
       return data.recommendations;
     }
 
-    return data.recommendations.filter(
+    return applyLimit(
+      data.recommendations.filter(
       (item) => item.source === recommendationSource,
+      ),
+      limit,
     );
-  }, [data, recommendationSource]);
+  }, [data, limit, recommendationSource]);
 
   if (isLoading) {
     return (
@@ -93,7 +108,7 @@ const FeedClient = () => {
           {data.activities.length === 0 ? (
             <EmptyState message="Aucune activité récente. Ajoutez vos premières notes !" />
           ) : (
-            data.activities.map((activity) => (
+            applyLimit(data.activities, limit).map((activity) => (
               <ActivityCard key={activity.id} item={activity} />
             ))
           )}
@@ -106,7 +121,7 @@ const FeedClient = () => {
           {data.friendsBooks.length === 0 ? (
             <EmptyState message="Ajoutez des ami·e·s pour suivre leurs lectures." />
           ) : (
-            data.friendsBooks.map((book) => (
+            applyLimit(data.friendsBooks, limit).map((book) => (
               <BookFeedCard key={book.id} item={book} />
             ))
           )}

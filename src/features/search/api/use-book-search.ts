@@ -1,0 +1,51 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+
+import type { SearchResponse } from "@/features/search/types";
+
+type SearchParams = {
+  q: string;
+  genre?: string;
+  includeExternal?: boolean;
+};
+
+const buildSearchPath = ({ q, genre, includeExternal = true }: SearchParams) => {
+  const params = new URLSearchParams();
+  if (q) {
+    params.set("q", q);
+  }
+  if (genre) {
+    params.set("genre", genre);
+  }
+  if (includeExternal === false) {
+    params.set("external", "false");
+  }
+
+  const queryString = params.toString();
+  return queryString ? `/api/books/search?${queryString}` : "/api/books/search";
+};
+
+const fetchBookSearch = async (params: SearchParams): Promise<SearchResponse> => {
+  const response = await fetch(buildSearchPath(params), {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Erreur lors de la recherche de livres.");
+  }
+
+  return response.json();
+};
+
+export const useBookSearch = (params: SearchParams, enabled: boolean) => {
+  return useQuery({
+    queryKey: ["book-search", params],
+    queryFn: () => fetchBookSearch(params),
+    enabled,
+  });
+};
+

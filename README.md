@@ -35,6 +35,7 @@ Ensuite, rendez-vous sur [http://localhost:3000](http://localhost:3000) pour exp
 ## Authentification
 
 - Page de connexion : `/login` (provider Credentials NextAuth).
+- Page d’inscription : `/signup` (création comptes credentials).
 - Identifiants démo : `camille@example.com` / `bookmarkd123`.
 - Variables d’environnement requises :
 
@@ -50,6 +51,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY="..."
 - Lancer `supabase/schema.sql` dans l’éditeur SQL Supabase pour créer les tables + policies de base.
 - Exécuter `supabase/seed.sql` pour créer le compte démo (mot de passe hashé).
 - RLS : prévoir des policies adaptées (ex. accès lecture publique sur les livres, restrictions par user_id).
+- Voir `docs/README.md` pour la roadmap produit et `docs/GOOGLE_BOOKS_MIGRATION.md` pour l’étude de bascule Google Books.
 
 ## Scripts utiles
 
@@ -58,6 +60,8 @@ pnpm run dev     # serveur de développement
 pnpm run lint    # linting ESLint
 pnpm run build   # build de production
 pnpm run start   # serveur Next.js en mode production
+pnpm test        # tests unitaires (Vitest + RTL)
+pnpm test:ui     # tests end-to-end Playwright (nécessite l'app en local)
 ```
 
-Prochaines étapes : étendre le schéma Supabase (commentaires, listes collaboratives), brancher la recherche avancée et sécuriser les mutations (Server Actions + policies RLS affinées).
+Prochaines étapes : enrichir encore les listes collaboratives (permissions avancées), connecter la recherche Open Library aux imports automatiques et renforcer la couverture de tests sur les flux critiques.

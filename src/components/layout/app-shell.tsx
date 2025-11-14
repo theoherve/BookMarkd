@@ -31,7 +31,7 @@ const AppShell = ({ children }: AppShellProps) => {
     ? session.user.name.split(" ")[0]
     : null;
 
-  const handleOpenCreateDialog = () => {
+  const handleOpenCreateList = () => {
     if (!session?.user) {
       router.push("/login?callbackUrl=/lists/create");
       return;
@@ -43,7 +43,7 @@ const AppShell = ({ children }: AppShellProps) => {
   const handleCreateKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      handleOpenCreateDialog();
+      handleOpenCreateList();
     }
   };
 
@@ -99,20 +99,30 @@ const AppShell = ({ children }: AppShellProps) => {
                 </Button>
               </>
             ) : (
-              <Button
-                variant="outline"
-                aria-label="Se connecter à BookMarkd"
-                onClick={handleNavigateLogin}
-              >
-                Se connecter
-              </Button>
+              <>
+                <Button
+                  variant="ghost"
+                  aria-label="Créer un compte BookMarkd"
+                  className="hidden text-sm text-muted-foreground sm:inline-flex"
+                  asChild
+                >
+                  <Link href="/signup">Créer un compte</Link>
+                </Button>
+                <Button
+                  variant="outline"
+                  aria-label="Se connecter à BookMarkd"
+                  onClick={handleNavigateLogin}
+                >
+                  Se connecter
+                </Button>
+              </>
             )}
             <Button
-              aria-label="Ajouter un livre à votre liste de lecture"
-              onClick={handleOpenCreateDialog}
+              aria-label="Créer une nouvelle liste personnalisée"
+              onClick={handleOpenCreateList}
               onKeyDown={handleCreateKeyDown}
             >
-              Nouvelle lecture
+              Nouvelle liste
             </Button>
           </div>
         </div>

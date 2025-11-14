@@ -24,9 +24,10 @@ Aperçu des routes principales, stratégie de rendu et données nécessaires.
 
 ## `/search`
 
-- **Rendu** : Client Component (search en direct) + server filters.
-- **Données** : résultats paginés, suggestions, filtres.
-- **Actions** : `handleApplyFilters`, `handleSaveSearch`.
+- **Rendu** : AppShell (server) + client SearchClient (TanStack Query).
+- **Données** : API `/api/books/search` (Supabase + fallback Open Library), `/api/tags`.
+- **Filtres** : texte, genre (tags), inclusion Open Library.
+- **Actions** : ajouter à la readlist, noter, commenter (CTA placeholder).
 
 ## `/lists`
 

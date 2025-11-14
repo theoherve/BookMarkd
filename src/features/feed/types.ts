@@ -31,6 +31,11 @@ export type FeedRecommendation = {
   reason?: string | null;
   source: "friends" | "global" | "similar";
   score: number;
+  friendNames?: string[];
+  friendCount?: number;
+  viewerHasInReadlist?: boolean;
+  friendHighlights?: string[];
+  tags?: string[];
 };
 
 export type FeedResponse = {
