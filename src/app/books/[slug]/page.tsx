@@ -81,6 +81,7 @@ type ViewerInfo = {
 const mapReviews = (
   rawReviews: RawBook["reviews"],
   viewerId?: string | null,
+  viewerFollowingIds?: Set<string>,
 ): BookReview[] => {
   if (!rawReviews) {
     return [];
@@ -91,8 +92,17 @@ const mapReviews = (
       if (review.visibility === "public") {
         return true;
       }
-      const authorId = review.user?.[0]?.id;
-      return viewerId && authorId === viewerId;
+      const authorId = review.user?.[0]?.id ?? null;
+      if (!viewerId || !authorId) {
+        return false;
+      }
+      if (authorId === viewerId) {
+        return true;
+      }
+      if (review.visibility === "friends") {
+        return !!viewerFollowingIds?.has(authorId);
+      }
+      return false; // private
     })
     .map((review) => ({
       id: review.id,
@@ -406,7 +416,30 @@ const BookPage = async ({ params }: BookPageProps) => {
 
   const tags =
     book.book_tags?.map((relation) => relation.tag).filter(Boolean) ?? [];
-  const reviews = mapReviews(book.reviews, viewerId);
+  // Préparer l'ensemble des auteurs des reviews pour vérifier les relations de suivi
+  let viewerFollowingIds: Set<string> | undefined = undefined;
+  if (viewerId && Array.isArray(book.reviews) && book.reviews.length > 0) {
+    const authorIds = Array.from(
+      new Set(
+        book.reviews
+          .map((r) => r.user?.[0]?.id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
+    if (authorIds.length > 0) {
+      const { data: followsRows } = await db.client
+        .from("follows")
+        .select("following_id")
+        .eq("follower_id", viewerId)
+        .in("following_id", authorIds);
+      const ids =
+        (followsRows ?? []).map(
+          (row: { following_id: string }) => row.following_id,
+        ) ?? [];
+      viewerFollowingIds = new Set(ids);
+    }
+  }
+  const reviews = mapReviews(book.reviews, viewerId, viewerFollowingIds);
   const readers = await getBookReaders(book.id);
 
   return (

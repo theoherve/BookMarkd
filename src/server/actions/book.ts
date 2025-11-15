@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { getCurrentSession } from "@/lib/auth/session";
 import db from "@/lib/supabase/db";
+import { createNotification } from "@/server/actions/notifications";
 
 type ActionResult =
   | { success: true }
@@ -222,6 +223,7 @@ export const createReview = async ({
       throw insertError;
     }
 
+    // Notifier les followers (optionnel: ici on ne notifie que l'auteur·e lui/elle-même pour simplifier)
     revalidateBook(bookId);
     return { success: true };
   } catch (error) {
@@ -282,6 +284,17 @@ export const addReviewComment = async (
 
     if (commentError) {
       throw commentError;
+    }
+
+    // Notifier l'auteur de l'avis si différent
+    const { data: reviewOwnerRow } = await db.client
+      .from("reviews")
+      .select("user_id, book_id")
+      .eq("id", reviewId)
+      .maybeSingle();
+    const reviewOwnerId = (reviewOwnerRow as { user_id?: string; book_id?: string } | null)?.user_id ?? null;
+    if (reviewOwnerId && reviewOwnerId !== (userId as string)) {
+      void createNotification(reviewOwnerId, "review_comment", {});
     }
 
     revalidateBook(review.book_id as string);

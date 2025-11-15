@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getCurrentSession } from "@/lib/auth/session";
 import { resolveSessionUserId } from "@/lib/auth/user";
 import db from "@/lib/supabase/db";
+import { createNotification } from "@/server/actions/notifications";
 
 type ActionResult =
   | { success: true }
@@ -67,6 +68,17 @@ export const likeReview = async (reviewId: string): Promise<ActionResult> => {
 
     if (likeError) {
       throw likeError;
+    }
+
+    // Notifier l'auteur de la review (si différent)
+    const { data: reviewOwnerRow } = await db.client
+      .from("reviews")
+      .select("user_id")
+      .eq("id", reviewId)
+      .maybeSingle();
+    const reviewOwnerId = (reviewOwnerRow as { user_id?: string } | null)?.user_id ?? null;
+    if (reviewOwnerId && reviewOwnerId !== userId) {
+      void createNotification(reviewOwnerId, "review_like", {});
     }
 
     revalidatePath(`/books/${review.book_id}`);

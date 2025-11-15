@@ -4,6 +4,15 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import AddToReadlistButton from "@/components/search/add-to-readlist-button";
+import RatingForm from "@/components/books/rating-form";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -27,18 +36,6 @@ const statusLabels: Record<FeedFriendBook["status"], string> = {
 };
 
 const BookFeedCard = ({ item }: BookFeedCardProps) => {
-  const handleAddToList = () => {
-    console.info(`Ajouter ${item.title} à la liste.`);
-  };
-
-  const handleRateBook = () => {
-    console.info(`Noter ${item.title}.`);
-  };
-
-  const handleCommentBook = () => {
-    console.info(`Commenter ${item.title}.`);
-  };
-
   const updatedAtLabel = formatRelativeTimeFromNow(item.updatedAt);
   const bookSlug = generateBookSlug(item.title, item.author);
 
@@ -87,27 +84,31 @@ const BookFeedCard = ({ item }: BookFeedCardProps) => {
               : `${item.readerName} a ajouté ce livre à sa pile à lire.`}
         </p>
       </CardContent>
-      <CardFooter className="flex flex-wrap gap-2 pt-0">
-        <Button
-          variant="secondary"
-          aria-label={`Ajouter ${item.title} à votre liste de lecture`}
-          onClick={handleAddToList}
-        >
-          Ajouter à la readlist
-        </Button>
-        <Button
-          variant="outline"
-          aria-label={`Noter ${item.title}`}
-          onClick={handleRateBook}
-        >
-          Noter
-        </Button>
-        <Button
+      <CardFooter className="flex flex-wrap items-center gap-3 pt-0">
+        <AddToReadlistButton bookId={item.bookId} />
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button
+              variant="outline"
+              aria-label={`Ouvrir la fenêtre pour noter ${item.title}`}
+            >
+              Noter
+            </Button>
+          </DialogTrigger>
+          <DialogContent aria-label={`Noter ${item.title}`}>
+            <DialogHeader>
+              <DialogTitle>Noter “{item.title}”</DialogTitle>
+            </DialogHeader>
+            <RatingForm bookId={item.bookId} />
+          </DialogContent>
+        </Dialog>
+        <Link
+          href={`/books/${bookSlug}#reviews`}
           aria-label={`Commenter ${item.title}`}
-          onClick={handleCommentBook}
+          className="inline-flex"
         >
-          Commenter
-        </Button>
+          <Button>Commenter</Button>
+        </Link>
       </CardFooter>
     </Card>
   );

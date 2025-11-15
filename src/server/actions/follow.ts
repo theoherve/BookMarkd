@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getCurrentSession } from "@/lib/auth/session";
 import { resolveSessionUserId } from "@/lib/auth/user";
 import db from "@/lib/supabase/db";
+import { createNotification } from "@/server/actions/notifications";
 
 type ActionResult =
   | { success: true }
@@ -105,6 +106,8 @@ export const requestFollow = async (
 
     revalidatePath("/profiles/me");
     revalidatePath(`/profiles/${targetUserId}`);
+    // Notification pour l'utilisateur cible
+    void createNotification(targetUserId, "follow_request", {});
     return { success: true };
   } catch (error) {
     if ((error as Error).message === "AUTH_REQUIRED") {
@@ -241,6 +244,11 @@ export const acceptFollowRequest = async (
 
     revalidatePath("/profiles/me");
     revalidatePath(`/profiles/${(request as { requester?: { id?: string } }).requester?.id ?? ""}`);
+    // Notification pour l'auteur de la demande (le demandeur)
+    void createNotification(request.requester_id as string, "follow_request_accepted", {
+      targetUserId: request.target_id,
+      targetUserName: (request as { requester?: { id?: string; display_name?: string } }).requester?.display_name ?? null,
+    });
     return { success: true };
   } catch (error) {
     if ((error as Error).message === "AUTH_REQUIRED") {
