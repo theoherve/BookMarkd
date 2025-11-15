@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
-import { Search, X } from "lucide-react";
+import { Search, X, Filter } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ const SearchClient = () => {
   const [minRating, setMinRating] = useState<number | undefined>();
   const [readingStatus, setReadingStatus] = useState<"to_read" | "reading" | "finished" | undefined>();
   const [includeExternal, setIncludeExternal] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
 
   const { data: tagsData } = useTagsQuery();
 
@@ -121,10 +122,94 @@ const SearchClient = () => {
         </button>
       </div>
 
+      {/* Filters will render inside the card (form) below */}
+
       <form
         onSubmit={handleSubmit}
-        className="flex flex-col gap-4 rounded-3xl border border-border bg-card/60 p-6 shadow-sm backdrop-blur lg:flex-row lg:items-center lg:gap-6"
+        className="flex flex-col rounded-3xl border border-border bg-card/60 p-6 shadow-sm backdrop-blur"
       >
+        {activeTab === "books" && showFilters ? (
+          <div className="flex w-full flex-wrap items-center gap-4 rounded-xl bg-card/70 p-2">
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <label
+                htmlFor="genre"
+                className="text-sm font-medium text-muted-foreground"
+              >
+                Genre
+              </label>
+              <select
+                id="genre"
+                className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                value={selectedGenre ?? ""}
+                onChange={(event) =>
+                  setSelectedGenre(event.target.value || undefined)
+                }
+              >
+                <option value="">Tous</option>
+                {tagsData?.tags.map((tag) => (
+                  <option key={tag.id} value={tag.slug}>
+                    {tag.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <label
+                htmlFor="minRating"
+                className="text-sm font-medium text-muted-foreground"
+              >
+                Note min.
+              </label>
+              <select
+                id="minRating"
+                className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                value={minRating ?? ""}
+                onChange={(event) =>
+                  setMinRating(event.target.value ? parseFloat(event.target.value) : undefined)
+                }
+              >
+                <option value="">Toutes</option>
+                <option value="1">1+ / 5</option>
+                <option value="2">2+ / 5</option>
+                <option value="3">3+ / 5</option>
+                <option value="4">4+ / 5</option>
+                <option value="4.5">4.5+ / 5</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <label
+                htmlFor="readingStatus"
+                className="text-sm font-medium text-muted-foreground"
+              >
+                État
+              </label>
+              <select
+                id="readingStatus"
+                className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                value={readingStatus ?? ""}
+                onChange={(event) =>
+                  setReadingStatus(event.target.value as "to_read" | "reading" | "finished" | undefined || undefined)
+                }
+              >
+                <option value="">Tous</option>
+                <option value="to_read">À lire</option>
+                <option value="reading">En cours</option>
+                <option value="finished">Terminé</option>
+              </select>
+            </div>
+
+            <label className="flex items-center gap-2 text-sm text-muted-foreground w-full md:w-auto">
+              <input
+                type="checkbox"
+                checked={includeExternal}
+                onChange={(event) => setIncludeExternal(event.target.checked)}
+              />
+              Inclure Open Library
+            </label>
+          </div>
+        ) : null}
         <div className="flex w-full flex-1 items-center gap-3">
           <Search className="h-5 w-5 text-muted-foreground" aria-hidden />
           <Input
@@ -140,6 +225,7 @@ const SearchClient = () => {
                 ? "Rechercher un livre"
                 : "Rechercher un utilisateur"
             }
+            className="flex-1"
           />
           {query ? (
             <Button
@@ -152,95 +238,24 @@ const SearchClient = () => {
               <X className="h-4 w-4" />
             </Button>
           ) : null}
-        </div>
-        <div className="flex flex-wrap items-center gap-4">
           {activeTab === "books" ? (
-            <>
-              <div className="flex items-center gap-2">
-                <label
-                  htmlFor="genre"
-                  className="text-sm font-medium text-muted-foreground"
-                >
-                  Genre
-                </label>
-                <select
-                  id="genre"
-                  className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                  value={selectedGenre ?? ""}
-                  onChange={(event) =>
-                    setSelectedGenre(event.target.value || undefined)
-                  }
-                >
-                  <option value="">Tous</option>
-                  {tagsData?.tags.map((tag) => (
-                    <option key={tag.id} value={tag.slug}>
-                      {tag.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <label
-                  htmlFor="minRating"
-                  className="text-sm font-medium text-muted-foreground"
-                >
-                  Note min.
-                </label>
-                <select
-                  id="minRating"
-                  className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                  value={minRating ?? ""}
-                  onChange={(event) =>
-                    setMinRating(event.target.value ? parseFloat(event.target.value) : undefined)
-                  }
-                >
-                  <option value="">Toutes</option>
-                  <option value="1">1+ / 5</option>
-                  <option value="2">2+ / 5</option>
-                  <option value="3">3+ / 5</option>
-                  <option value="4">4+ / 5</option>
-                  <option value="4.5">4.5+ / 5</option>
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <label
-                  htmlFor="readingStatus"
-                  className="text-sm font-medium text-muted-foreground"
-                >
-                  État
-                </label>
-                <select
-                  id="readingStatus"
-                  className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                  value={readingStatus ?? ""}
-                  onChange={(event) =>
-                    setReadingStatus(event.target.value as "to_read" | "reading" | "finished" | undefined || undefined)
-                  }
-                >
-                  <option value="">Tous</option>
-                  <option value="to_read">À lire</option>
-                  <option value="reading">En cours</option>
-                  <option value="finished">Terminé</option>
-                </select>
-              </div>
-
-              <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                <input
-                  type="checkbox"
-                  checked={includeExternal}
-                  onChange={(event) => setIncludeExternal(event.target.checked)}
-                />
-                Inclure Open Library
-              </label>
-            </>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-label={showFilters ? "Masquer les filtres" : "Afficher les filtres"}
+              onClick={() => setShowFilters((v) => !v)}
+              className="inline-flex items-center gap-2"
+            >
+              <Filter className="h-4 w-4" />
+              <span className="hidden sm:inline">Filtres</span>
+            </Button>
           ) : null}
-
-          <Button type="submit" aria-label="Lancer la recherche">
+          <Button type="submit" aria-label="Lancer la recherche" className="ml-auto">
             Rechercher
           </Button>
         </div>
+        <div className="flex flex-wrap items-center gap-4" />
       </form>
 
       {activeTab === "books" && activeFilters.length > 0 ? (

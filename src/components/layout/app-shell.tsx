@@ -32,7 +32,10 @@ const navigationLinks: NavigationLink[] = [
   { href: "/profiles/me", label: "Profil", ariaLabel: "Voir votre profil" },
 ];
 
-const NavigationList = ({ onLinkClick }: { onLinkClick?: () => void }) => {
+const NavigationList = ({ onLinkClick, emphasis = "normal" }: { onLinkClick?: () => void; emphasis?: "normal" | "strong" }) => {
+  const linkClass = emphasis === "strong"
+    ? "block rounded-full px-3 py-2 text-foreground transition hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent"
+    : "block rounded-full px-3 py-2 text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent";
   return (
     <ul className="flex flex-col gap-2 text-sm font-medium md:flex-row md:items-center md:gap-4">
       {navigationLinks.map((item) => (
@@ -41,7 +44,7 @@ const NavigationList = ({ onLinkClick }: { onLinkClick?: () => void }) => {
             href={item.href}
             aria-label={item.ariaLabel}
             onClick={onLinkClick}
-            className="block rounded-full px-3 py-2 text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent"
+            className={linkClass}
           >
             {item.label}
           </Link>
@@ -169,8 +172,48 @@ const AppShell = ({ children }: AppShellProps) => {
                   <SheetTitle>Navigation</SheetTitle>
                 </SheetHeader>
                 <nav aria-label="Navigation principale" className="mt-6">
-                  <NavigationList onLinkClick={handleMenuLinkClick} />
+                  <NavigationList emphasis="strong" onLinkClick={handleMenuLinkClick} />
                 </nav>
+                <div className="my-6 h-px w-full bg-border" />
+                {/* Auth section for mobile */}
+                {session?.user ? (
+                  <div className="mt-4 flex flex-col gap-3 px-2">
+                    <Button
+                      variant="destructive"
+                      aria-label="Se déconnecter de BookMarkd"
+                      className="self-start px-5"
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        void handleSignOut();
+                      }}
+                    >
+                      Se déconnecter
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="mt-4 grid grid-cols-1 gap-3 px-2">
+                    <Button
+                      variant="default"
+                      aria-label="Se connecter à BookMarkd"
+                      className="self-start px-5"
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        handleNavigateLogin();
+                      }}
+                    >
+                      Se connecter
+                    </Button>
+                    <Button
+                      variant="outline"
+                      aria-label="Créer un compte BookMarkd"
+                      className="self-start px-5"
+                      asChild
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <Link href="/signup">Créer un compte</Link>
+                    </Button>
+                  </div>
+                )}
               </SheetContent>
             </Sheet>
           </div>
