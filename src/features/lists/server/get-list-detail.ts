@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { prisma } from "@/lib/prisma/client";
+import db from "@/lib/supabase/db";
 
 import type { CollaboratorRole, ListDetail, ViewerRole } from "../types";
 
@@ -27,57 +27,70 @@ export const getListDetail = async (
   listId: string,
   viewerId: string | null,
 ): Promise<ListDetail> => {
-  const list = await prisma.list.findUnique({
-    where: { id: listId },
-    include: {
-      owner: {
-        select: {
-          id: true,
-          displayName: true,
-          avatarUrl: true,
-        },
-      },
-      collaborators: {
-        include: {
-          user: {
-            select: {
-              id: true,
-              displayName: true,
-              avatarUrl: true,
-            },
-          },
-        },
-      },
-      items: {
-        include: {
-          book: {
-            select: {
-              id: true,
-              title: true,
-              author: true,
-              coverUrl: true,
-              averageRating: true,
-            },
-          },
-        },
-        orderBy: {
-          position: "asc",
-        },
-      },
-    },
-  });
+  // Fetch list with joins for owner, collaborators, and items
+  const { data: listRow, error } = await db.client
+    .from("lists")
+    .select(
+      `
+      id,
+      title,
+      description,
+      visibility,
+      is_collaborative,
+      updated_at,
+      owner:owner_id ( id, display_name, avatar_url ),
+      collaborators:list_collaborators ( role, user:user_id ( id, display_name, avatar_url ) ),
+      items:list_items (
+        id,
+        position,
+        note,
+        book:book_id ( id, title, author, cover_url, average_rating )
+      )
+    `,
+    )
+    .eq("id", listId)
+    .maybeSingle();
 
-  if (!list) {
+  if (error) {
+    console.error("[lists] getListDetail error:", error);
     notFound();
   }
 
-  const rawCollaborators = list.collaborators;
+  if (!listRow) {
+    notFound();
+  }
+
+  const list = db.toCamel<{
+    id: string;
+    title: string;
+    description: string | null;
+    visibility: string;
+    isCollaborative: boolean | null;
+    updatedAt: string;
+    owner?: { id: string; displayName: string | null; avatarUrl: string | null };
+    collaborators: Array<{ role: ViewerRole; user?: { id: string; displayName: string | null; avatarUrl: string | null } }>;
+    items: Array<{
+      id: string;
+      position: number;
+      note: string | null;
+      book?: {
+        id: string;
+        title: string;
+        author: string;
+        coverUrl: string | null;
+        averageRating: number | null;
+      };
+    }>;
+  }>(listRow);
+
+  const rawCollaborators = list.collaborators ?? [];
   const viewerRole = viewerId
     ? inferViewerRole(
-        list.ownerId,
+        // Note: ownerId is the list owner id
+        (list as any).owner?.id as string,
         viewerId,
         rawCollaborators.map((entry) => ({
-          user_id: entry.userId,
+          user_id: (entry as any).user?.id as string,
           role: entry.role as ViewerRole,
         })),
       )
@@ -87,26 +100,29 @@ export const getListDetail = async (
     notFound();
   }
 
-  const collaborators = rawCollaborators.map((entry) => ({
-    userId: entry.user.id,
-    displayName: entry.user.displayName ?? "Collaborateur·rice",
-    avatarUrl: entry.user.avatarUrl ?? null,
-    role: entry.role as CollaboratorRole,
-  }));
+  const collaborators = rawCollaborators
+    .filter((entry) => (entry as any).user)
+    .map((entry) => ({
+      userId: (entry as any).user!.id as string,
+      displayName: ((entry as any).user!.displayName as string | null) ?? "Collaborateur·rice",
+      avatarUrl: ((entry as any).user!.avatarUrl as string | null) ?? null,
+      role: entry.role as CollaboratorRole,
+    }));
 
-  const items = list.items
+  const items = (list.items ?? [])
     .map((item) => ({
       id: item.id,
       position: item.position,
       note: item.note ?? null,
       book: {
-        id: item.book.id,
-        title: item.book.title,
-        author: item.book.author,
-        coverUrl: item.book.coverUrl ?? null,
-        averageRating: item.book.averageRating
-          ? Number(item.book.averageRating)
-          : null,
+        id: item.book?.id as string,
+        title: item.book?.title as string,
+        author: item.book?.author as string,
+        coverUrl: (item.book?.coverUrl as string | null) ?? null,
+        averageRating:
+          typeof item.book?.averageRating === "number"
+            ? item.book!.averageRating!
+            : null,
       },
     }))
     .sort((left, right) => left.position - right.position);
@@ -118,14 +134,14 @@ export const getListDetail = async (
     visibility: list.visibility as ListDetail["visibility"],
     isCollaborative: list.isCollaborative ?? false,
     owner: {
-      id: list.owner.id,
-      displayName: list.owner.displayName ?? "Utilisateur·rice",
-      avatarUrl: list.owner.avatarUrl ?? null,
+      id: (list.owner?.id as string) ?? "",
+      displayName: list.owner?.displayName ?? "Utilisateur·rice",
+      avatarUrl: list.owner?.avatarUrl ?? null,
     },
     collaborators,
     viewerRole: viewerRole ?? "viewer",
     items,
-    updatedAt: list.updatedAt.toISOString(),
+    updatedAt: list.updatedAt,
   };
 };
 

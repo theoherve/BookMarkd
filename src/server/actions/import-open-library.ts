@@ -1,9 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { Decimal } from "@prisma/client/runtime/library";
 
-import { prisma } from "@/lib/prisma/client";
+import db from "@/lib/supabase/db";
 import { fetchOpenLibraryWorkDetails } from "@/lib/open-library";
 
 type ImportPayload = {
@@ -32,13 +31,15 @@ export const importOpenLibraryBook = async (
 ): Promise<ImportResult> => {
   try {
     // Vérifier si le livre existe déjà
-    const existing = await prisma.book.findUnique({
-      where: { openLibraryId: payload.openLibraryId },
-      select: { id: true },
-    });
+    const { data: existing, error: findError } = await db.client
+      .from("books")
+      .select("id")
+      .eq("open_library_id", payload.openLibraryId)
+      .maybeSingle();
+    if (findError) throw findError;
 
     if (existing?.id) {
-      return { success: true, bookId: existing.id };
+      return { success: true, bookId: existing.id as string };
     }
 
     const workDetails = await fetchOpenLibraryWorkDetails(payload.openLibraryId);
@@ -46,18 +47,23 @@ export const importOpenLibraryBook = async (
     const coverUrl = payload.coverUrl ?? workDetails.coverUrl ?? payload.coverUrl;
 
     // Créer le livre
-    const newBook = await prisma.book.create({
-      data: {
-        openLibraryId: payload.openLibraryId,
-        title: payload.title,
-        author: payload.author,
-        coverUrl,
-        publicationYear: payload.publicationYear,
-        summary,
-        ratingsCount: 0,
-        averageRating: new Decimal(0),
-      },
-    });
+    const { data: newBook, error: insertError } = await db.client
+      .from("books")
+      .insert([
+        {
+          open_library_id: payload.openLibraryId,
+          title: payload.title,
+          author: payload.author,
+          cover_url: coverUrl,
+          publication_year: payload.publicationYear ?? null,
+          summary,
+          ratings_count: 0,
+          average_rating: 0,
+        },
+      ])
+      .select("id")
+      .single();
+    if (insertError) throw insertError;
 
     const subjects = workDetails.subjects ?? [];
     if (subjects.length > 0) {
@@ -72,30 +78,40 @@ export const importOpenLibraryBook = async (
       if (uniqueSubjects.length > 0) {
         // Créer ou mettre à jour les tags
         for (const subject of uniqueSubjects) {
-          await prisma.tag.upsert({
-            where: { slug: subject.slug },
-            update: { name: subject.name },
-            create: {
-              name: subject.name,
-              slug: subject.slug,
-            },
-          });
+          // Upsert tag by slug
+          const { data: tagRow } = await db.client
+            .from("tags")
+            .select("id")
+            .eq("slug", subject.slug)
+            .maybeSingle();
+          if (!tagRow) {
+            await db.client.from("tags").insert([
+              {
+                name: subject.name,
+                slug: subject.slug,
+              },
+            ]);
+          } else {
+            await db.client
+              .from("tags")
+              .update({ name: subject.name })
+              .eq("id", tagRow.id as string);
+          }
         }
 
         // Récupérer les IDs des tags
-        const tagRows = await prisma.tag.findMany({
-          where: {
-            slug: {
-              in: uniqueSubjects.map((subject) => subject.slug),
-            },
-          },
-          select: {
-            id: true,
-            slug: true,
-          },
-        });
+        const { data: tagRows, error: tagsError } = await db.client
+          .from("tags")
+          .select("id, slug")
+          .in(
+            "slug",
+            uniqueSubjects.map((subject) => subject.slug),
+          );
+        if (tagsError) throw tagsError;
 
-        const tagMap = new Map(tagRows.map((row) => [row.slug, row.id]));
+        const tagMap = new Map(
+          (tagRows ?? []).map((row: any) => [row.slug as string, row.id as string]),
+        );
 
         // Créer les relations book_tags
         const bookTagData = uniqueSubjects
@@ -105,20 +121,21 @@ export const importOpenLibraryBook = async (
               return null;
             }
             return {
-              bookId: newBook.id,
-              tagId,
+              book_id: newBook.id as string,
+              tag_id: tagId,
             };
           })
-          .filter((row): row is { bookId: string; tagId: string } =>
+          .filter((row): row is { book_id: string; tag_id: string } =>
             Boolean(row),
           );
 
         // Créer les relations (Prisma gère automatiquement les conflits avec createMany + skipDuplicates)
         if (bookTagData.length > 0) {
-          await prisma.bookTag.createMany({
-            data: bookTagData,
-            skipDuplicates: true,
-          });
+          // Upsert-like: try insert, ignore duplicates
+          await db.client.from("book_tags").upsert(bookTagData, {
+            onConflict: "book_id,tag_id",
+            ignoreDuplicates: true,
+          } as any);
         }
       }
     }
@@ -126,7 +143,7 @@ export const importOpenLibraryBook = async (
     revalidatePath("/search");
     revalidatePath(`/books/${newBook.id}`);
 
-    return { success: true, bookId: newBook.id };
+    return { success: true, bookId: newBook.id as string };
   } catch (error) {
     console.error("[import-open-library] error:", error);
     return {

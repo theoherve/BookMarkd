@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import type { Prisma } from "@prisma/client";
-
-import { prisma } from "@/lib/prisma/client";
+import db from "@/lib/supabase/db";
 
 const LIMIT = 20;
 
@@ -21,41 +19,65 @@ export async function GET(request: Request) {
 
     const searchTerm = query.trim();
 
-    // Construire la condition de recherche
-    const whereCondition: Prisma.UserWhereInput = {
-      OR: [
-        { displayName: { contains: searchTerm, mode: "insensitive" } },
-        { email: { contains: searchTerm, mode: "insensitive" } },
-        // Note: username sera ajouté plus tard quand le champ existera
-      ],
-    };
+    // Recherche côté Supabase (ILIKE sur display_name et email)
+    const { data: usersData, error: usersError } = await db.client
+      .from("users")
+      .select("id, display_name, avatar_url, bio, email")
+      .or(`display_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
+      .order("display_name", { ascending: true })
+      .limit(LIMIT);
 
-    // Récupérer les utilisateurs
-    const users = await prisma.user.findMany({
-      where: whereCondition,
-      select: {
-        id: true,
-        displayName: true,
-        avatarUrl: true,
-        bio: true,
-        email: true,
-        // Compter les followers
-        _count: {
-          select: {
-            followsAsFollowing: true,
-            userBooks: {
-              where: {
-                status: "finished",
-              },
-            },
-          },
-        },
-      },
-      take: LIMIT,
-      orderBy: {
-        displayName: "asc",
-      },
-    });
+    if (usersError) {
+      throw usersError;
+    }
+
+    const users = db.toCamel<
+      Array<{
+        id: string;
+        displayName: string;
+        avatarUrl: string | null;
+        bio: string | null;
+        email: string;
+      }>
+    >(usersData ?? []);
+
+    const userIds = users.map((u) => u.id);
+
+    // Followers: count rows where following_id in userIds
+    const { data: followersRows, error: followersError } = await db.client
+      .from("follows")
+      .select("following_id")
+      .in("following_id", userIds);
+
+    if (followersError) {
+      throw followersError;
+    }
+
+    const followersByUser = new Map<string, number>();
+    for (const row of followersRows ?? []) {
+      const { followingId } = db.toCamel<{ followingId: string }>(row);
+      followersByUser.set(
+        followingId,
+        (followersByUser.get(followingId) ?? 0) + 1,
+      );
+    }
+
+    // Books read: rows in user_books where status = 'finished' and user_id in userIds
+    const { data: booksRows, error: booksError } = await db.client
+      .from("user_books")
+      .select("user_id, status")
+      .in("user_id", userIds)
+      .eq("status", "finished");
+
+    if (booksError) {
+      throw booksError;
+    }
+
+    const booksReadByUser = new Map<string, number>();
+    for (const row of booksRows ?? []) {
+      const { userId } = db.toCamel<{ userId: string }>(row);
+      booksReadByUser.set(userId, (booksReadByUser.get(userId) ?? 0) + 1);
+    }
 
     const formattedUsers = users.map((user) => ({
       id: user.id,
@@ -63,8 +85,8 @@ export async function GET(request: Request) {
       avatarUrl: user.avatarUrl,
       bio: user.bio,
       stats: {
-        followers: user._count.followsAsFollowing,
-        booksRead: user._count.userBooks,
+        followers: followersByUser.get(user.id) ?? 0,
+        booksRead: booksReadByUser.get(user.id) ?? 0,
       },
     }));
 

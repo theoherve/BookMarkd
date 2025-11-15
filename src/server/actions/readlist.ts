@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { getCurrentSession } from "@/lib/auth/session";
-import { prisma } from "@/lib/prisma/client";
+import db from "@/lib/supabase/db";
 import { resolveSessionUserId } from "@/lib/auth/user";
 
 type AddBookToReadlistResult =
@@ -26,34 +26,36 @@ export const addBookToReadlist = async (
 
   try {
     // Récupérer l'enregistrement existant pour préserver le rating s'il existe
-    const existing = await prisma.userBook.findUnique({
-      where: {
-        userId_bookId: {
-          userId,
-          bookId,
-        },
-      },
-    });
+    const { data: existing, error: existingError } = await db.client
+      .from("user_books")
+      .select("status, rating")
+      .eq("user_id", userId)
+      .eq("book_id", bookId)
+      .maybeSingle();
+    if (existingError) {
+      throw existingError;
+    }
 
-    await prisma.userBook.upsert({
-      where: {
-        userId_bookId: {
-          userId,
-          bookId,
-        },
-      },
-      update: {
-        // Si le status existe déjà, on le préserve, sinon on met "to_read"
-        status: existing?.status ?? "to_read",
-        // Préserver le rating s'il existe
-        rating: existing?.rating ?? null,
-      },
-      create: {
-        userId,
-        bookId,
-        status: "to_read",
-      },
-    });
+    const statusToSet =
+      (existing?.status as "to_read" | "reading" | "finished" | undefined) ??
+      "to_read";
+
+    const { error: upsertError } = await db.client
+      .from("user_books")
+      .upsert(
+        [
+          {
+            user_id: userId,
+            book_id: bookId,
+            status: statusToSet,
+            rating: existing?.rating ?? null,
+          },
+        ],
+        { onConflict: "user_id,book_id" },
+      );
+    if (upsertError) {
+      throw upsertError;
+    }
 
     revalidatePath("/"); // feed
     revalidatePath("/search");

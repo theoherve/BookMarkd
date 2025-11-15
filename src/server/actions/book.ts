@@ -1,10 +1,9 @@
 'use server';
 
 import { revalidatePath } from "next/cache";
-import { Decimal } from "@prisma/client/runtime/library";
 
 import { getCurrentSession } from "@/lib/auth/session";
-import { prisma } from "@/lib/prisma/client";
+import db from "@/lib/supabase/db";
 
 type ActionResult =
   | { success: true }
@@ -32,33 +31,38 @@ export const updateReadingStatus = async (
     const userId = await requireSession();
     
     // Récupérer l'enregistrement existant pour préserver le rating s'il existe
-    const existing = await prisma.userBook.findUnique({
-      where: {
-        userId_bookId: {
-          userId,
-          bookId,
-        },
-      },
-    });
+    const { data: existing, error: existingError } = await db.client
+      .from("user_books")
+      .select("rating")
+      .eq("user_id", userId)
+      .eq("book_id", bookId)
+      .maybeSingle();
 
-    await prisma.userBook.upsert({
-      where: {
-        userId_bookId: {
-          userId,
-          bookId,
+    if (existingError) {
+      throw existingError;
+    }
+
+    // Upsert via contrainte unique (user_id, book_id)
+    const { error: upsertError } = await db.client
+      .from("user_books")
+      .upsert(
+        [
+          {
+            user_id: userId,
+            book_id: bookId,
+            status,
+            // Préserver le rating s'il existe
+            rating: existing?.rating ?? null,
+          },
+        ],
+        {
+          onConflict: "user_id,book_id",
         },
-      },
-      update: {
-        status,
-        // Préserver le rating s'il existe
-        rating: existing?.rating ?? null,
-      },
-      create: {
-        userId,
-        bookId,
-        status,
-      },
-    });
+      );
+
+    if (upsertError) {
+      throw upsertError;
+    }
 
     revalidateBook(bookId);
     return { success: true };
@@ -91,74 +95,76 @@ export const rateBook = async (
     const userId = await requireSession();
     
     // Récupérer l'enregistrement existant pour préserver le status s'il existe
-    const existing = await prisma.userBook.findUnique({
-      where: {
-        userId_bookId: {
-          userId,
-          bookId,
-        },
-      },
-    });
+    const { data: existing, error: existingError } = await db.client
+      .from("user_books")
+      .select("status")
+      .eq("user_id", userId)
+      .eq("book_id", bookId)
+      .maybeSingle();
 
-    // Convertir le rating en Decimal pour Prisma
-    const ratingDecimal = new Decimal(rating);
+    if (existingError) {
+      throw existingError;
+    }
 
-    // Upsert avec Prisma : met à jour le rating et rated_at, préserve le status s'il existe
-    // Si le livre n'a pas encore de statut, mettre "finished" automatiquement
-    await prisma.userBook.upsert({
-      where: {
-        userId_bookId: {
-          userId,
-          bookId,
-        },
-      },
-      update: {
-        rating: ratingDecimal,
-        ratedAt: new Date(),
-        // Préserver le status s'il existe, sinon utiliser 'finished' par défaut
-        status: (existing?.status as "to_read" | "reading" | "finished") ?? "finished",
-      },
-      create: {
-        userId,
-        bookId,
-        status: "finished", // Status par défaut si création (noter un livre = l'avoir terminé)
-        rating: ratingDecimal,
-        ratedAt: new Date(),
-      },
-    });
+    // Upsert: met à jour le rating et rated_at, préserve ou fixe le status
+    const newStatus =
+      (existing?.status as "to_read" | "reading" | "finished" | undefined) ??
+      "finished";
+
+    const { error: upsertError } = await db.client
+      .from("user_books")
+      .upsert(
+        [
+          {
+            user_id: userId,
+            book_id: bookId,
+            status: newStatus,
+            rating,
+            rated_at: new Date().toISOString(),
+          },
+        ],
+        { onConflict: "user_id,book_id" },
+      );
+
+    if (upsertError) {
+      throw upsertError;
+    }
 
     // Mettre à jour les statistiques du livre (ratings_count et average_rating)
-    const allRatings = await prisma.userBook.findMany({
-      where: {
-        bookId,
-        rating: { not: null },
-      },
-      select: {
-        rating: true,
-      },
-    });
+    const { data: allRatings, error: ratingsError } = await db.client
+      .from("user_books")
+      .select("rating")
+      .eq("book_id", bookId)
+      .not("rating", "is", null);
 
-    const ratingsCount = allRatings.length;
-    let averageRating: Decimal | null = null;
+    if (ratingsError) {
+      throw ratingsError;
+    }
+
+    const ratings = (allRatings ?? [])
+      .map((r: { rating: number | null }) => r.rating)
+      .filter((v): v is number => typeof v === "number");
+
+    const ratingsCount = ratings.length;
+    let averageRating: number | null = null;
 
     if (ratingsCount > 0) {
-      const sum = allRatings.reduce((acc, ub) => {
-        if (ub.rating) {
-          return acc.plus(ub.rating);
-        }
-        return acc;
-      }, new Decimal(0));
-      averageRating = sum.dividedBy(ratingsCount);
+      const sum = ratings.reduce((acc, val) => acc + val, 0);
+      averageRating = parseFloat((sum / ratingsCount).toFixed(2));
     }
 
     // Mettre à jour le livre avec les nouvelles statistiques
-    await prisma.book.update({
-      where: { id: bookId },
-      data: {
-        ratingsCount,
-        averageRating: averageRating ?? new Decimal(0),
-      },
-    });
+    const { error: updateBookError } = await db.client
+      .from("books")
+      .update({
+        ratings_count: ratingsCount,
+        average_rating: averageRating ?? 0,
+      })
+      .eq("id", bookId);
+
+    if (updateBookError) {
+      throw updateBookError;
+    }
 
     revalidateBook(bookId);
     return { success: true };
@@ -201,16 +207,20 @@ export const createReview = async ({
     }
     const userId = await requireSession();
     
-    await prisma.review.create({
-      data: {
-        userId,
-        bookId,
+    const { error: insertError } = await db.client.from("reviews").insert([
+      {
+        user_id: userId,
+        book_id: bookId,
         visibility,
         title: title || null,
         content,
         spoiler: Boolean(spoiler),
       },
-    });
+    ]);
+
+    if (insertError) {
+      throw insertError;
+    }
 
     revalidateBook(bookId);
     return { success: true };
@@ -243,10 +253,15 @@ export const addReviewComment = async (
     const userId = await requireSession();
     
     // Vérifier que la review existe et récupérer le bookId
-    const review = await prisma.review.findUnique({
-      where: { id: reviewId },
-      select: { bookId: true },
-    });
+    const { data: review, error: reviewError } = await db.client
+      .from("reviews")
+      .select("book_id")
+      .eq("id", reviewId)
+      .maybeSingle();
+
+    if (reviewError) {
+      throw reviewError;
+    }
 
     if (!review) {
       return {
@@ -255,15 +270,21 @@ export const addReviewComment = async (
       };
     }
 
-    await prisma.reviewComment.create({
-      data: {
-        reviewId,
-        userId,
-        content,
-      },
-    });
+    const { error: commentError } = await db.client
+      .from("review_comments")
+      .insert([
+        {
+          review_id: reviewId,
+          user_id: userId,
+          content,
+        },
+      ]);
 
-    revalidateBook(review.bookId);
+    if (commentError) {
+      throw commentError;
+    }
+
+    revalidateBook(review.book_id as string);
     return { success: true };
   } catch (error) {
     if ((error as Error).message === "AUTH_REQUIRED") {
@@ -291,10 +312,15 @@ export const createBook = async (
     const userId = await requireSession();
 
     // Vérifier que l'utilisateur existe dans la base de données
-    const userExists = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true },
-    });
+    const { data: userExists, error: userError } = await db.client
+      .from("users")
+      .select("id")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (userError) {
+      throw userError;
+    }
 
     if (!userExists) {
       return {
@@ -326,23 +352,31 @@ export const createBook = async (
       };
     }
 
-    const newBook = await prisma.book.create({
-      data: {
-        title,
-        author,
-        coverUrl,
-        publicationYear,
-        summary,
-        createdBy: userId,
-        ratingsCount: 0,
-        averageRating: new Decimal(0),
-      },
-    });
+    const { data: inserted, error: insertBookError } = await db.client
+      .from("books")
+      .insert([
+        {
+          title,
+          author,
+          cover_url: coverUrl,
+          publication_year: publicationYear,
+          summary,
+          created_by: userId,
+          ratings_count: 0,
+          average_rating: 0,
+        },
+      ])
+      .select("id")
+      .single();
+
+    if (insertBookError) {
+      throw insertBookError;
+    }
 
     revalidatePath("/search");
-    revalidatePath(`/books/${newBook.id}`);
+    revalidatePath(`/books/${inserted.id}`);
 
-    return { success: true, bookId: newBook.id };
+    return { success: true, bookId: inserted.id as string };
   } catch (error) {
     if ((error as Error).message === "AUTH_REQUIRED") {
       return {

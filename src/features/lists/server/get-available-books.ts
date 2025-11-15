@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma/client";
+import db from "@/lib/supabase/db";
 
 import type { AvailableBook } from "../types";
 
@@ -6,24 +6,25 @@ export const getAvailableBooks = async (
   excludeBookIds: string[],
   limit = 20,
 ): Promise<AvailableBook[]> => {
-  const books = await prisma.book.findMany({
-    where: excludeBookIds.length > 0
-      ? {
-          id: {
-            notIn: excludeBookIds,
-          },
-        }
-      : undefined,
-    select: {
-      id: true,
-      title: true,
-      author: true,
-    },
-    orderBy: {
-      title: "asc",
-    },
-    take: limit,
-  });
+  let query = db.client
+    .from("books")
+    .select("id, title, author")
+    .order("title", { ascending: true })
+    .limit(limit);
+
+  if (excludeBookIds.length > 0) {
+    query = query.not("id", "in", `(${excludeBookIds.join(",")})`);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("[lists] getAvailableBooks error:", error);
+    return [];
+  }
+
+  const books = db.toCamel<Array<{ id: string; title: string; author: string }>>(
+    data ?? [],
+  );
 
   return books.map((book) => ({
     id: book.id,

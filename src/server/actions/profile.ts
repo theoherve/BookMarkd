@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { getCurrentSession } from "@/lib/auth/session";
 import { resolveSessionUserId } from "@/lib/auth/user";
-import { prisma } from "@/lib/prisma/client";
+import db from "@/lib/supabase/db";
 
 type ActionResult =
   | { success: true }
@@ -56,10 +56,26 @@ export const updateProfile = async (
       updateData.avatarUrl = input.avatarUrl?.trim() || null;
     }
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: updateData,
-    });
+    const payload: Record<string, unknown> = {};
+    if (updateData.displayName !== undefined) {
+      payload["display_name"] = updateData.displayName;
+    }
+    if (updateData.bio !== undefined) {
+      payload["bio"] = updateData.bio;
+    }
+    if (updateData.avatarUrl !== undefined) {
+      payload["avatar_url"] = updateData.avatarUrl;
+    }
+
+    if (Object.keys(payload).length > 0) {
+      const { error } = await db.client
+        .from("users")
+        .update(payload)
+        .eq("id", userId);
+      if (error) {
+        throw error;
+      }
+    }
 
     revalidatePath("/profiles/me");
     return { success: true };
@@ -107,12 +123,15 @@ export const updateTopBooks = async (
 
     // Vérifier que les livres existent
     const bookIds = input.topBooks.map((tb) => tb.bookId);
-    const existingBooks = await prisma.book.findMany({
-      where: { id: { in: bookIds } },
-      select: { id: true },
-    });
+    const { data: existingBooks, error: booksError } = await db.client
+      .from("books")
+      .select("id")
+      .in("id", bookIds);
+    if (booksError) {
+      throw booksError;
+    }
 
-    if (existingBooks.length !== bookIds.length) {
+    if ((existingBooks?.length ?? 0) !== bookIds.length) {
       return {
         success: false,
         message: "Un ou plusieurs livres n'existent pas.",
@@ -120,19 +139,23 @@ export const updateTopBooks = async (
     }
 
     // Supprimer les anciens top books de l'utilisateur
-    await prisma.userTopBook.deleteMany({
-      where: { userId },
-    });
+    const { error: delError } = await db.client
+      .from("user_top_books")
+      .delete()
+      .eq("user_id", userId);
+    if (delError) throw delError;
 
     // Créer les nouveaux top books
     if (input.topBooks.length > 0) {
-      await prisma.userTopBook.createMany({
-        data: input.topBooks.map((tb) => ({
-          userId,
-          bookId: tb.bookId,
-          position: tb.position,
-        })),
-      });
+      const rows = input.topBooks.map((tb) => ({
+        user_id: userId,
+        book_id: tb.bookId,
+        position: tb.position,
+      }));
+      const { error: insertError } = await db.client
+        .from("user_top_books")
+        .insert(rows);
+      if (insertError) throw insertError;
     }
 
     revalidatePath("/profiles/me");

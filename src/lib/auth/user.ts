@@ -1,6 +1,5 @@
 import type { Session } from "next-auth";
-
-import { prisma } from "@/lib/prisma/client";
+import db from "@/lib/supabase/db";
 
 export const resolveSessionUserId = async (
   session: Session | null,
@@ -17,11 +16,18 @@ export const resolveSessionUserId = async (
     return null;
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: { id: true },
-  });
+  const { data, error } = await db.client
+    .from("users")
+    .select("id")
+    .eq("email", session.user.email)
+    .limit(1)
+    .maybeSingle();
 
-  return user?.id ?? null;
+  if (error) {
+    console.error("Supabase error while resolving session user id:", error);
+    return null;
+  }
+
+  return data?.id ?? null;
 };
 

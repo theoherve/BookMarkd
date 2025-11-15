@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { getCurrentSession } from "@/lib/auth/session";
 import { resolveSessionUserId } from "@/lib/auth/user";
-import { prisma } from "@/lib/prisma/client";
+import db from "@/lib/supabase/db";
 
 type ActionResult =
   | { success: true }
@@ -33,10 +33,15 @@ export const requestFollow = async (
     }
 
     // Vérifier que l'utilisateur cible existe
-    const targetUser = await prisma.user.findUnique({
-      where: { id: targetUserId },
-      select: { id: true },
-    });
+    const { data: targetUser, error: targetErr } = await db.client
+      .from("users")
+      .select("id")
+      .eq("id", targetUserId)
+      .maybeSingle();
+
+    if (targetErr) {
+      throw targetErr;
+    }
 
     if (!targetUser) {
       return {
@@ -46,14 +51,16 @@ export const requestFollow = async (
     }
 
     // Vérifier si une demande existe déjà
-    const existingRequest = await prisma.followRequest.findUnique({
-      where: {
-        requesterId_targetId: {
-          requesterId,
-          targetId: targetUserId,
-        },
-      },
-    });
+    const { data: existingRequest, error: existingReqErr } = await db.client
+      .from("follow_requests")
+      .select("status")
+      .eq("requester_id", requesterId)
+      .eq("target_id", targetUserId)
+      .maybeSingle();
+
+    if (existingReqErr) {
+      throw existingReqErr;
+    }
 
     if (existingRequest) {
       if (existingRequest.status === "pending") {
@@ -66,14 +73,16 @@ export const requestFollow = async (
     }
 
     // Vérifier si on suit déjà cet utilisateur
-    const existingFollow = await prisma.follow.findUnique({
-      where: {
-        followerId_followingId: {
-          followerId: requesterId,
-          followingId: targetUserId,
-        },
-      },
-    });
+    const { data: existingFollow, error: existingFollowErr } = await db.client
+      .from("follows")
+      .select("follower_id")
+      .eq("follower_id", requesterId)
+      .eq("following_id", targetUserId)
+      .maybeSingle();
+
+    if (existingFollowErr) {
+      throw existingFollowErr;
+    }
 
     if (existingFollow) {
       return {
@@ -83,13 +92,16 @@ export const requestFollow = async (
     }
 
     // Créer la demande
-    await prisma.followRequest.create({
-      data: {
-        requesterId,
-        targetId: targetUserId,
+    const { error: createErr } = await db.client.from("follow_requests").insert([
+      {
+        requester_id: requesterId,
+        target_id: targetUserId,
         status: "pending",
       },
-    });
+    ]);
+    if (createErr) {
+      throw createErr;
+    }
 
     revalidatePath("/profiles/me");
     revalidatePath(`/profiles/${targetUserId}`);
@@ -115,14 +127,16 @@ export const cancelFollowRequest = async (
   try {
     const requesterId = await requireSession();
 
-    const request = await prisma.followRequest.findUnique({
-      where: {
-        requesterId_targetId: {
-          requesterId,
-          targetId: targetUserId,
-        },
-      },
-    });
+    const { data: request, error } = await db.client
+      .from("follow_requests")
+      .select("id, status")
+      .eq("requester_id", requesterId)
+      .eq("target_id", targetUserId)
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
 
     if (!request || request.status !== "pending") {
       return {
@@ -131,9 +145,13 @@ export const cancelFollowRequest = async (
       };
     }
 
-    await prisma.followRequest.delete({
-      where: { id: request.id },
-    });
+    const { error: delErr } = await db.client
+      .from("follow_requests")
+      .delete()
+      .eq("id", request.id as string);
+    if (delErr) {
+      throw delErr;
+    }
 
     revalidatePath("/profiles/me");
     revalidatePath(`/profiles/${targetUserId}`);
@@ -159,17 +177,23 @@ export const acceptFollowRequest = async (
   try {
     const userId = await requireSession();
 
-    const request = await prisma.followRequest.findUnique({
-      where: { id: requestId },
-      include: {
-        requester: {
-          select: {
-            id: true,
-            displayName: true,
-          },
-        },
-      },
-    });
+    const { data: request, error } = await db.client
+      .from("follow_requests")
+      .select(
+        `
+        id,
+        status,
+        requester_id,
+        target_id,
+        requester:requester_id ( id, display_name )
+      `,
+      )
+      .eq("id", requestId)
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
 
     if (!request) {
       return {
@@ -178,7 +202,7 @@ export const acceptFollowRequest = async (
       };
     }
 
-    if (request.targetId !== userId) {
+    if ((request.target_id as string) !== userId) {
       return {
         success: false,
         message: "Vous n'êtes pas autorisé·e à accepter cette demande.",
@@ -193,31 +217,30 @@ export const acceptFollowRequest = async (
     }
 
     // Accepter la demande et créer la relation Follow
-    await prisma.$transaction([
-      prisma.followRequest.update({
-        where: { id: requestId },
-        data: {
-          status: "accepted",
-          respondedAt: new Date(),
-        },
-      }),
-      prisma.follow.upsert({
-        where: {
-          followerId_followingId: {
-            followerId: request.requesterId,
-            followingId: request.targetId,
+    const { error: updErr } = await db.client
+      .from("follow_requests")
+      .update({
+        status: "accepted",
+        responded_at: new Date().toISOString(),
+      })
+      .eq("id", requestId);
+    if (updErr) throw updErr;
+
+    const { error: upsertErr } = await db.client
+      .from("follows")
+      .upsert(
+        [
+          {
+            follower_id: request.requester_id,
+            following_id: request.target_id,
           },
-        },
-        create: {
-          followerId: request.requesterId,
-          followingId: request.targetId,
-        },
-        update: {},
-      }),
-    ]);
+        ],
+        { onConflict: "follower_id,following_id" },
+      );
+    if (upsertErr) throw upsertErr;
 
     revalidatePath("/profiles/me");
-    revalidatePath(`/profiles/${request.requester.id}`);
+    revalidatePath(`/profiles/${(request as any).requester?.id}`);
     return { success: true };
   } catch (error) {
     if ((error as Error).message === "AUTH_REQUIRED") {
@@ -240,9 +263,15 @@ export const rejectFollowRequest = async (
   try {
     const userId = await requireSession();
 
-    const request = await prisma.followRequest.findUnique({
-      where: { id: requestId },
-    });
+    const { data: request, error } = await db.client
+      .from("follow_requests")
+      .select("id, status, target_id")
+      .eq("id", requestId)
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
 
     if (!request) {
       return {
@@ -251,7 +280,7 @@ export const rejectFollowRequest = async (
       };
     }
 
-    if (request.targetId !== userId) {
+    if ((request.target_id as string) !== userId) {
       return {
         success: false,
         message: "Vous n'êtes pas autorisé·e à refuser cette demande.",
@@ -265,13 +294,14 @@ export const rejectFollowRequest = async (
       };
     }
 
-    await prisma.followRequest.update({
-      where: { id: requestId },
-      data: {
+    const { error: updErr } = await db.client
+      .from("follow_requests")
+      .update({
         status: "rejected",
-        respondedAt: new Date(),
-      },
-    });
+        responded_at: new Date().toISOString(),
+      })
+      .eq("id", requestId);
+    if (updErr) throw updErr;
 
     revalidatePath("/profiles/me");
     return { success: true };
@@ -301,14 +331,16 @@ export const unfollowUser = async (targetUserId: string): Promise<ActionResult> 
       };
     }
 
-    const follow = await prisma.follow.findUnique({
-      where: {
-        followerId_followingId: {
-          followerId,
-          followingId: targetUserId,
-        },
-      },
-    });
+    const { data: follow, error } = await db.client
+      .from("follows")
+      .select("follower_id")
+      .eq("follower_id", followerId)
+      .eq("following_id", targetUserId)
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
 
     if (!follow) {
       return {
@@ -317,14 +349,14 @@ export const unfollowUser = async (targetUserId: string): Promise<ActionResult> 
       };
     }
 
-    await prisma.follow.delete({
-      where: {
-        followerId_followingId: {
-          followerId,
-          followingId: targetUserId,
-        },
-      },
-    });
+    const { error: delErr } = await db.client
+      .from("follows")
+      .delete()
+      .eq("follower_id", followerId)
+      .eq("following_id", targetUserId);
+    if (delErr) {
+      throw delErr;
+    }
 
     revalidatePath("/profiles/me");
     revalidatePath(`/profiles/${targetUserId}`);
@@ -357,28 +389,27 @@ export const getFollowStatus = async (
     const viewerId = await requireSession();
 
     // Vérifier si on suit déjà
-    const follow = await prisma.follow.findUnique({
-      where: {
-        followerId_followingId: {
-          followerId: viewerId,
-          followingId: targetUserId,
-        },
-      },
-    });
+    const { data: follow, error: followErr } = await db.client
+      .from("follows")
+      .select("follower_id")
+      .eq("follower_id", viewerId)
+      .eq("following_id", targetUserId)
+      .maybeSingle();
+
+    if (followErr) throw followErr;
 
     if (follow) {
       return { status: "following" };
     }
 
     // Vérifier s'il y a une demande en attente
-    const request = await prisma.followRequest.findUnique({
-      where: {
-        requesterId_targetId: {
-          requesterId: viewerId,
-          targetId: targetUserId,
-        },
-      },
-    });
+    const { data: request, error: reqErr } = await db.client
+      .from("follow_requests")
+      .select("status")
+      .eq("requester_id", viewerId)
+      .eq("target_id", targetUserId)
+      .maybeSingle();
+    if (reqErr) throw reqErr;
 
     if (request) {
       if (request.status === "pending") {
@@ -409,38 +440,46 @@ export const getFollowRequests = async () => {
   try {
     const userId = await requireSession();
 
-    const requests = await prisma.followRequest.findMany({
-      where: {
-        targetId: userId,
-        status: "pending",
-      },
-      include: {
-        requester: {
-          select: {
-            id: true,
-            displayName: true,
-            avatarUrl: true,
-            bio: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+    const { data: requests, error } = await db.client
+      .from("follow_requests")
+      .select(
+        `
+        id,
+        created_at,
+        requester:requester_id ( id, display_name, avatar_url, bio )
+      `,
+      )
+      .eq("target_id", userId)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    const mapped = (requests ?? [])
+      .map((req: any) =>
+        db.toCamel<{
+          id: string;
+          createdAt: string;
+          requester?: {
+            id: string;
+            displayName: string;
+            avatarUrl: string | null;
+            bio: string | null;
+          };
+        }>(req),
+      )
+      .filter((r) => Boolean(r.requester))
+      .map((r) => ({
+        id: r.id,
+        requester: r.requester!,
+        createdAt: r.createdAt,
+      }));
 
     return {
       success: true,
-      requests: requests.map((req) => ({
-        id: req.id,
-        requester: {
-          id: req.requester.id,
-          displayName: req.requester.displayName,
-          avatarUrl: req.requester.avatarUrl,
-          bio: req.requester.bio,
-        },
-        createdAt: req.createdAt.toISOString(),
-      })),
+      requests: mapped,
     };
   } catch (error) {
     if ((error as Error).message === "AUTH_REQUIRED") {
@@ -461,36 +500,35 @@ export const getPendingFollowRequests = async () => {
   try {
     const userId = await requireSession();
 
-    const requests = await prisma.followRequest.findMany({
-      where: {
-        requesterId: userId,
-        status: "pending",
-      },
-      include: {
-        target: {
-          select: {
-            id: true,
-            displayName: true,
-            avatarUrl: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+    const { data: requests, error } = await db.client
+      .from("follow_requests")
+      .select(
+        `
+        id,
+        created_at,
+        target:target_id ( id, display_name, avatar_url )
+      `,
+      )
+      .eq("requester_id", userId)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
 
     return {
       success: true,
-      requests: requests.map((req) => ({
-        id: req.id,
-        target: {
-          id: req.target.id,
-          displayName: req.target.displayName,
-          avatarUrl: req.target.avatarUrl,
-        },
-        createdAt: req.createdAt.toISOString(),
-      })),
+      requests: (requests ?? []).map((req: any) => {
+        const r = db.toCamel<{
+          id: string;
+          createdAt: string;
+          target?: { id: string; displayName: string; avatarUrl: string | null };
+        }>(req);
+        return {
+          id: r.id,
+          target: r.target!,
+          createdAt: r.createdAt,
+        };
+      }),
     };
   } catch (error) {
     if ((error as Error).message === "AUTH_REQUIRED") {
@@ -509,32 +547,37 @@ export const getPendingFollowRequests = async () => {
 
 export const getFollowers = async (userId: string) => {
   try {
-    const followers = await prisma.follow.findMany({
-      where: {
-        followingId: userId,
-      },
-      include: {
-        follower: {
-          select: {
-            id: true,
-            displayName: true,
-            avatarUrl: true,
-            bio: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+    const { data: followers, error } = await db.client
+      .from("follows")
+      .select(
+        `
+        created_at,
+        follower:follower_id ( id, display_name, avatar_url, bio )
+      `,
+      )
+      .eq("following_id", userId)
+      .order("created_at", { ascending: false });
 
-    return followers.map((follow) => ({
-      id: follow.follower.id,
-      displayName: follow.follower.displayName,
-      avatarUrl: follow.follower.avatarUrl,
-      bio: follow.follower.bio,
-      followedAt: follow.createdAt.toISOString(),
-    }));
+    if (error) throw error;
+
+    return (followers ?? []).map((row: any) => {
+      const r = db.toCamel<{
+        createdAt: string;
+        follower?: {
+          id: string;
+          displayName: string;
+          avatarUrl: string | null;
+          bio: string | null;
+        };
+      }>(row);
+      return {
+        id: r.follower!.id,
+        displayName: r.follower!.displayName,
+        avatarUrl: r.follower!.avatarUrl,
+        bio: r.follower!.bio,
+        followedAt: r.createdAt,
+      };
+    });
   } catch (error) {
     console.error("[follow] getFollowers error:", error);
     return [];
@@ -543,32 +586,37 @@ export const getFollowers = async (userId: string) => {
 
 export const getFollowing = async (userId: string) => {
   try {
-    const following = await prisma.follow.findMany({
-      where: {
-        followerId: userId,
-      },
-      include: {
-        following: {
-          select: {
-            id: true,
-            displayName: true,
-            avatarUrl: true,
-            bio: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+    const { data: following, error } = await db.client
+      .from("follows")
+      .select(
+        `
+        created_at,
+        following:following_id ( id, display_name, avatar_url, bio )
+      `,
+      )
+      .eq("follower_id", userId)
+      .order("created_at", { ascending: false });
 
-    return following.map((follow) => ({
-      id: follow.following.id,
-      displayName: follow.following.displayName,
-      avatarUrl: follow.following.avatarUrl,
-      bio: follow.following.bio,
-      followedAt: follow.createdAt.toISOString(),
-    }));
+    if (error) throw error;
+
+    return (following ?? []).map((row: any) => {
+      const r = db.toCamel<{
+        createdAt: string;
+        following?: {
+          id: string;
+          displayName: string;
+          avatarUrl: string | null;
+          bio: string | null;
+        };
+      }>(row);
+      return {
+        id: r.following!.id,
+        displayName: r.following!.displayName,
+        avatarUrl: r.following!.avatarUrl,
+        bio: r.following!.bio,
+        followedAt: r.createdAt,
+      };
+    });
   } catch (error) {
     console.error("[follow] getFollowing error:", error);
     return [];

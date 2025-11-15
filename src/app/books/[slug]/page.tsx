@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 
 import AppShell from "@/components/layout/app-shell";
-import { prisma } from "@/lib/prisma/client";
+import db from "@/lib/supabase/db";
 import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
@@ -157,14 +157,13 @@ const getBookDetail = async (
       targetBookId = bookId;
     } else {
       // Recherche par slug (titre + auteur)
-      const allBooks = await prisma.book.findMany({
-        select: {
-          id: true,
-          title: true,
-          author: true,
-        },
-        take: 10000,
-      });
+      const { data: allBooks, error: booksError } = await db.client
+        .from("books")
+        .select("id, title, author")
+        .limit(10000);
+      if (booksError) {
+        throw booksError;
+      }
 
       if (!allBooks || allBooks.length === 0) {
         return {
@@ -206,63 +205,44 @@ const getBookDetail = async (
     }
 
     // Récupérer le livre avec toutes ses relations
-    const book = await prisma.book.findUnique({
-      where: { id: targetBookId },
-      include: {
-        bookTags: {
-          include: {
-            tag: {
-              select: {
-                id: true,
-                name: true,
-                slug: true,
-              },
-            },
-          },
-        },
-        reviews: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                displayName: true,
-                avatarUrl: true,
-              },
-            },
-            likes: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    displayName: true,
-                    avatarUrl: true,
-                  },
-                },
-              },
-            },
-            comments: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    displayName: true,
-                    avatarUrl: true,
-                  },
-                },
-              },
-              orderBy: {
-                createdAt: "asc",
-              },
-            },
-          },
-          orderBy: {
-            createdAt: "desc",
-          },
-        },
-      },
-    });
+    const { data: bookRow, error: bookError } = await db.client
+      .from("books")
+      .select(
+        `
+        id,
+        title,
+        author,
+        cover_url,
+        summary,
+        average_rating,
+        ratings_count,
+        publication_year,
+        book_tags:book_tags ( tag:tags ( id, name, slug ) ),
+        reviews:reviews (
+          id,
+          title,
+          content,
+          created_at,
+          visibility,
+          spoiler,
+          user:user_id ( id, display_name, avatar_url ),
+          review_likes:review_likes ( user:user_id ( id, display_name, avatar_url ) ),
+          review_comments:review_comments (
+            id,
+            content,
+            created_at,
+            user:user_id ( id, display_name, avatar_url )
+          )
+        )
+      `,
+      )
+      .eq("id", targetBookId)
+      .maybeSingle();
+    if (bookError) {
+      throw bookError;
+    }
 
-    if (!book) {
+    if (!bookRow) {
       return {
         book: null,
         viewer: {
@@ -275,104 +255,85 @@ const getBookDetail = async (
     // Récupérer les informations du viewer (user_books)
     let userBook = null;
     if (validViewerId) {
-      userBook = await prisma.userBook.findUnique({
-        where: {
-          userId_bookId: {
-            userId: validViewerId,
-            bookId: targetBookId,
-          },
-        },
-        select: {
-          status: true,
-          rating: true,
-        },
-      });
+      const { data: userBookRow } = await db.client
+        .from("user_books")
+        .select("status, rating")
+        .eq("user_id", validViewerId)
+        .eq("book_id", targetBookId)
+        .maybeSingle();
+      userBook = userBookRow ?? null;
     }
 
     // Transformer les données Prisma en format RawBook
+    const book = bookRow!;
     const rawBook: RawBook = {
       id: book.id,
       title: book.title,
       author: book.author,
-      cover_url: book.coverUrl,
+      cover_url: book.cover_url,
       summary: book.summary,
-      average_rating: book.averageRating ? Number(book.averageRating) : null,
-      ratings_count: book.ratingsCount,
-      publication_year: book.publicationYear,
-      book_tags: book.bookTags.map((bt: { tag: { id: string; name: string; slug: string } }) => ({
-        tag: {
-          id: bt.tag.id,
-          name: bt.tag.name,
-          slug: bt.tag.slug,
-        },
-      })),
-      reviews: book.reviews.map((review: {
-        id: string;
-        title: string | null;
-        content: string;
-        createdAt: Date;
-        visibility: string;
-        spoiler: boolean;
-        user: { id: string; displayName: string; avatarUrl: string | null };
-        likes: Array<{
-          user: { id: string; displayName: string; avatarUrl: string | null };
-        }>;
-        comments: Array<{
-          id: string;
-          content: string;
-          createdAt: Date;
-          user: { id: string; displayName: string; avatarUrl: string | null };
-        }>;
-      }) => ({
-        id: review.id,
-        title: review.title,
-        content: review.content,
-        created_at: review.createdAt.toISOString(),
-        visibility: review.visibility as "public" | "friends" | "private",
-        spoiler: review.spoiler,
-        user: [
-          {
-            id: review.user.id,
-            display_name: review.user.displayName,
-            avatar_url: review.user.avatarUrl,
+      average_rating:
+        typeof book.average_rating === "number" ? book.average_rating : null,
+      ratings_count: book.ratings_count ?? 0,
+      publication_year: book.publication_year,
+      book_tags: (book.book_tags ?? []).map((bt: any) => {
+        const tag = Array.isArray(bt.tag) ? bt.tag[0] : bt.tag;
+        return {
+          tag: {
+            id: tag?.id ?? "",
+            name: tag?.name ?? "",
+            slug: tag?.slug ?? "",
           },
-        ],
-        review_likes: review.likes.map((like: {
-          user: { id: string; displayName: string; avatarUrl: string | null };
-        }) => ({
-          user: [
-            {
-              id: like.user.id,
-              display_name: like.user.displayName,
-              avatar_url: like.user.avatarUrl,
-            },
-          ],
-        })),
-        review_comments: review.comments.map((comment: {
-          id: string;
-          content: string;
-          createdAt: Date;
-          user: { id: string; displayName: string; avatarUrl: string | null };
-        }) => ({
-          id: comment.id,
-          content: comment.content,
-          created_at: comment.createdAt.toISOString(),
-          user: [
-            {
-              id: comment.user.id,
-              display_name: comment.user.displayName,
-              avatar_url: comment.user.avatarUrl,
-            },
-          ],
-        })),
-      })),
+        };
+      }),
+      reviews:
+        (book.reviews ?? []).map((review: any) => ({
+          id: review.id,
+          title: review.title,
+          content: review.content,
+          created_at: review.created_at,
+          visibility: review.visibility,
+          spoiler: review.spoiler,
+          user: review.user
+            ? review.user.map((u: any) => ({
+                id: u.id,
+                display_name: u.display_name,
+                avatar_url: u.avatar_url,
+              }))
+            : [],
+          review_likes: review.review_likes
+            ? review.review_likes.map((like: any) => ({
+                user: like.user
+                  ? like.user.map((u: any) => ({
+                      id: u.id,
+                      display_name: u.display_name,
+                      avatar_url: u.avatar_url,
+                    }))
+                  : [],
+              }))
+            : [],
+          review_comments: review.review_comments
+            ? review.review_comments.map((comment: any) => ({
+                id: comment.id,
+                content: comment.content,
+                created_at: comment.created_at,
+                user: comment.user
+                  ? comment.user.map((u: any) => ({
+                      id: u.id,
+                      display_name: u.display_name,
+                      avatar_url: u.avatar_url,
+                    }))
+                  : [],
+              }))
+            : [],
+        })) ?? [],
     };
 
     return {
       book: rawBook,
       viewer: {
-        status: userBook?.status as "to_read" | "reading" | "finished" | null,
-        rating: userBook?.rating ? Number(userBook.rating) : null,
+        status: (userBook?.status as "to_read" | "reading" | "finished") ?? null,
+        rating: typeof userBook?.rating === "number" ? userBook.rating : null,
       },
     };
   } catch {

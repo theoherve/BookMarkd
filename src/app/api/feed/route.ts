@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { prisma } from "@/lib/prisma/client";
+import db from "@/lib/supabase/db";
 import type {
   FeedActivity,
   FeedFriendBook,
@@ -49,12 +49,13 @@ export async function GET() {
     let followingIds: string[] = [];
 
     if (viewerId) {
-      const follows = await prisma.follow.findMany({
-        where: { followerId: viewerId },
-        select: { followingId: true },
-      });
+      const { data: follows, error: followsErr } = await db.client
+        .from("follows")
+        .select("following_id")
+        .eq("follower_id", viewerId);
+      if (followsErr) throw followsErr;
 
-      followingIds = follows.map((follow) => follow.followingId);
+      followingIds = (follows ?? []).map((f) => (f as any).following_id as string);
     }
 
     const audienceIds =
@@ -64,100 +65,122 @@ export async function GET() {
           )
         : null;
 
+    const activitiesPromise = (() => {
+      let q = db.client
+        .from("activities")
+        .select(
+          `
+          id,
+          type,
+          payload,
+          created_at,
+          user:user_id ( id, display_name, avatar_url )
+        `,
+        );
+      if (audienceIds?.length) {
+        q = q.in("user_id", audienceIds);
+      }
+      return q
+        .order("created_at", { ascending: false })
+        .limit(ACTIVITY_LIMIT)
+        .then((r) =>
+          db.toCamel<
+            Array<{
+              id: string;
+              type: string;
+              payload: unknown;
+              createdAt: string;
+              user?: { id: string; displayName: string | null; avatarUrl: string | null };
+            }>
+          >(r.data ?? []),
+        );
+    })();
+
+    const friendsBooksPromise = (() => {
+      let q = db.client
+        .from("user_books")
+        .select(
+          `
+          id,
+          status,
+          updated_at,
+          rating,
+          user:user_id ( id, display_name, avatar_url ),
+          book:book_id ( id, title, author, cover_url, average_rating )
+        `,
+        );
+      if (audienceIds?.length) {
+        q = q.in("user_id", audienceIds);
+      }
+      return q
+        .order("updated_at", { ascending: false })
+        .limit(FRIENDS_BOOKS_LIMIT)
+        .then((r) =>
+          db.toCamel<
+            Array<{
+              id: string;
+              status: string | null;
+              updatedAt: string;
+              rating: number | null;
+              user?: { id: string; displayName: string | null; avatarUrl: string | null };
+              book?: {
+                id: string;
+                title: string;
+                author: string;
+                coverUrl: string | null;
+                averageRating: number | null;
+              };
+            }>
+          >(r.data ?? []),
+        );
+    })();
+
+    const recommendationsPromise = db.client
+      .from("recommendations")
+      .select(
+          `
+          id,
+          score,
+          source,
+          metadata,
+          book:book_id ( id, title, author, cover_url )
+        `,
+      )
+      .match(viewerId ? { user_id: viewerId } : {})
+      .order("score", { ascending: false })
+      .limit(RECOMMENDATIONS_LIMIT)
+      .then((r) =>
+        db.toCamel<
+          Array<{
+            id: string;
+            score: number;
+            source: string;
+            metadata: unknown;
+            book?: { id: string; title: string; author: string; coverUrl: string | null };
+          }>
+        >(r.data ?? []),
+      );
+
     const [activities, friendsBooks, recommendations] = await Promise.all([
-      prisma.activity.findMany({
-        where: audienceIds?.length
-          ? {
-              userId: {
-                in: audienceIds,
-              },
-            }
-          : undefined,
-        include: {
-          user: {
-            select: {
-              id: true,
-              displayName: true,
-              avatarUrl: true,
-            },
-          },
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-        take: ACTIVITY_LIMIT,
-      }),
-      prisma.userBook.findMany({
-        where: audienceIds?.length
-          ? {
-              userId: {
-                in: audienceIds,
-              },
-            }
-          : undefined,
-        include: {
-          book: {
-            select: {
-              id: true,
-              title: true,
-              author: true,
-              coverUrl: true,
-              averageRating: true,
-            },
-          },
-          user: {
-            select: {
-              id: true,
-              displayName: true,
-              avatarUrl: true,
-            },
-          },
-        },
-        orderBy: {
-          updatedAt: "desc",
-        },
-        take: FRIENDS_BOOKS_LIMIT,
-      }),
-      prisma.recommendation.findMany({
-        where: viewerId
-          ? {
-              userId: viewerId,
-            }
-          : undefined,
-        include: {
-          book: {
-            select: {
-              id: true,
-              title: true,
-              author: true,
-              coverUrl: true,
-            },
-          },
-        },
-        orderBy: {
-          score: "desc",
-        },
-        take: RECOMMENDATIONS_LIMIT,
-      }),
+      activitiesPromise,
+      friendsBooksPromise,
+      recommendationsPromise,
     ]);
 
-    const recommendationBookIds = recommendations
-      .map((item) => item.book.id)
+    const recommendationBookIds = (recommendations ?? [])
+      .map((item) => item.book?.id)
       .filter((id): id is string => Boolean(id));
 
     let viewerReadlistBooks = new Set<string>();
     if (viewerId && recommendationBookIds.length > 0) {
-      const viewerEntries = await prisma.userBook.findMany({
-        where: {
-          userId: viewerId,
-          bookId: {
-            in: recommendationBookIds,
-          },
-        },
-        select: { bookId: true },
-      });
+      const { data: viewerEntries, error: viewerErr } = await db.client
+        .from("user_books")
+        .select("book_id")
+        .eq("user_id", viewerId)
+        .in("book_id", recommendationBookIds);
+      if (viewerErr) throw viewerErr;
       viewerReadlistBooks = new Set(
-        viewerEntries.map((entry) => entry.bookId).filter(Boolean),
+        (viewerEntries ?? []).map((e) => (e as any).book_id as string).filter(Boolean),
       );
     }
 
@@ -166,40 +189,34 @@ export async function GET() {
       { names: string[]; count: number; highlights: string[] }
     >();
     if (followingIds.length > 0 && recommendationBookIds.length > 0) {
-      const friendEntries = await prisma.userBook.findMany({
-        where: {
-          userId: {
-            in: followingIds,
-          },
-          bookId: {
-            in: recommendationBookIds,
-          },
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              displayName: true,
-            },
-          },
-        },
-      });
+      const { data: friendEntries, error: friendErr } = await db.client
+        .from("user_books")
+        .select(
+          `
+          status,
+          book_id,
+          user:user_id ( id, display_name )
+        `,
+        )
+        .in("user_id", followingIds)
+        .in("book_id", recommendationBookIds);
+      if (friendErr) throw friendErr;
 
-      friendEntries.forEach((entry) => {
-        const bookId = entry.bookId;
+      (friendEntries ?? []).forEach((entry: any) => {
+        const bookId = entry.book_id as string;
         if (!bookId) {
           return;
         }
 
-        const friendName = entry.user.displayName ?? null;
+        const friendName = entry.user?.display_name ?? null;
         if (!friendName) {
           return;
         }
 
         const statusLabel =
-          entry.status === "finished"
+          (entry.status as string) === "finished"
             ? `${friendName} l'a terminé`
-            : entry.status === "reading"
+            : (entry.status as string) === "reading"
               ? `${friendName} est en cours de lecture`
               : `${friendName} l'a ajouté à sa liste`;
 
@@ -223,24 +240,15 @@ export async function GET() {
 
     const tagsByBook = new Map<string, string[]>();
     if (recommendationBookIds.length > 0) {
-      const tagRelations = await prisma.bookTag.findMany({
-        where: {
-          bookId: {
-            in: recommendationBookIds,
-          },
-        },
-        include: {
-          tag: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      });
+      const { data: tagRelations, error: tagsErr } = await db.client
+        .from("book_tags")
+        .select("book_id, tag:tag_id ( name )")
+        .in("book_id", recommendationBookIds);
+      if (tagsErr) throw tagsErr;
 
-      tagRelations.forEach((relation) => {
-        const bookId = relation.bookId;
-        const tagName = relation.tag.name;
+      (tagRelations ?? []).forEach((relation: any) => {
+        const bookId = relation.book_id as string;
+        const tagName = relation.tag?.name as string | undefined;
         if (!bookId || !tagName) {
           return;
         }
@@ -267,8 +275,8 @@ export async function GET() {
       return {
         id: item.id,
         type: isActivityType(item.type) ? item.type : "list_update",
-        userName: item.user.displayName ?? "Lectrice anonyme",
-        userAvatarUrl: item.user.avatarUrl ?? null,
+        userName: item.user?.displayName ?? "Lectrice anonyme",
+        userAvatarUrl: item.user?.avatarUrl ?? null,
         bookTitle:
           (normalizedPayload.book_title as string | null | undefined) ?? null,
         note:
@@ -278,29 +286,30 @@ export async function GET() {
           null,
         rating:
           (normalizedPayload.rating as number | null | undefined) ?? null,
-        occurredAt: item.createdAt.toISOString(),
+        occurredAt: item.createdAt,
       };
     });
 
     const formattedFriendsBooks: FeedFriendBook[] = friendsBooks.map((item) => ({
       id: item.id,
-      bookId: item.book.id,
-      title: item.book.title,
-      author: item.book.author,
-      coverUrl: item.book.coverUrl ?? null,
-      averageRating: item.book.averageRating
-        ? Number(item.book.averageRating)
+      bookId: item.book?.id ?? "",
+      title: item.book?.title ?? "",
+      author: item.book?.author ?? "",
+      coverUrl: item.book?.coverUrl ?? null,
+      averageRating: typeof item.book?.averageRating === "number"
+        ? item.book!.averageRating!
         : null,
       status: item.status as "to_read" | "reading" | "finished",
-      updatedAt: item.updatedAt.toISOString(),
-      readerName: item.user.displayName ?? "Lectrice anonyme",
-      readerAvatarUrl: item.user.avatarUrl ?? null,
+      updatedAt: item.updatedAt,
+      readerName: item.user?.displayName ?? "Lectrice anonyme",
+      readerAvatarUrl: item.user?.avatarUrl ?? null,
     }));
 
-    const formattedRecommendations: FeedRecommendation[] = recommendations.map(
+    const formattedRecommendations: FeedRecommendation[] = (recommendations ?? []).map(
       (item) => {
-        const friendContext = friendContextByBook.get(item.book.id);
-        const tags = tagsByBook.get(item.book.id) ?? [];
+        const bookId = item.book?.id ?? "";
+        const friendContext = friendContextByBook.get(bookId);
+        const tags = tagsByBook.get(bookId) ?? [];
 
         const metadata = item.metadata ?? {};
         const normalizedMetadata =
@@ -312,10 +321,10 @@ export async function GET() {
 
         return {
           id: item.id,
-          bookId: item.book.id,
-          title: item.book.title,
-          author: item.book.author,
-          coverUrl: item.book.coverUrl ?? null,
+          bookId,
+          title: item.book?.title ?? "",
+          author: item.book?.author ?? "",
+          coverUrl: item.book?.coverUrl ?? null,
           reason:
             (normalizedMetadata.reason as string | null | undefined) ??
             (normalizedMetadata.explanation as string | null | undefined) ??
@@ -326,10 +335,10 @@ export async function GET() {
           source: isRecommendationSource(item.source)
             ? item.source
             : "global",
-          score: Number(item.score),
+          score: typeof item.score === "number" ? item.score : Number(item.score ?? 0),
           friendNames: friendContext?.names ?? [],
           friendCount: friendContext?.count ?? 0,
-          viewerHasInReadlist: viewerReadlistBooks.has(item.book.id),
+          viewerHasInReadlist: viewerReadlistBooks.has(bookId),
           friendHighlights: friendContext?.highlights ?? [],
           tags: tags.slice(0, 5),
         };

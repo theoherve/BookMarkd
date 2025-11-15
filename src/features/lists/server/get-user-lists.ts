@@ -1,64 +1,94 @@
-import { prisma } from "@/lib/prisma/client";
+import db from "@/lib/supabase/db";
 
 import type { ListSummary, ViewerRole } from "../types";
 
 const mapViewerRole = (role: ViewerRole) => role;
 
 export const getUserLists = async (userId: string): Promise<ListSummary[]> => {
-  const [ownedLists, collaboratorRows] = await Promise.all([
-    prisma.list.findMany({
-      where: { ownerId: userId },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        visibility: true,
-        isCollaborative: true,
-        updatedAt: true,
-        _count: {
-          select: {
-            items: true,
-            collaborators: true,
-          },
-        },
-      },
-    }),
-    prisma.listCollaborator.findMany({
-      where: { userId },
-      include: {
-        list: {
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            visibility: true,
-            isCollaborative: true,
-            updatedAt: true,
-            _count: {
-              select: {
-                items: true,
-                collaborators: true,
-              },
-            },
-          },
-        },
-      },
-    }),
+  const [ownedListsRows, collaboratorRows] = await Promise.all([
+    db.client
+      .from("lists")
+      .select(
+        `
+        id,
+        title,
+        description,
+        visibility,
+        is_collaborative,
+        updated_at
+      `,
+      )
+      .eq("owner_id", userId)
+      .then((r) =>
+        db.toCamel<
+          Array<{
+            id: string;
+            title: string;
+            description: string | null;
+            visibility: string;
+            isCollaborative: boolean | null;
+            updatedAt: string;
+          }>
+        >(r.data ?? []),
+      ),
+    db.client
+      .from("list_collaborators")
+      .select(
+        `
+        role,
+        list:list_id (
+          id,
+          title,
+          description,
+          visibility,
+          is_collaborative,
+          updated_at
+        )
+      `,
+      )
+      .eq("user_id", userId)
+      .then((r) =>
+        db.toCamel<
+          Array<{
+            role: ViewerRole;
+            list?: {
+              id: string;
+              title: string;
+              description: string | null;
+              visibility: string;
+              isCollaborative: boolean | null;
+              updatedAt: string;
+            };
+          }>
+        >(r.data ?? []),
+      ),
   ]);
 
   const summaries: ListSummary[] = [];
 
   // Ajouter les listes possédées
-  for (const list of ownedLists) {
+  for (const list of ownedListsRows) {
+    // Counts (items, collaborators)
+    const [{ count: itemsCount }, { count: collaboratorCount }] =
+      await Promise.all([
+        db.client
+          .from("list_items")
+          .select("id", { count: "exact", head: true })
+          .eq("list_id", list.id),
+        db.client
+          .from("list_collaborators")
+          .select("user_id", { count: "exact", head: true })
+          .eq("list_id", list.id),
+      ]);
     summaries.push({
       id: list.id,
       title: list.title,
       description: list.description ?? null,
       visibility: list.visibility as ListSummary["visibility"],
       isCollaborative: list.isCollaborative ?? false,
-      updatedAt: list.updatedAt.toISOString(),
-      itemCount: list._count.items,
-      collaboratorCount: list._count.collaborators,
+      updatedAt: list.updatedAt,
+      itemCount: itemsCount ?? 0,
+      collaboratorCount: collaboratorCount ?? 0,
       viewerRole: mapViewerRole("owner"),
     });
   }
@@ -69,6 +99,17 @@ export const getUserLists = async (userId: string): Promise<ListSummary[]> => {
     if (!list) {
       continue;
     }
+    const [{ count: itemsCount }, { count: collaboratorCount }] =
+      await Promise.all([
+        db.client
+          .from("list_items")
+          .select("id", { count: "exact", head: true })
+          .eq("list_id", list.id),
+        db.client
+          .from("list_collaborators")
+          .select("user_id", { count: "exact", head: true })
+          .eq("list_id", list.id),
+      ]);
 
     summaries.push({
       id: list.id,
@@ -76,9 +117,9 @@ export const getUserLists = async (userId: string): Promise<ListSummary[]> => {
       description: list.description ?? null,
       visibility: list.visibility as ListSummary["visibility"],
       isCollaborative: list.isCollaborative ?? false,
-      updatedAt: list.updatedAt.toISOString(),
-      itemCount: list._count.items,
-      collaboratorCount: list._count.collaborators,
+      updatedAt: list.updatedAt,
+      itemCount: itemsCount ?? 0,
+      collaboratorCount: collaboratorCount ?? 0,
       viewerRole: mapViewerRole(collaboratorRow.role as ViewerRole),
     });
   }

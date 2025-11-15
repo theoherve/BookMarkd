@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import type { Prisma } from "@prisma/client";
-
-import { prisma } from "@/lib/prisma/client";
+import db from "@/lib/supabase/db";
 import { searchOpenLibrary } from "@/lib/open-library";
 import type { SearchBook, SearchResponse } from "@/features/search/types";
 
@@ -19,83 +17,96 @@ export async function GET(request: Request) {
     url.searchParams.get("external") !== "false" && query.length > 0;
 
   try {
-    // Construire la condition de recherche
-    const whereCondition: Prisma.BookWhereInput = {};
+    // Construire la requête Supabase
+    let booksQuery = db.client
+      .from("books")
+      .select(
+        `
+        id,
+        title,
+        author,
+        cover_url,
+        summary,
+        average_rating,
+        publication_year,
+        book_tags:book_tags(
+          tags:tags(
+            id,
+            name,
+            slug
+          )
+        )
+      `,
+      )
+      .order("average_rating", { ascending: false })
+      .limit(DB_LIMIT);
 
-    // Recherche par titre ou auteur
     if (query) {
-      whereCondition.OR = [
-        { title: { contains: query, mode: "insensitive" } },
-        { author: { contains: query, mode: "insensitive" } },
-      ];
+      booksQuery = booksQuery.or(
+        `title.ilike.%${query}%,author.ilike.%${query}%`,
+      );
     }
 
-    // Filtre par genre
-    if (genre) {
-      const normalizedGenre = genre.toLowerCase();
-      whereCondition.bookTags = {
-        some: {
-          tag: {
-            OR: [
-              { slug: genre },
-              { name: { contains: normalizedGenre, mode: "insensitive" } },
-            ],
-          },
-        },
-      };
-    }
-
-    // Filtre par note minimale
     if (minRating) {
       const ratingValue = parseFloat(minRating);
       if (!isNaN(ratingValue) && ratingValue >= 0 && ratingValue <= 5) {
-        whereCondition.averageRating = {
-          gte: ratingValue,
-        };
+        booksQuery = booksQuery.gte("average_rating", ratingValue);
       }
     }
 
-    // Filtre par état de lecture (nécessite une jointure avec userBooks)
-    // Note: Ce filtre nécessite un userId, donc on ne peut pas l'appliquer directement ici
-    // On le gérera côté client en filtrant les résultats
+    let { data: booksData, error: booksError } = await booksQuery;
 
-    // Récupérer les livres avec Prisma
-    const dbBooks = await prisma.book.findMany({
-      where: whereCondition,
-      include: {
-        bookTags: {
-          include: {
-            tag: {
-              select: {
-                id: true,
-                name: true,
-                slug: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: {
-        averageRating: "desc",
-      },
-      take: DB_LIMIT,
+    if (booksError) {
+      throw booksError;
+    }
+
+    // Filtre par genre côté JS si nécessaire
+    if (genre) {
+      const normalizedGenre = genre.trim().toLowerCase();
+      booksData =
+        (booksData ?? []).filter((b: any) =>
+          (b.book_tags ?? []).some(
+            (bt: any) =>
+              bt?.tags?.slug === normalizedGenre ||
+              (bt?.tags?.name ?? "")
+                .toLowerCase()
+                .includes(normalizedGenre),
+          ),
+        );
+    }
+
+    const formattedDbBooks: SearchBook[] = (booksData ?? []).map((raw) => {
+      const book = db.toCamel<{
+        id: string;
+        title: string;
+        author: string;
+        coverUrl: string | null;
+        summary: string | null;
+        averageRating: number | null;
+        publicationYear: number | null;
+        bookTags?: Array<{ tags?: { id: string; name: string; slug: string } }>;
+      }>(raw);
+
+      return {
+        id: book.id,
+        title: book.title,
+        author: book.author,
+        coverUrl: book.coverUrl,
+        summary: book.summary ?? null,
+        averageRating:
+          typeof book.averageRating === "number" ? book.averageRating : null,
+        publicationYear: book.publicationYear ?? null,
+        tags: (book.bookTags ?? [])
+          .map((bt) => bt.tags)
+          .filter(Boolean)
+          .map((t) => ({
+            id: t!.id,
+            name: t!.name,
+            slug: t!.slug,
+          })),
+        source: "supabase",
+      };
     });
-
-    const formattedDbBooks: SearchBook[] = dbBooks.map((book) => ({
-      id: book.id,
-      title: book.title,
-      author: book.author,
-      coverUrl: book.coverUrl,
-      summary: book.summary,
-      averageRating: book.averageRating ? Number(book.averageRating) : null,
-      publicationYear: book.publicationYear,
-      tags: book.bookTags.map((bt) => ({
-        id: bt.tag.id,
-        name: bt.tag.name,
-        slug: bt.tag.slug,
-      })),
-      source: "supabase",
-    }));
 
     let externalBooks: SearchBook[] = [];
 

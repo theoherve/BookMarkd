@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getCurrentSession } from "@/lib/auth/session";
-import { prisma } from "@/lib/prisma/client";
+import db from "@/lib/supabase/db";
 import { resolveSessionUserId } from "@/lib/auth/user";
 
 type BaseActionResult =
@@ -25,34 +25,40 @@ const loadListMembership = async (
   listId: string,
   userId: string,
 ) => {
-  const list = await prisma.list.findUnique({
-    where: { id: listId },
-    include: {
-      collaborators: {
-        where: { userId },
-        select: {
-          userId: true,
-          role: true,
-        },
-      },
-    },
-  });
+  const { data: list, error } = await db.client
+    .from("lists")
+    .select(
+      `
+      id,
+      owner_id,
+      collaborators:list_collaborators(role, user_id)
+    `,
+    )
+    .eq("id", listId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[lists] loadListMembership error:", error);
+    return null;
+  }
 
   if (!list) {
     return null;
   }
 
-  if (list.ownerId === userId) {
+  if (list.owner_id === userId) {
     return "owner" as const;
   }
 
-  const collaborator = list.collaborators[0];
+  const collaborator = (list as any).collaborators?.find(
+    (c: any) => c.user_id === userId,
+  );
 
   if (!collaborator) {
     return null;
   }
 
-  return collaborator.role as "editor" | "viewer";
+  return (collaborator.role as "editor" | "viewer") ?? null;
 };
 
 const isEditorRole = (
@@ -96,21 +102,30 @@ export const createList = async (formData: FormData): Promise<CreateListResult> 
   }
 
   try {
-    const newList = await prisma.list.create({
-      data: {
-        ownerId: userId,
-        title: title.trim(),
-        description: typeof description === "string" ? description.trim() : null,
-        visibility,
-        isCollaborative,
-      },
-    });
+    const { data: newList, error } = await db.client
+      .from("lists")
+      .insert([
+        {
+          owner_id: userId,
+          title: title.trim(),
+          description:
+            typeof description === "string" ? description.trim() : null,
+          visibility,
+          is_collaborative: isCollaborative,
+        },
+      ])
+      .select("id")
+      .single();
+
+    if (error) {
+      throw error;
+    }
 
     revalidatePath("/lists");
 
     return {
       success: true,
-      listId: newList.id,
+      listId: newList.id as string,
     };
   } catch (error) {
     console.error("[lists] createList error:", error);
@@ -146,13 +161,17 @@ export const addBookToList = async (
 
   try {
     // Vérifier si le livre est déjà dans la liste
-    const existingItem = await prisma.listItem.findFirst({
-      where: {
-        listId,
-        bookId,
-      },
-      select: { id: true },
-    });
+    const { data: existingItem, error: existingError } = await db.client
+      .from("list_items")
+      .select("id")
+      .eq("list_id", listId)
+      .eq("book_id", bookId)
+      .maybeSingle();
+
+    if (existingError && existingError.code !== "PGRST116") {
+      // PGRST116: maybeSingle with 0 rows
+      throw existingError;
+    }
 
     if (existingItem) {
       return {
@@ -162,24 +181,34 @@ export const addBookToList = async (
     }
 
     // Trouver la dernière position
-    const lastPositionRow = await prisma.listItem.findFirst({
-      where: { listId },
-      orderBy: { position: "desc" },
-      select: { position: true },
-    });
+    const { data: lastRows, error: lastError } = await db.client
+      .from("list_items")
+      .select("position")
+      .eq("list_id", listId)
+      .order("position", { ascending: false })
+      .limit(1);
 
-    const nextPosition = lastPositionRow?.position
-      ? lastPositionRow.position + 1
+    if (lastError) {
+      throw lastError;
+    }
+
+    const lastPosition = (lastRows?.[0]?.position as number | undefined) ?? 0;
+    const nextPosition = lastPosition
+      ? lastPosition + 1
       : 1;
 
-    await prisma.listItem.create({
-      data: {
-        listId,
-        bookId,
+    const { error: insertError } = await db.client.from("list_items").insert([
+      {
+        list_id: listId,
+        book_id: bookId,
         position: nextPosition,
         note: note ? note.trim() : null,
       },
-    });
+    ]);
+
+    if (insertError) {
+      throw insertError;
+    }
   } catch (error) {
     console.error("[lists] addBookToList error:", error);
     return {
@@ -218,21 +247,31 @@ export const removeListItem = async (
 
   try {
     // Vérifier que l'élément appartient bien à la liste avant de le supprimer
-    const item = await prisma.listItem.findUnique({
-      where: { id: listItemId },
-      select: { listId: true },
-    });
+    const { data: item, error: itemError } = await db.client
+      .from("list_items")
+      .select("list_id")
+      .eq("id", listItemId)
+      .maybeSingle();
 
-    if (!item || item.listId !== listId) {
+    if (itemError) {
+      throw itemError;
+    }
+
+    if (!item || (item.list_id as string) !== listId) {
       return {
         success: false,
         message: "Cet élément n'appartient pas à cette liste.",
       };
     }
 
-    await prisma.listItem.delete({
-      where: { id: listItemId },
-    });
+    const { error: deleteError } = await db.client
+      .from("list_items")
+      .delete()
+      .eq("id", listItemId);
+
+    if (deleteError) {
+      throw deleteError;
+    }
   } catch (error) {
     console.error("[lists] removeListItem error:", error);
     return {
@@ -269,14 +308,15 @@ export const leaveList = async (
   }
 
   try {
-    await prisma.listCollaborator.delete({
-      where: {
-        listId_userId: {
-          listId,
-          userId,
-        },
-      },
-    });
+    const { error } = await db.client
+      .from("list_collaborators")
+      .delete()
+      .eq("list_id", listId)
+      .eq("user_id", userId);
+
+    if (error) {
+      throw error;
+    }
   } catch (error) {
     console.error("[lists] leaveList error:", error);
     return {
@@ -315,15 +355,17 @@ export const reorderListItems = async (
 
   try {
     // Vérifier que tous les items appartiennent à la liste
-    const items = await prisma.listItem.findMany({
-      where: {
-        id: { in: itemIds },
-        listId,
-      },
-      select: { id: true },
-    });
+    const { data: items, error: itemsError } = await db.client
+      .from("list_items")
+      .select("id")
+      .in("id", itemIds)
+      .eq("list_id", listId);
 
-    if (items.length !== itemIds.length) {
+    if (itemsError) {
+      throw itemsError;
+    }
+
+    if ((items?.length ?? 0) !== itemIds.length) {
       return {
         success: false,
         message: "Certains éléments n'appartiennent pas à cette liste.",
@@ -331,14 +373,17 @@ export const reorderListItems = async (
     }
 
     // Mettre à jour les positions
-    await prisma.$transaction(
-      itemIds.map((itemId, index) =>
-        prisma.listItem.update({
-          where: { id: itemId },
-          data: { position: index + 1 },
-        }),
-      ),
-    );
+    for (let index = 0; index < itemIds.length; index++) {
+      const itemId = itemIds[index]!;
+      const { error } = await db.client
+        .from("list_items")
+        .update({ position: index + 1 })
+        .eq("id", itemId)
+        .eq("list_id", listId);
+      if (error) {
+        throw error;
+      }
+    }
   } catch (error) {
     console.error("[lists] reorderListItems error:", error);
     return {
