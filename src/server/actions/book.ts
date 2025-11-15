@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getCurrentSession } from "@/lib/auth/session";
 import db from "@/lib/supabase/db";
 import { createNotification } from "@/server/actions/notifications";
+import { upsertBookTags } from "@/server/actions/helpers/book-tags";
 
 type ActionResult =
   | { success: true }
@@ -350,6 +351,13 @@ export const createBook = async (
       ? parseInt(publicationYearStr, 10)
       : null;
     const summary = formData.get("summary")?.toString().trim() || null;
+    const tagsInput = formData.get("tags")?.toString();
+    const tagList = tagsInput
+      ? tagsInput
+          .split(/[\n,;]+/)
+          .map((tag) => tag.trim())
+          .filter(Boolean)
+      : [];
 
     if (!title || !author) {
       return {
@@ -384,6 +392,10 @@ export const createBook = async (
 
     if (insertBookError) {
       throw insertBookError;
+    }
+
+    if (tagList.length > 0) {
+      await upsertBookTags(tagList, inserted.id as string);
     }
 
     revalidatePath("/search");

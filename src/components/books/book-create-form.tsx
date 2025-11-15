@@ -4,7 +4,6 @@ import { FormEvent, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { createBook } from "@/server/actions/book";
-import { generateBookSlug } from "@/lib/slug";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,17 +30,7 @@ const BookCreateForm = () => {
         return;
       }
 
-      // Générer le slug à partir des données du formulaire
-      const title = formData.get("title")?.toString().trim() || "";
-      const author = formData.get("author")?.toString().trim() || "";
-      
-      if (title && author) {
-        const slug = generateBookSlug(title, author);
-        router.push(`/books/${slug}`);
-      } else {
-        // Fallback vers l'ID si les données ne sont pas disponibles
-        router.push(`/books/${result.bookId}`);
-      }
+      router.push(`/books/${result.bookId}`);
     });
   };
 
@@ -111,6 +100,21 @@ const BookCreateForm = () => {
               placeholder="https://example.com/cover.jpg"
               disabled={isPending}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="tags">Tags (optionnel)</Label>
+            <Textarea
+              id="tags"
+              name="tags"
+              rows={2}
+              placeholder="Fantasy, roman d'initiation, saga familiale"
+              disabled={isPending}
+              aria-describedby="tags-hint"
+            />
+            <p id="tags-hint" className="text-xs text-muted-foreground">
+              Séparez les tags par des virgules ou des retours à la ligne (8 maximum).
+            </p>
           </div>
 
           <div className="space-y-2">
