@@ -9,7 +9,7 @@ import { getUnreadCount } from "@/server/actions/notifications";
 
 const NotificationBell = () => {
   const [count, setCount] = useState<number>(0);
-  const [isPending, startTransition] = useTransition();
+  const [isPending] = useTransition();
 
   useEffect(() => {
     void (async () => {
