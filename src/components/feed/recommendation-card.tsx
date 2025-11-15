@@ -9,6 +9,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import AddToReadlistButton from "@/components/search/add-to-readlist-button";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import RatingForm from "@/components/books/rating-form";
 import { generateBookSlug } from "@/lib/slug";
 import type { FeedRecommendation } from "@/features/feed/types";
 import {
@@ -116,11 +125,31 @@ const RecommendationCard = ({ item }: RecommendationCardProps) => {
           </div>
         ) : null}
       </CardContent>
-      <CardFooter className="border-t border-border/60 bg-card/40 p-4">
-        <AddToReadlistButton
-          bookId={item.bookId}
-          disabled={item.viewerHasInReadlist}
-        />
+      <CardFooter className="flex flex-wrap items-center gap-3 border-t border-border/60 bg-card/40 p-4">
+        <AddToReadlistButton bookId={item.bookId} disabled={item.viewerHasInReadlist} />
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button
+              variant="outline"
+              aria-label={`Ouvrir la fenêtre pour noter ${item.title}`}
+            >
+              Noter
+            </Button>
+          </DialogTrigger>
+          <DialogContent aria-label={`Noter ${item.title}`}>
+            <DialogHeader>
+              <DialogTitle>Noter “{item.title}”</DialogTitle>
+            </DialogHeader>
+            <RatingForm bookId={item.bookId} />
+          </DialogContent>
+        </Dialog>
+        <Link
+          href={`/books/${bookSlug}#reviews`}
+          aria-label={`Commenter ${item.title}`}
+          className="inline-flex"
+        >
+          <Button>Commenter</Button>
+        </Link>
       </CardFooter>
     </Card>
   );

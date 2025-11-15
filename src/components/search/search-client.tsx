@@ -22,6 +22,7 @@ const SearchClient = () => {
   const [selectedGenre, setSelectedGenre] = useState<string | undefined>();
   const [minRating, setMinRating] = useState<number | undefined>();
   const [readingStatus, setReadingStatus] = useState<"to_read" | "reading" | "finished" | undefined>();
+  const [author, setAuthor] = useState<string>("");
   const [includeExternal, setIncludeExternal] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -39,9 +40,10 @@ const SearchClient = () => {
       genre: selectedGenre,
       minRating,
       readingStatus,
+      author: author.trim() || undefined,
       includeExternal,
     },
-    Boolean((submittedQuery || selectedGenre || minRating || readingStatus) && activeTab === "books"),
+    Boolean((submittedQuery || selectedGenre || minRating || readingStatus || author) && activeTab === "books"),
   );
 
   const {
@@ -87,11 +89,14 @@ const SearchClient = () => {
       };
       filters.push(`État: ${statusLabels[readingStatus]}`);
     }
+    if (author) {
+      filters.push(`Auteur: ${author}`);
+    }
     if (!includeExternal) {
       filters.push("Catalogue BookMarkd uniquement");
     }
     return filters;
-  }, [selectedGenre, minRating, readingStatus, includeExternal, tagsData?.tags]);
+  }, [selectedGenre, minRating, readingStatus, author, includeExternal, tagsData?.tags]);
 
   return (
     <div className="space-y-8">
@@ -152,6 +157,23 @@ const SearchClient = () => {
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <label
+                htmlFor="author"
+                className="text-sm font-medium text-muted-foreground"
+              >
+                Auteur
+              </label>
+              <Input
+                id="author"
+                value={author}
+                onChange={(event) => setAuthor(event.target.value)}
+                placeholder="Nom de l'auteur·rice"
+                className="w-48"
+                aria-label="Filtrer par auteur"
+              />
             </div>
 
             <div className="flex items-center gap-2 w-full md:w-auto">

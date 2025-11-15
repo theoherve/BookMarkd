@@ -30,6 +30,12 @@ export async function GET(request: Request) {
   const query = url.searchParams.get("q") ?? "";
   const genre = url.searchParams.get("genre") ?? "";
   const minRating = url.searchParams.get("minRating");
+  const readingStatus = url.searchParams.get("readingStatus") as
+    | "to_read"
+    | "reading"
+    | "finished"
+    | null;
+  const author = url.searchParams.get("author") ?? "";
   const includeExternal =
     url.searchParams.get("external") !== "false" && query.length > 0;
 
@@ -64,10 +70,42 @@ export async function GET(request: Request) {
       );
     }
 
+    if (author) {
+      booksQuery = booksQuery.ilike("author", `%${author}%`);
+    }
+
     if (minRating) {
       const ratingValue = parseFloat(minRating);
       if (!isNaN(ratingValue) && ratingValue >= 0 && ratingValue <= 5) {
         booksQuery = booksQuery.gte("average_rating", ratingValue);
+      }
+    }
+
+    // Filtrer par état de lecture du viewer si fourni et si session disponible
+    if (readingStatus) {
+      // Récupérer l'id du viewer via la session côté serveur
+      const { getCurrentSession } = await import("@/lib/auth/session");
+      const session = await getCurrentSession();
+      const viewerId = session?.user?.id ? String(session.user.id) : null;
+
+      if (viewerId) {
+        const { data: rows, error: userBooksError } = await db.client
+          .from("user_books")
+          .select("book_id")
+          .eq("user_id", viewerId)
+          .eq("status", readingStatus);
+        if (userBooksError) {
+          throw userBooksError;
+        }
+        const bookIds = (rows ?? []).map((r: { book_id: string }) => r.book_id);
+        if (bookIds.length === 0) {
+          return NextResponse.json({
+            books: [],
+            supabaseCount: 0,
+            externalCount: 0,
+          } as SearchResponse);
+        }
+        booksQuery = booksQuery.in("id", bookIds);
       }
     }
 

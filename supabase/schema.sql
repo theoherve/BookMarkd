@@ -165,14 +165,39 @@ alter table public.follows enable row level security;
 alter table public.activities enable row level security;
 alter table public.recommendations enable row level security;
 alter table public.review_comments enable row level security;
+-- notifications
+create table if not exists public.notifications (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  type text not null check (
+    type in (
+      'follow_request',
+      'follow_request_accepted',
+      'review_like',
+      'review_comment',
+      'recommendation'
+    )
+  ),
+  payload jsonb not null default '{}'::jsonb,
+  read_at timestamptz,
+  created_at timestamptz not null default now()
+);
+alter table public.notifications enable row level security;
+-- Indexes for notifications (must come after table creation)
+create index if not exists idx_notifications_user_created_at on public.notifications (user_id, created_at desc);
+create index if not exists idx_notifications_unread on public.notifications (user_id)
+where read_at is null;
 -- 5) Policies minimales (à affiner selon produit) ----------------------------
 -- Users : insertion publique (inscription), lecture publique (affichage profils), mise à jour propriétaire
 drop policy if exists "users_public_insert" on public.users;
-create policy "users_public_insert" on public.users for insert with check (true);
+create policy "users_public_insert" on public.users for
+insert with check (true);
 drop policy if exists "users_public_read" on public.users;
-create policy "users_public_read" on public.users for select using (true);
+create policy "users_public_read" on public.users for
+select using (true);
 drop policy if exists "users_own_update" on public.users;
-create policy "users_own_update" on public.users for update using (auth.uid() = id) with check (auth.uid() = id);
+create policy "users_own_update" on public.users for
+update using (auth.uid() = id) with check (auth.uid() = id);
 -- Books : lecture publique, écriture restreinte aux admins (placeholder).
 drop policy if exists "books_read_public" on public.books;
 create policy "books_read_public" on public.books for
@@ -388,6 +413,16 @@ drop policy if exists "recommendations_owner_read" on public.recommendations;
 create policy "recommendations_owner_read" on public.recommendations for
 select using (auth.uid() = user_id);
 -- NOTE : L’insertion dans recommendations se fera via service role (pas besoin de policy).
+-- notifications : propriétaire uniquement (lecture/mise à jour/insertion)
+drop policy if exists "notifications_owner_read" on public.notifications;
+create policy "notifications_owner_read" on public.notifications for
+select using (auth.uid() = user_id);
+drop policy if exists "notifications_owner_update" on public.notifications;
+create policy "notifications_owner_update" on public.notifications for
+update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "notifications_owner_insert" on public.notifications;
+create policy "notifications_owner_insert" on public.notifications for
+insert with check (auth.uid() = user_id);
 -- ============================================================================
 -- Après exécution :
 --   - Lancer supabase/seed.sql pour injecter la démo utilisateur.

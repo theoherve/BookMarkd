@@ -96,7 +96,9 @@ export const getListDetail = async (
       )
     : null;
 
-  if (!viewerRole && list.visibility !== "public") {
+  // Autoriser l'accès via lien direct pour les listes "unlisted".
+  // Bloquer uniquement si la liste est "private" et que l'utilisateur n'a aucun rôle.
+  if (!viewerRole && list.visibility === "private") {
     notFound();
   }
 

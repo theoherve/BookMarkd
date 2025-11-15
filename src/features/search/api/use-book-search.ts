@@ -9,10 +9,11 @@ type SearchParams = {
   genre?: string;
   minRating?: number;
   readingStatus?: "to_read" | "reading" | "finished";
+  author?: string;
   includeExternal?: boolean;
 };
 
-const buildSearchPath = ({ q, genre, minRating, readingStatus, includeExternal = true }: SearchParams) => {
+const buildSearchPath = ({ q, genre, minRating, readingStatus, author, includeExternal = true }: SearchParams) => {
   const params = new URLSearchParams();
   if (q) {
     params.set("q", q);
@@ -25,6 +26,9 @@ const buildSearchPath = ({ q, genre, minRating, readingStatus, includeExternal =
   }
   if (readingStatus) {
     params.set("readingStatus", readingStatus);
+  }
+  if (author) {
+    params.set("author", author);
   }
   if (includeExternal === false) {
     params.set("external", "false");
