@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma/client";
+import db from "@/lib/supabase/db";
 
 export type PublicProfile = {
   id: string;
@@ -43,74 +43,142 @@ export const getPublicProfile = async (
   username: string,
 ): Promise<PublicProfile | null> => {
   try {
-    const user = await prisma.user.findFirst({
-      where: { username },
-      include: {
-        userBooks: {
-          include: {
-            book: {
-              select: {
-                id: true,
-                title: true,
-                author: true,
-                coverUrl: true,
-              },
-            },
-          },
-          orderBy: {
-            updatedAt: "desc",
-          },
-          take: 10,
-        },
-        topBooks: {
-          include: {
-            book: {
-              select: {
-                id: true,
-                title: true,
-                author: true,
-                coverUrl: true,
-              },
-            },
-          },
-          orderBy: {
-            position: "asc",
-          },
-        },
-        listsOwned: {
-          where: {
-            visibility: "public",
-          },
-          include: {
-            items: {
-              select: {
-                id: true,
-              },
-            },
-          },
-          take: 10,
-        },
-        _count: {
-          select: {
-            followsAsFollower: true,
-            followsAsFollowing: true,
-            reviews: {
-              where: {
-                visibility: "public",
-              },
-            },
-          },
-        },
-      },
-    });
+    // 1) User by username
+    const { data: userRow, error: userError } = await db.client
+      .from("users")
+      .select(
+        "id, username, display_name, avatar_url, bio",
+      )
+      .eq("username", username)
+      .maybeSingle();
+    if (userError) {
+      throw userError;
+    }
 
-    if (!user) {
+    if (!userRow) {
       return null;
     }
 
-    const booksRead = user.userBooks.filter((ub) => ub.status === "finished").length;
-    const booksReading = user.userBooks.filter((ub) => ub.status === "reading").length;
-    const booksToRead = user.userBooks.filter((ub) => ub.status === "to_read").length;
+    const user = db.toCamel<{
+      id: string;
+      username: string | null;
+      displayName: string;
+      avatarUrl: string | null;
+      bio: string | null;
+    }>(userRow);
+
+    // 2) Recent user_books with book join
+    const { data: userBooksRows, error: userBooksError } = await db.client
+      .from("user_books")
+      .select(
+        `
+        status,
+        rating,
+        updated_at,
+        book:book_id (
+          id,
+          title,
+          author,
+          cover_url
+        )
+      `,
+      )
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false })
+      .limit(10);
+    if (userBooksError) throw userBooksError;
+
+    const userBooks = (userBooksRows ?? []).map((row) =>
+      db.toCamel<{
+        status: "to_read" | "reading" | "finished";
+        rating: number | null;
+        updatedAt: string;
+        book?: { id: string; title: string; author: string; coverUrl: string | null };
+      }>(row),
+    );
+
+    // 3) Top books
+    const { data: topBooksRows, error: topBooksError } = await db.client
+      .from("user_top_books")
+      .select(
+        `
+        position,
+        book:book_id (
+          id,
+          title,
+          author,
+          cover_url
+        )
+      `,
+      )
+      .eq("user_id", user.id)
+      .order("position", { ascending: true });
+    if (topBooksError) throw topBooksError;
+
+    const topBooks = (topBooksRows ?? [])
+      .map((row) =>
+        db.toCamel<{
+          position: number;
+          book?: { id: string; title: string; author: string; coverUrl: string | null };
+        }>(row),
+      )
+      .filter((r) => r.book)
+      .map((r) => ({
+        id: r.book!.id,
+        title: r.book!.title,
+        author: r.book!.author,
+        coverUrl: r.book!.coverUrl,
+        position: r.position,
+      }));
+
+    // 4) Public lists owned
+    const { data: listsRows, error: listsError } = await db.client
+      .from("lists")
+      .select("id, title, description")
+      .eq("owner_id", user.id)
+      .eq("visibility", "public")
+      .limit(10);
+    if (listsError) throw listsError;
+
+    const lists = db.toCamel<Array<{ id: string; title: string; description: string | null }>>(
+      listsRows ?? [],
+    );
+
+    // Count items per list
+    const listIds = lists.map((l) => l.id);
+    const itemsCountByList = new Map<string, number>();
+    if (listIds.length > 0) {
+      const { data: itemsRows, error: itemsError } = await db.client
+        .from("list_items")
+        .select("list_id")
+        .in("list_id", listIds);
+      if (itemsError) throw itemsError;
+      for (const row of itemsRows ?? []) {
+        const { listId } = db.toCamel<{ listId: string }>(row);
+        itemsCountByList.set(listId, (itemsCountByList.get(listId) ?? 0) + 1);
+      }
+    }
+
+    // 5) Followers / Following counts
+    const [{ data: followersRows }, { data: followingRows }] = await Promise.all([
+      db.client.from("follows").select("following_id").eq("following_id", user.id),
+      db.client.from("follows").select("follower_id").eq("follower_id", user.id),
+    ]);
+    const followers = followersRows?.length ?? 0;
+    const following = followingRows?.length ?? 0;
+
+    // 6) Public reviews count
+    const { data: publicReviewsRows, error: reviewsError } = await db.client
+      .from("reviews")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("visibility", "public");
+    if (reviewsError) throw reviewsError;
+    const publicReviewsCount = publicReviewsRows?.length ?? 0;
+
+    const booksRead = userBooks.filter((ub) => ub.status === "finished").length;
+    const booksReading = userBooks.filter((ub) => ub.status === "reading").length;
+    const booksToRead = userBooks.filter((ub) => ub.status === "to_read").length;
 
     return {
       id: user.id,
@@ -122,32 +190,28 @@ export const getPublicProfile = async (
         booksRead,
         booksReading,
         booksToRead,
-        followers: user._count.followsAsFollowing,
-        following: user._count.followsAsFollower,
-        listsOwned: user.listsOwned.length,
-        reviews: user._count.reviews,
+        followers,
+        following,
+        listsOwned: lists.length,
+        reviews: publicReviewsCount,
       },
-      topBooks: user.topBooks.map((tb) => ({
-        id: tb.book.id,
-        title: tb.book.title,
-        author: tb.book.author,
-        coverUrl: tb.book.coverUrl,
-        position: tb.position,
-      })),
-      recentBooks: user.userBooks.map((ub) => ({
-        id: ub.book.id,
-        title: ub.book.title,
-        author: ub.book.author,
-        coverUrl: ub.book.coverUrl,
-        status: ub.status as "to_read" | "reading" | "finished",
-        rating: ub.rating ? Number(ub.rating) : null,
-        updatedAt: ub.updatedAt.toISOString(),
-      })),
-      publicLists: user.listsOwned.map((list) => ({
+      topBooks,
+      recentBooks: userBooks
+        .filter((ub) => ub.book)
+        .map((ub) => ({
+          id: ub.book!.id,
+          title: ub.book!.title,
+          author: ub.book!.author,
+          coverUrl: ub.book!.coverUrl,
+          status: ub.status,
+          rating: typeof ub.rating === "number" ? ub.rating : null,
+          updatedAt: ub.updatedAt,
+        })),
+      publicLists: lists.map((list) => ({
         id: list.id,
         title: list.title,
         description: list.description,
-        itemsCount: list.items.length,
+        itemsCount: itemsCountByList.get(list.id) ?? 0,
       })),
     };
   } catch (error) {

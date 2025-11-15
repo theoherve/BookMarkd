@@ -1,7 +1,7 @@
 "use server";
 
 import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/prisma/client";
+import db from "@/lib/supabase/db";
 
 type RegisterInput = {
   email: string;
@@ -73,10 +73,14 @@ export const registerUser = async (
 
     // Vérifier l'unicité du username et ajouter un suffixe si nécessaire
     while (usernameAttempts < maxAttempts) {
-      const existingUsername = await prisma.user.findUnique({
-        where: { username },
-        select: { id: true },
-      });
+      const { data: existingUsername, error: usernameError } = await db.client
+        .from("users")
+        .select("id")
+        .eq("username", username)
+        .maybeSingle();
+      if (usernameError) {
+        throw usernameError;
+      }
 
       if (!existingUsername) {
         break;
@@ -88,12 +92,15 @@ export const registerUser = async (
 
     console.log("[auth] registerUser: Attempting to insert user", { email, displayName, username });
 
-    // Utiliser Prisma pour contourner les problèmes de RLS
-    // Vérifier si l'utilisateur existe déjà avec Prisma
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-      select: { id: true },
-    });
+    // Vérifier si l'utilisateur existe déjà
+    const { data: existingUser, error: existingErr } = await db.client
+      .from("users")
+      .select("id")
+      .eq("email", email)
+      .maybeSingle();
+    if (existingErr) {
+      throw existingErr;
+    }
 
     if (existingUser) {
       return {
@@ -103,45 +110,34 @@ export const registerUser = async (
       };
     }
 
-    try {
-      const newUser = await prisma.user.create({
-        data: {
+    const { data: inserted, error: insertError } = await db.client
+      .from("users")
+      .insert([
+        {
           email,
           username,
-          displayName,
-          passwordHash,
+          display_name: displayName,
+          password_hash: passwordHash,
         },
-      });
+      ])
+      .select("id")
+      .single();
 
-      console.log("[auth] registerUser: User created successfully with Prisma", { userId: newUser.id });
-      return { success: true };
-    } catch (prismaError: unknown) {
-      console.error("[auth] registerUser Prisma error:", prismaError);
-      
-      // Gérer les erreurs Prisma spécifiques
-      if (prismaError && typeof prismaError === "object" && "code" in prismaError) {
-        const error = prismaError as { code?: string; message?: string };
-        
-        // Erreur de contrainte unique (email déjà existant)
-        if (error.code === "P2002") {
-          return {
-            success: false,
-            message: "Un compte existe déjà avec cette adresse e-mail.",
-          };
-        }
-        
-        // Erreur de validation
-        if (error.code === "P2003") {
-          return {
-            success: false,
-            message: "Erreur de validation des données.",
-          };
-        }
+    if (insertError) {
+      // Contrainte unique
+      if ((insertError as { code?: string }).code === "23505") {
+        return {
+          success: false,
+          message: "Un compte existe déjà avec cette adresse e-mail.",
+        };
       }
-      
-      // Si c'est une erreur Prisma, la relancer pour qu'elle soit catchée par le catch général
-      throw prismaError;
+      throw insertError;
     }
+
+    console.log("[auth] registerUser: User created successfully with Supabase", {
+      userId: inserted?.id,
+    });
+    return { success: true };
   } catch (error) {
     console.error("[auth] registerUser error:", error);
     

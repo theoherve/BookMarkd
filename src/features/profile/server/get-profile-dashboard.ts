@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma/client";
+import db from "@/lib/supabase/db";
 import { generateBookSlug } from "@/lib/slug";
 
 import type {
@@ -44,93 +44,105 @@ export const getProfileDashboard = async (
 ): Promise<ProfileDashboard> => {
   try {
     // Étape 1 : Données utilisateur (critique, doit être récupéré en premier)
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        displayName: true,
-        email: true,
-        bio: true,
-        avatarUrl: true,
-      },
-    });
+    const { data: userRow, error: userError } = await db.client
+      .from("users")
+      .select("display_name, email, bio, avatar_url")
+      .eq("id", userId)
+      .maybeSingle();
 
-    if (!user) {
+    if (userError) {
+      throw userError;
+    }
+
+    if (!userRow) {
       throw new Error("Utilisateur introuvable.");
     }
+    const user = db.toCamel<{
+      displayName: string | null;
+      email: string | null;
+      bio: string | null;
+      avatarUrl: string | null;
+    }>(userRow);
 
     // Étape 2 : Statistiques de base (3 requêtes en parallèle)
     const [ownedListsCount, collaborativeListsCount, recommendationsCount] =
       await Promise.all([
-        prisma.list.count({
-          where: { ownerId: userId },
-        }),
-        prisma.listCollaborator.count({
-          where: { userId },
-        }),
-        prisma.recommendation.count({
-          where: { userId },
-        }),
+        db.client
+          .from("lists")
+          .select("id", { count: "exact", head: true })
+          .eq("owner_id", userId)
+          .then((r) => r.count ?? 0),
+        db.client
+          .from("list_collaborators")
+          .select("user_id", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .then((r) => r.count ?? 0),
+        db.client
+          .from("recommendations")
+          .select("user_id", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .then((r) => r.count ?? 0),
       ]);
 
     // Étape 3 : Données de lecture (2 requêtes en parallèle)
     const [readingRows, topBooksData] = await Promise.all([
-      prisma.userBook.findMany({
-        where: { userId },
-        select: { status: true },
-      }),
-      // Gérer le cas où la table user_top_books n'existe pas encore
-      prisma.userTopBook
-        .findMany({
-          where: { userId },
-          include: {
-            book: {
-              select: {
-                id: true,
-                title: true,
-                author: true,
-                coverUrl: true,
-              },
-            },
-          },
-          orderBy: {
-            position: "asc",
-          },
-        })
-        .catch((error) => {
-          // Si la table n'existe pas encore, retourner un tableau vide
-          if (
-            error instanceof Error &&
-            (error.message.includes("does not exist") ||
-              error.message.includes("relation") ||
-              error.message.includes("Unknown table"))
-          ) {
-            console.warn(
-              "[getProfileDashboard] user_top_books table doesn't exist yet, returning empty array"
-            );
-            return [];
-          }
-          throw error;
-        }),
+      db.client
+        .from("user_books")
+        .select("status")
+        .eq("user_id", userId)
+        .then((r) =>
+          db.toCamel<Array<{ status: string | null }>>(r.data ?? [])
+        ),
+      db.client
+        .from("user_top_books")
+        .select(
+          `
+          id,
+          user_id,
+          book_id,
+          position,
+          updated_at,
+          book:book_id ( id, title, author, cover_url )
+        `
+        )
+        .eq("user_id", userId)
+        .order("position", { ascending: true })
+        .then((r) =>
+          db.toCamel<
+            Array<{
+              id: string;
+              bookId: string;
+              position: number;
+              updatedAt: string;
+              book?: {
+                id: string;
+                title: string;
+                author: string;
+                coverUrl: string | null;
+              };
+            }>
+          >(r.data ?? [])
+        ),
     ]);
 
     // Étape 4 : Données des listes (2 requêtes en parallèle)
     const [ownedListsIds, collaboratorListsIds] = await Promise.all([
-      prisma.list.findMany({
-        where: { ownerId: userId },
-        select: {
-          id: true,
-          title: true,
-          createdAt: true,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-        take: 50,
-      }),
-      prisma.listCollaborator.findMany({
-        where: { userId },
-        select: { listId: true },
-      }),
+      db.client
+        .from("lists")
+        .select("id, title, created_at")
+        .eq("owner_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(50)
+        .then((r) =>
+          db.toCamel<Array<{ id: string; title: string; createdAt: string }>>(
+            r.data ?? []
+          )
+        ),
+      db.client
+        .from("list_collaborators")
+        .select("list_id")
+        .eq("user_id", userId)
+        .then((r) => db.toCamel<Array<{ listId: string }>>(r.data ?? [])),
     ]);
 
     const listIds = [
@@ -141,188 +153,262 @@ export const getProfileDashboard = async (
 
     // Étape 5 : Activités - groupe 1 (3 requêtes en parallèle)
     const [oldActivities, userBooks, reviews] = await Promise.all([
-      prisma.activity.findMany({
-        where: { userId },
-        select: {
-          id: true,
-          type: true,
-          payload: true,
-          createdAt: true,
-        },
-      }),
-      prisma.userBook.findMany({
-        where: { userId },
-        select: {
-          id: true,
-          status: true,
-          rating: true,
-          ratedAt: true,
-          notePrivate: true,
-          createdAt: true,
-          updatedAt: true,
-          book: {
-            select: {
-              title: true,
-              author: true,
-            },
-          },
-        },
-        orderBy: {
-          updatedAt: "desc",
-        },
-        take: 50,
-      }),
-      prisma.review.findMany({
-        where: { userId },
-        include: {
-          book: {
-            select: {
-              title: true,
-              author: true,
-            },
-          },
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-        take: 50,
-      }),
+      db.client
+        .from("activities")
+        .select("id, type, payload, created_at")
+        .eq("user_id", userId)
+        .then((r) =>
+          db.toCamel<
+            Array<{
+              id: string;
+              type: string;
+              payload: unknown;
+              createdAt: string;
+            }>
+          >(r.data ?? [])
+        ),
+      db.client
+        .from("user_books")
+        .select(
+          `
+          id,
+          status,
+          rating,
+          rated_at,
+          note_private,
+          created_at,
+          updated_at,
+          book:book_id ( title, author )
+        `
+        )
+        .eq("user_id", userId)
+        .order("updated_at", { ascending: false })
+        .limit(50)
+        .then((r) =>
+          db.toCamel<
+            Array<{
+              id: string;
+              status: string | null;
+              rating: number | null;
+              ratedAt: string | null;
+              notePrivate: string | null;
+              createdAt: string;
+              updatedAt: string;
+              book?: { title: string; author: string };
+            }>
+          >(r.data ?? [])
+        ),
+      db.client
+        .from("reviews")
+        .select(
+          `
+          id,
+          content,
+          created_at,
+          book:book_id ( title, author )
+        `
+        )
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(50)
+        .then((r) =>
+          db.toCamel<
+            Array<{
+              id: string;
+              content: string;
+              createdAt: string;
+              book?: { title: string; author: string };
+            }>
+          >(r.data ?? [])
+        ),
     ]);
 
     // Étape 6 : Activités - groupe 2 (2 requêtes en parallèle)
     const [reviewComments, listItems] = await Promise.all([
-      prisma.reviewComment.findMany({
-        where: { userId },
-        include: {
-          review: {
-            include: {
-              book: {
-                select: {
-                  title: true,
-                  author: true,
-                },
-              },
-            },
-          },
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-        take: 50,
-      }),
+      db.client
+        .from("review_comments")
+        .select(
+          `
+          id,
+          content,
+          created_at,
+          review:review_id (
+            book:book_id ( title, author )
+          )
+        `
+        )
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(50)
+        .then((r) =>
+          db.toCamel<
+            Array<{
+              id: string;
+              content: string;
+              createdAt: string;
+              review?: { book?: { title: string; author: string } };
+            }>
+          >(r.data ?? [])
+        ),
       listIds.length > 0
-        ? prisma.listItem.findMany({
-            where: {
-              listId: { in: listIds },
-            },
-            include: {
-              book: {
-                select: {
-                  title: true,
-                  author: true,
-                },
-              },
-              list: {
-                select: {
-                  title: true,
-                  ownerId: true,
-                },
-              },
-            },
-            orderBy: {
-              createdAt: "desc",
-            },
-            take: 50,
-          })
-        : Promise.resolve([]),
+        ? db.client
+            .from("list_items")
+            .select(
+              `
+              id,
+              note,
+              created_at,
+              book:book_id ( title, author ),
+              list:list_id ( title, owner_id )
+            `
+            )
+            .in("list_id", listIds)
+            .order("created_at", { ascending: false })
+            .limit(50)
+            .then((r) =>
+              db.toCamel<
+                Array<{
+                  id: string;
+                  note: string | null;
+                  createdAt: string;
+                  book?: { title: string; author: string };
+                  list?: { title: string; ownerId: string };
+                }>
+              >(r.data ?? [])
+            )
+        : Promise.resolve(
+            [] as Array<{
+              id: string;
+              note: string | null;
+              createdAt: string;
+              book?: { title: string; author: string };
+              list?: { title: string; ownerId: string };
+            }>
+          ),
     ]);
 
     // Étape 7 : Activités - groupe 3 (3 requêtes en parallèle)
     const [reviewLikes, follows, topBooksUpdates] = await Promise.all([
-      prisma.reviewLike.findMany({
-        where: { userId },
-        include: {
-          review: {
-            include: {
-              book: {
-                select: {
-                  title: true,
-                  author: true,
-                },
-              },
-            },
-          },
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-        take: 50,
-      }),
-      prisma.follow.findMany({
-        where: { followerId: userId },
-        include: {
-          following: {
-            select: {
-              displayName: true,
-            },
-          },
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-        take: 50,
-      }),
-      prisma.userTopBook
-        .findMany({
-          where: { userId },
-          include: {
-            book: {
-              select: {
-                title: true,
-                author: true,
-              },
-            },
-          },
-          orderBy: {
-            updatedAt: "desc",
-          },
-          take: 50,
-        })
-        .catch(() => []),
+      db.client
+        .from("review_likes")
+        .select(
+          `
+          review_id,
+          user_id,
+          created_at,
+          review:review_id (
+            book:book_id ( title, author )
+          )
+        `
+        )
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(50)
+        .then((r) =>
+          db.toCamel<
+            Array<{
+              reviewId: string;
+              userId: string;
+              createdAt: string;
+              review?: { book?: { title: string; author: string } };
+            }>
+          >(r.data ?? [])
+        ),
+      db.client
+        .from("follows")
+        .select(
+          `
+          follower_id,
+          following_id,
+          created_at,
+          following:following_id ( display_name )
+        `
+        )
+        .eq("follower_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(50)
+        .then((r) =>
+          db.toCamel<
+            Array<{
+              followerId: string;
+              followingId: string;
+              createdAt: string;
+              following?: { displayName: string | null };
+            }>
+          >(r.data ?? [])
+        ),
+      db.client
+        .from("user_top_books")
+        .select(
+          `
+          id,
+          updated_at,
+          book:book_id ( title, author )
+        `
+        )
+        .eq("user_id", userId)
+        .order("updated_at", { ascending: false })
+        .limit(50)
+        .then((r) =>
+          db.toCamel<
+            Array<{
+              id: string;
+              updatedAt: string;
+              book?: { title: string; author: string };
+            }>
+          >(r.data ?? [])
+        ),
     ]);
 
     // Étape 8 : Récupérer la read list (sérialisée à la fin)
-    const readListData = await prisma.userBook.findMany({
-      where: { userId },
-      include: {
-        book: {
-          select: {
-            id: true,
-            title: true,
-            author: true,
-            coverUrl: true,
-          },
-        },
-      },
-      orderBy: {
-        updatedAt: "desc",
-      },
-      take: 20,
-    });
+    const readListData = await db.client
+      .from("user_books")
+      .select(
+        `
+        id,
+        book_id,
+        status,
+        rating,
+        updated_at,
+        book:book_id ( id, title, author, cover_url )
+      `
+      )
+      .eq("user_id", userId)
+      .order("updated_at", { ascending: false })
+      .limit(20)
+      .then((r) =>
+        db.toCamel<
+          Array<{
+            id: string;
+            bookId: string;
+            status: string | null;
+            rating: number | null;
+            updatedAt: string;
+            book?: {
+              id: string;
+              title: string;
+              author: string;
+              coverUrl: string | null;
+            };
+          }>
+        >(r.data ?? [])
+      );
 
     const readingStats = buildReadingStats(readingRows);
 
-    const topBooks: TopBook[] = topBooksData.map((item) => ({
-      id: item.id,
-      bookId: item.bookId,
-      position: item.position,
-      book: {
-        id: item.book.id,
-        title: item.book.title,
-        author: item.book.author,
-        coverUrl: item.book.coverUrl,
-      },
-    }));
+    const topBooks: TopBook[] = topBooksData
+      .filter((item) => item.book)
+      .map((item) => ({
+        id: item.id,
+        bookId: item.bookId,
+        position: item.position,
+        book: {
+          id: item.book!.id,
+          title: item.book!.title,
+          author: item.book!.author,
+          coverUrl: item.book!.coverUrl,
+        },
+      }));
 
     // Normaliser toutes les activités dans un format unifié
     const lists = listsForActivities;
@@ -354,15 +440,17 @@ export const getProfileDashboard = async (
           null,
         rating: (normalizedPayload.rating as number | null | undefined) ?? null,
         status: null,
-        occurredAt: item.createdAt.toISOString(),
+        occurredAt: item.createdAt,
       });
     });
 
     // UserBook - ajout à la read list, changement de statut, ajout de note/rating
     userBooks.forEach((userBook) => {
-      const createdAtTime = userBook.createdAt.getTime();
-      const updatedAtTime = userBook.updatedAt.getTime();
-      const ratedAtTime = userBook.ratedAt?.getTime() ?? null;
+      const createdAtTime = new Date(userBook.createdAt).getTime();
+      const updatedAtTime = new Date(userBook.updatedAt).getTime();
+      const ratedAtTime = userBook.ratedAt
+        ? new Date(userBook.ratedAt).getTime()
+        : null;
 
       // Si c'est un ajout récent (createdAt proche de updatedAt), c'est un ajout à la read list
       const isNewAddition =
@@ -371,6 +459,9 @@ export const getProfileDashboard = async (
 
       // Ajouter l'activité d'ajout à la read list si c'est un nouvel ajout
       if (isNewAddition) {
+        if (!userBook.book) {
+          return;
+        }
         allActivities.push({
           id: `readlist_${userBook.id}`,
           type: "readlist_add",
@@ -380,12 +471,15 @@ export const getProfileDashboard = async (
           note: userBook.notePrivate ?? null,
           rating: null,
           status: userBook.status as "to_read" | "reading" | "finished" | null,
-          occurredAt: userBook.createdAt.toISOString(),
+          occurredAt: userBook.createdAt,
         });
       }
 
       // Ajouter l'activité de note si ratedAt existe et est différent de createdAt
       if (ratedAtTime && Math.abs(ratedAtTime - createdAtTime) > 1000) {
+        if (!userBook.book) {
+          return;
+        }
         allActivities.push({
           id: `rating_${userBook.id}_${ratedAtTime}`,
           type: "rating",
@@ -395,7 +489,7 @@ export const getProfileDashboard = async (
           note: userBook.notePrivate ?? null,
           rating: userBook.rating ? Number(userBook.rating) : null,
           status: userBook.status as "to_read" | "reading" | "finished" | null,
-          occurredAt: userBook.ratedAt!.toISOString(),
+          occurredAt: userBook.ratedAt!,
         });
       }
 
@@ -404,6 +498,9 @@ export const getProfileDashboard = async (
         !isNewAddition &&
         (!ratedAtTime || Math.abs(updatedAtTime - ratedAtTime) > 1000)
       ) {
+        if (!userBook.book) {
+          return;
+        }
         allActivities.push({
           id: `status_${userBook.id}_${updatedAtTime}`,
           type: "status_change",
@@ -413,13 +510,16 @@ export const getProfileDashboard = async (
           note: userBook.notePrivate ?? null,
           rating: userBook.rating ? Number(userBook.rating) : null,
           status: userBook.status as "to_read" | "reading" | "finished" | null,
-          occurredAt: userBook.updatedAt.toISOString(),
+          occurredAt: userBook.updatedAt,
         });
       }
     });
 
     // Reviews - publication de critiques
     reviews.forEach((review) => {
+      if (!review.book) {
+        return;
+      }
       allActivities.push({
         id: `review_${review.id}`,
         type: "review",
@@ -429,12 +529,15 @@ export const getProfileDashboard = async (
         note: review.content,
         rating: null,
         status: null,
-        occurredAt: review.createdAt.toISOString(),
+        occurredAt: review.createdAt,
       });
     });
 
     // ReviewComments - commentaires sur des critiques
     reviewComments.forEach((comment) => {
+      if (!comment.review || !comment.review.book) {
+        return;
+      }
       allActivities.push({
         id: `comment_${comment.id}`,
         type: "review_comment",
@@ -447,7 +550,7 @@ export const getProfileDashboard = async (
         note: comment.content,
         rating: null,
         status: null,
-        occurredAt: comment.createdAt.toISOString(),
+        occurredAt: comment.createdAt,
       });
     });
 
@@ -462,12 +565,15 @@ export const getProfileDashboard = async (
         note: null,
         rating: null,
         status: null,
-        occurredAt: list.createdAt.toISOString(),
+        occurredAt: list.createdAt,
       });
     });
 
     // ListItems - ajout de livres à des listes
     listItems.forEach((item) => {
+      if (!item.book || !item.list) {
+        return;
+      }
       allActivities.push({
         id: `listitem_${item.id}`,
         type: "list_item_add",
@@ -477,12 +583,15 @@ export const getProfileDashboard = async (
         note: item.note ?? null,
         rating: null,
         status: null,
-        occurredAt: item.createdAt.toISOString(),
+        occurredAt: item.createdAt,
       });
     });
 
     // ReviewLikes - likes sur des critiques
     reviewLikes.forEach((like) => {
+      if (!like.review || !like.review.book) {
+        return;
+      }
       allActivities.push({
         id: `like_${like.reviewId}_${like.userId}`,
         type: "review_like",
@@ -495,12 +604,15 @@ export const getProfileDashboard = async (
         note: null,
         rating: null,
         status: null,
-        occurredAt: like.createdAt.toISOString(),
+        occurredAt: like.createdAt,
       });
     });
 
     // Follows - suivi de profils
     follows.forEach((follow) => {
+      if (!follow.following) {
+        return;
+      }
       allActivities.push({
         id: `follow_${follow.followerId}_${follow.followingId}`,
         type: "follow",
@@ -510,14 +622,17 @@ export const getProfileDashboard = async (
         note: follow.following.displayName,
         rating: null,
         status: null,
-        occurredAt: follow.createdAt.toISOString(),
+        occurredAt: follow.createdAt,
       });
     });
 
     // UserTopBook - mise à jour des top books
     topBooksUpdates.forEach((topBook) => {
+      if (!topBook.book) {
+        return;
+      }
       allActivities.push({
-        id: `topbook_${topBook.id}_${topBook.updatedAt.getTime()}`,
+        id: `topbook_${topBook.id}_${new Date(topBook.updatedAt).getTime()}`,
         type: "top_book_update",
         bookTitle: topBook.book.title,
         bookSlug: generateBookSlug(topBook.book.title, topBook.book.author),
@@ -525,7 +640,7 @@ export const getProfileDashboard = async (
         note: null,
         rating: null,
         status: null,
-        occurredAt: topBook.updatedAt.toISOString(),
+        occurredAt: topBook.updatedAt,
       });
     });
 
@@ -537,19 +652,21 @@ export const getProfileDashboard = async (
       )
       .slice(0, 20);
 
-    const readList: ReadListBook[] = readListData.map((item) => ({
-      id: item.id,
-      bookId: item.bookId,
-      status: item.status as "to_read" | "reading" | "finished",
-      rating: item.rating ? Number(item.rating) : null,
-      book: {
-        id: item.book.id,
-        title: item.book.title,
-        author: item.book.author,
-        coverUrl: item.book.coverUrl,
-      },
-      updatedAt: item.updatedAt.toISOString(),
-    }));
+    const readList: ReadListBook[] = readListData
+      .filter((item) => Boolean(item.book))
+      .map((item) => ({
+        id: item.id,
+        bookId: item.bookId,
+        status: item.status as "to_read" | "reading" | "finished",
+        rating: item.rating ? Number(item.rating) : null,
+        book: {
+          id: item.book!.id,
+          title: item.book!.title,
+          author: item.book!.author,
+          coverUrl: item.book!.coverUrl,
+        },
+        updatedAt: item.updatedAt,
+      }));
 
     return {
       displayName: user.displayName ?? "Utilisateur·rice",

@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/prisma/client";
+import db from "@/lib/supabase/db";
 
 export const verifyPassword = async (
   plainPassword: string,
@@ -45,37 +45,43 @@ type UserRow = {
 };
 
 const fetchUserByEmail = async (email: string): Promise<UserRow | null> => {
-  try {
-    const normalizedEmail = email.trim().toLowerCase();
-    
-    const user = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
-      select: {
-        id: true,
-        email: true,
-        passwordHash: true,
-        displayName: true,
-        avatarUrl: true,
-        bio: true,
-      },
-    });
+  const normalizedEmail = email.trim().toLowerCase();
 
-    if (!user) {
-      return null;
-    }
+  const { data, error } = await db.client
+    .from("users")
+    .select(
+      "id, email, password_hash, display_name, avatar_url, bio",
+    )
+    .eq("email", normalizedEmail)
+    .limit(1)
+    .maybeSingle();
 
-    return {
-      id: user.id,
-      email: user.email,
-      passwordHash: user.passwordHash,
-      displayName: user.displayName,
-      avatarUrl: user.avatarUrl,
-      bio: user.bio,
-    };
-  } catch (error) {
-    console.error("Prisma error while fetching user:", error);
+  if (error) {
+    console.error("Supabase error while fetching user:", error);
     return null;
   }
+
+  if (!data) {
+    return null;
+  }
+
+  const row = db.toCamel<{
+    id: string;
+    email: string;
+    passwordHash: string;
+    displayName: string;
+    avatarUrl: string | null;
+    bio: string | null;
+  }>(data);
+
+  return {
+    id: row.id,
+    email: row.email,
+    passwordHash: row.passwordHash,
+    displayName: row.displayName,
+    avatarUrl: row.avatarUrl,
+    bio: row.bio,
+  };
 };
 
 export type PublicUser = {

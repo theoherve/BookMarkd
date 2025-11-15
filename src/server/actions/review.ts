@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { getCurrentSession } from "@/lib/auth/session";
 import { resolveSessionUserId } from "@/lib/auth/user";
-import { prisma } from "@/lib/prisma/client";
+import db from "@/lib/supabase/db";
 
 type ActionResult =
   | { success: true }
@@ -24,10 +24,15 @@ export const likeReview = async (reviewId: string): Promise<ActionResult> => {
     const userId = await requireSession();
 
     // Vérifier que la review existe
-    const review = await prisma.review.findUnique({
-      where: { id: reviewId },
-      select: { bookId: true },
-    });
+    const { data: review, error: reviewError } = await db.client
+      .from("reviews")
+      .select("book_id")
+      .eq("id", reviewId)
+      .maybeSingle();
+
+    if (reviewError) {
+      throw reviewError;
+    }
 
     if (!review) {
       return {
@@ -37,14 +42,16 @@ export const likeReview = async (reviewId: string): Promise<ActionResult> => {
     }
 
     // Vérifier si le like existe déjà
-    const existingLike = await prisma.reviewLike.findUnique({
-      where: {
-        reviewId_userId: {
-          reviewId,
-          userId,
-        },
-      },
-    });
+    const { data: existingLike, error: existingLikeError } = await db.client
+      .from("review_likes")
+      .select("review_id, user_id")
+      .eq("review_id", reviewId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (existingLikeError) {
+      throw existingLikeError;
+    }
 
     if (existingLike) {
       return {
@@ -54,14 +61,15 @@ export const likeReview = async (reviewId: string): Promise<ActionResult> => {
     }
 
     // Créer le like
-    await prisma.reviewLike.create({
-      data: {
-        reviewId,
-        userId,
-      },
-    });
+    const { error: likeError } = await db.client
+      .from("review_likes")
+      .insert([{ review_id: reviewId, user_id: userId }]);
 
-    revalidatePath(`/books/${review.bookId}`);
+    if (likeError) {
+      throw likeError;
+    }
+
+    revalidatePath(`/books/${review.book_id}`);
     return { success: true };
   } catch (error) {
     if ((error as Error).message === "AUTH_REQUIRED") {
@@ -83,10 +91,15 @@ export const unlikeReview = async (reviewId: string): Promise<ActionResult> => {
     const userId = await requireSession();
 
     // Vérifier que la review existe
-    const review = await prisma.review.findUnique({
-      where: { id: reviewId },
-      select: { bookId: true },
-    });
+    const { data: review, error: reviewError } = await db.client
+      .from("reviews")
+      .select("book_id")
+      .eq("id", reviewId)
+      .maybeSingle();
+
+    if (reviewError) {
+      throw reviewError;
+    }
 
     if (!review) {
       return {
@@ -96,14 +109,16 @@ export const unlikeReview = async (reviewId: string): Promise<ActionResult> => {
     }
 
     // Vérifier si le like existe
-    const existingLike = await prisma.reviewLike.findUnique({
-      where: {
-        reviewId_userId: {
-          reviewId,
-          userId,
-        },
-      },
-    });
+    const { data: existingLike, error: existingLikeError } = await db.client
+      .from("review_likes")
+      .select("review_id, user_id")
+      .eq("review_id", reviewId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (existingLikeError) {
+      throw existingLikeError;
+    }
 
     if (!existingLike) {
       return {
@@ -113,16 +128,17 @@ export const unlikeReview = async (reviewId: string): Promise<ActionResult> => {
     }
 
     // Supprimer le like
-    await prisma.reviewLike.delete({
-      where: {
-        reviewId_userId: {
-          reviewId,
-          userId,
-        },
-      },
-    });
+    const { error: deleteError } = await db.client
+      .from("review_likes")
+      .delete()
+      .eq("review_id", reviewId)
+      .eq("user_id", userId);
 
-    revalidatePath(`/books/${review.bookId}`);
+    if (deleteError) {
+      throw deleteError;
+    }
+
+    revalidatePath(`/books/${review.book_id}`);
     return { success: true };
   } catch (error) {
     if ((error as Error).message === "AUTH_REQUIRED") {
@@ -141,30 +157,41 @@ export const unlikeReview = async (reviewId: string): Promise<ActionResult> => {
 
 export const getReviewLikes = async (reviewId: string) => {
   try {
-    const likes = await prisma.reviewLike.findMany({
-      where: { reviewId },
-      include: {
-        user: {
-          select: {
-            id: true,
-            displayName: true,
-            avatarUrl: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+    const { data: likesRows, error: likesError } = await db.client
+      .from("review_likes")
+      .select(
+        `
+        user_id,
+        users:user_id (
+          id,
+          display_name,
+          avatar_url
+        )
+      `,
+      )
+      .eq("review_id", reviewId)
+      .order("created_at", { ascending: false });
+
+    if (likesError) {
+      throw likesError;
+    }
 
     return {
       success: true,
-      likes: likes.map((like) => ({
-        id: like.user.id,
-        displayName: like.user.displayName,
-        avatarUrl: like.user.avatarUrl,
-      })),
-      count: likes.length,
+      likes:
+        (likesRows ?? [])
+          .map((row) =>
+            db.toCamel<{
+              users?: { id: string; displayName: string; avatarUrl: string | null };
+            }>(row),
+          )
+          .filter((r) => r.users)
+          .map((r) => ({
+            id: r.users!.id,
+            displayName: r.users!.displayName,
+            avatarUrl: r.users!.avatarUrl,
+          })),
+      count: (likesRows ?? []).length,
     };
   } catch (error) {
     console.error("[review] getReviewLikes error:", error);
@@ -179,14 +206,16 @@ export const getUserLikeStatus = async (reviewId: string) => {
   try {
     const userId = await requireSession();
 
-    const like = await prisma.reviewLike.findUnique({
-      where: {
-        reviewId_userId: {
-          reviewId,
-          userId,
-        },
-      },
-    });
+    const { data: like, error: likeError } = await db.client
+      .from("review_likes")
+      .select("review_id")
+      .eq("review_id", reviewId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (likeError) {
+      throw likeError;
+    }
 
     return {
       success: true,
