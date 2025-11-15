@@ -50,9 +50,10 @@ const loadListMembership = async (
     return "owner" as const;
   }
 
-  const collaborator = (list as any).collaborators?.find(
-    (c: any) => c.user_id === userId,
-  );
+  const collaborators =
+    ((list as { collaborators?: Array<{ role: "editor" | "viewer"; user_id: string }> })
+      .collaborators) ?? [];
+  const collaborator = collaborators.find((c) => c.user_id === userId);
 
   if (!collaborator) {
     return null;

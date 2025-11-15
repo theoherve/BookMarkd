@@ -276,7 +276,9 @@ const getBookDetail = async (
         typeof book.average_rating === "number" ? book.average_rating : null,
       ratings_count: book.ratings_count ?? 0,
       publication_year: book.publication_year,
-      book_tags: (book.book_tags ?? []).map((bt: any) => {
+      book_tags: (book.book_tags ?? []).map((bt: {
+        tag?: { id?: string; name?: string; slug?: string } | Array<{ id?: string; name?: string; slug?: string }>;
+      }) => {
         const tag = Array.isArray(bt.tag) ? bt.tag[0] : bt.tag;
         return {
           tag: {
@@ -287,7 +289,22 @@ const getBookDetail = async (
         };
       }),
       reviews:
-        (book.reviews ?? []).map((review: any) => ({
+        (book.reviews ?? []).map((review: {
+          id: string;
+          title: string | null;
+          content: string;
+          created_at: string;
+          visibility: "public" | "friends" | "private";
+          spoiler: boolean;
+          user?: Array<{ id: string; display_name: string; avatar_url: string | null }> | null;
+          review_likes?: Array<{ user?: Array<{ id: string; display_name: string; avatar_url: string | null }> | null }> | null;
+          review_comments?: Array<{
+            id: string;
+            content: string;
+            created_at: string;
+            user?: Array<{ id: string; display_name: string; avatar_url: string | null }> | null;
+          }> | null;
+        }) => ({
           id: review.id,
           title: review.title,
           content: review.content,
@@ -295,16 +312,18 @@ const getBookDetail = async (
           visibility: review.visibility,
           spoiler: review.spoiler,
           user: review.user
-            ? review.user.map((u: any) => ({
+            ? review.user.map((u: { id: string; display_name: string; avatar_url: string | null }) => ({
                 id: u.id,
                 display_name: u.display_name,
                 avatar_url: u.avatar_url,
               }))
             : [],
           review_likes: review.review_likes
-            ? review.review_likes.map((like: any) => ({
+            ? review.review_likes.map((like: {
+                user?: Array<{ id: string; display_name: string; avatar_url: string | null }> | null;
+              }) => ({
                 user: like.user
-                  ? like.user.map((u: any) => ({
+                  ? like.user.map((u: { id: string; display_name: string; avatar_url: string | null }) => ({
                       id: u.id,
                       display_name: u.display_name,
                       avatar_url: u.avatar_url,
@@ -313,12 +332,17 @@ const getBookDetail = async (
               }))
             : [],
           review_comments: review.review_comments
-            ? review.review_comments.map((comment: any) => ({
+            ? review.review_comments.map((comment: {
+                id: string;
+                content: string;
+                created_at: string;
+                user?: Array<{ id: string; display_name: string; avatar_url: string | null }> | null;
+              }) => ({
                 id: comment.id,
                 content: comment.content,
                 created_at: comment.created_at,
                 user: comment.user
-                  ? comment.user.map((u: any) => ({
+                  ? comment.user.map((u: { id: string; display_name: string; avatar_url: string | null }) => ({
                       id: u.id,
                       display_name: u.display_name,
                       avatar_url: u.avatar_url,

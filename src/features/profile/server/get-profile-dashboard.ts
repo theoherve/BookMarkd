@@ -276,7 +276,15 @@ export const getProfileDashboard = async (
                 }>
               >(r.data ?? [])
             )
-        : Promise.resolve([] as any[]),
+        : Promise.resolve(
+            [] as Array<{
+              id: string;
+              note: string | null;
+              createdAt: string;
+              book?: { title: string; author: string };
+              list?: { title: string; ownerId: string };
+            }>
+          ),
     ]);
 
     // Étape 7 : Activités - groupe 3 (3 requêtes en parallèle)
@@ -563,6 +571,9 @@ export const getProfileDashboard = async (
 
     // ListItems - ajout de livres à des listes
     listItems.forEach((item) => {
+      if (!item.book || !item.list) {
+        return;
+      }
       allActivities.push({
         id: `listitem_${item.id}`,
         type: "list_item_add",

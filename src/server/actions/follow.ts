@@ -240,7 +240,7 @@ export const acceptFollowRequest = async (
     if (upsertErr) throw upsertErr;
 
     revalidatePath("/profiles/me");
-    revalidatePath(`/profiles/${(request as any).requester?.id}`);
+    revalidatePath(`/profiles/${(request as { requester?: { id?: string } }).requester?.id ?? ""}`);
     return { success: true };
   } catch (error) {
     if ((error as Error).message === "AUTH_REQUIRED") {
@@ -458,7 +458,7 @@ export const getFollowRequests = async () => {
     }
 
     const mapped = (requests ?? [])
-      .map((req: any) =>
+      .map((req) =>
         db.toCamel<{
           id: string;
           createdAt: string;
@@ -517,7 +517,7 @@ export const getPendingFollowRequests = async () => {
 
     return {
       success: true,
-      requests: (requests ?? []).map((req: any) => {
+      requests: (requests ?? []).map((req) => {
         const r = db.toCamel<{
           id: string;
           createdAt: string;
@@ -560,7 +560,7 @@ export const getFollowers = async (userId: string) => {
 
     if (error) throw error;
 
-    return (followers ?? []).map((row: any) => {
+    return (followers ?? []).map((row) => {
       const r = db.toCamel<{
         createdAt: string;
         follower?: {
@@ -599,7 +599,7 @@ export const getFollowing = async (userId: string) => {
 
     if (error) throw error;
 
-    return (following ?? []).map((row: any) => {
+    return (following ?? []).map((row) => {
       const r = db.toCamel<{
         createdAt: string;
         following?: {

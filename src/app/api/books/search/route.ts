@@ -6,6 +6,23 @@ import type { SearchBook, SearchResponse } from "@/features/search/types";
 const DB_LIMIT = 12;
 const OPEN_LIBRARY_LIMIT = 6;
 
+type DbBookRow = {
+  id: string;
+  title: string;
+  author: string;
+  cover_url?: string | null;
+  summary?: string | null;
+  average_rating?: number | null;
+  publication_year?: number | null;
+  book_tags?: Array<{
+    tags?: {
+      id: string;
+      name: string;
+      slug: string;
+    } | null;
+  }> | null;
+};
+
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
@@ -54,7 +71,9 @@ export async function GET(request: Request) {
       }
     }
 
-    let { data: booksData, error: booksError } = await booksQuery;
+    const result = await booksQuery;
+    let booksData = result.data as DbBookRow[] | null;
+    const booksError = result.error;
 
     if (booksError) {
       throw booksError;
@@ -64,15 +83,17 @@ export async function GET(request: Request) {
     if (genre) {
       const normalizedGenre = genre.trim().toLowerCase();
       booksData =
-        (booksData ?? []).filter((b: any) =>
-          (b.book_tags ?? []).some(
-            (bt: any) =>
-              bt?.tags?.slug === normalizedGenre ||
-              (bt?.tags?.name ?? "")
-                .toLowerCase()
-                .includes(normalizedGenre),
-          ),
-        );
+        (booksData ?? []).filter((b: DbBookRow) => {
+          const relations = b.book_tags ?? [];
+          return relations.some((bt) => {
+            const tag = bt?.tags;
+            if (!tag) return false;
+            return (
+              tag.slug === normalizedGenre ||
+              (tag.name ?? "").toLowerCase().includes(normalizedGenre)
+            );
+          });
+        });
     }
 
     const formattedDbBooks: SearchBook[] = (booksData ?? []).map((raw) => {

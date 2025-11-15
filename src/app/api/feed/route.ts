@@ -55,7 +55,9 @@ export async function GET() {
         .eq("follower_id", viewerId);
       if (followsErr) throw followsErr;
 
-      followingIds = (follows ?? []).map((f) => (f as any).following_id as string);
+      followingIds = (follows ?? []).map(
+        (f) => (f as { following_id: string }).following_id,
+      );
     }
 
     const audienceIds =
@@ -180,7 +182,9 @@ export async function GET() {
         .in("book_id", recommendationBookIds);
       if (viewerErr) throw viewerErr;
       viewerReadlistBooks = new Set(
-        (viewerEntries ?? []).map((e) => (e as any).book_id as string).filter(Boolean),
+        (viewerEntries ?? [])
+          .map((e) => (e as { book_id?: string }).book_id)
+          .filter((id): id is string => Boolean(id)),
       );
     }
 
@@ -202,21 +206,28 @@ export async function GET() {
         .in("book_id", recommendationBookIds);
       if (friendErr) throw friendErr;
 
-      (friendEntries ?? []).forEach((entry: any) => {
-        const bookId = entry.book_id as string;
+      const friendEntriesTyped = (friendEntries ?? []) as Array<{
+        status: string | null;
+        book_id: string | null;
+        user: Array<{ id: string; display_name: string | null }> | null;
+      }>;
+      friendEntriesTyped.forEach((entry) => {
+        const bookId = entry.book_id ?? undefined;
         if (!bookId) {
           return;
         }
 
-        const friendName = entry.user?.display_name ?? null;
+        const friendName = Array.isArray(entry.user)
+          ? entry.user[0]?.display_name ?? null
+          : null;
         if (!friendName) {
           return;
         }
 
         const statusLabel =
-          (entry.status as string) === "finished"
+          (entry.status ?? "") === "finished"
             ? `${friendName} l'a terminé`
-            : (entry.status as string) === "reading"
+            : (entry.status ?? "") === "reading"
               ? `${friendName} est en cours de lecture`
               : `${friendName} l'a ajouté à sa liste`;
 
@@ -246,9 +257,15 @@ export async function GET() {
         .in("book_id", recommendationBookIds);
       if (tagsErr) throw tagsErr;
 
-      (tagRelations ?? []).forEach((relation: any) => {
-        const bookId = relation.book_id as string;
-        const tagName = relation.tag?.name as string | undefined;
+      const tagRelationsTyped = (tagRelations ?? []) as Array<{
+        book_id: string | null;
+        tag: Array<{ name: string | null }> | null;
+      }>;
+      tagRelationsTyped.forEach((relation) => {
+        const bookId = relation.book_id ?? undefined;
+        const tagName = Array.isArray(relation.tag)
+          ? relation.tag[0]?.name ?? undefined
+          : undefined;
         if (!bookId || !tagName) {
           return;
         }

@@ -180,7 +180,7 @@ export const getReviewLikes = async (reviewId: string) => {
       success: true,
       likes:
         (likesRows ?? [])
-          .map((row: any) =>
+          .map((row) =>
             db.toCamel<{
               users?: { id: string; displayName: string; avatarUrl: string | null };
             }>(row),

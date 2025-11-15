@@ -88,7 +88,7 @@ export const getPublicProfile = async (
       .limit(10);
     if (userBooksError) throw userBooksError;
 
-    const userBooks = (userBooksRows ?? []).map((row: any) =>
+    const userBooks = (userBooksRows ?? []).map((row) =>
       db.toCamel<{
         status: "to_read" | "reading" | "finished";
         rating: number | null;
@@ -116,7 +116,7 @@ export const getPublicProfile = async (
     if (topBooksError) throw topBooksError;
 
     const topBooks = (topBooksRows ?? [])
-      .map((row: any) =>
+      .map((row) =>
         db.toCamel<{
           position: number;
           book?: { id: string; title: string; author: string; coverUrl: string | null };
@@ -146,7 +146,7 @@ export const getPublicProfile = async (
 
     // Count items per list
     const listIds = lists.map((l) => l.id);
-    let itemsCountByList = new Map<string, number>();
+    const itemsCountByList = new Map<string, number>();
     if (listIds.length > 0) {
       const { data: itemsRows, error: itemsError } = await db.client
         .from("list_items")

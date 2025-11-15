@@ -110,7 +110,7 @@ export const importOpenLibraryBook = async (
         if (tagsError) throw tagsError;
 
         const tagMap = new Map(
-          (tagRows ?? []).map((row: any) => [row.slug as string, row.id as string]),
+          (tagRows ?? []).map((row) => [row.slug as string, row.id as string]),
         );
 
         // Créer les relations book_tags
@@ -135,7 +135,7 @@ export const importOpenLibraryBook = async (
           await db.client.from("book_tags").upsert(bookTagData, {
             onConflict: "book_id,tag_id",
             ignoreDuplicates: true,
-          } as any);
+          });
         }
       }
     }

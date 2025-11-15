@@ -87,11 +87,11 @@ export const getListDetail = async (
   const viewerRole = viewerId
     ? inferViewerRole(
         // Note: ownerId is the list owner id
-        (list as any).owner?.id as string,
+        (list.owner?.id ?? ""),
         viewerId,
         rawCollaborators.map((entry) => ({
-          user_id: (entry as any).user?.id as string,
-          role: entry.role as ViewerRole,
+          user_id: entry.user?.id ?? "",
+          role: entry.role,
         })),
       )
     : null;
@@ -101,11 +101,11 @@ export const getListDetail = async (
   }
 
   const collaborators = rawCollaborators
-    .filter((entry) => (entry as any).user)
+    .filter((entry) => Boolean(entry.user))
     .map((entry) => ({
-      userId: (entry as any).user!.id as string,
-      displayName: ((entry as any).user!.displayName as string | null) ?? "Collaborateur·rice",
-      avatarUrl: ((entry as any).user!.avatarUrl as string | null) ?? null,
+      userId: entry.user!.id as string,
+      displayName: (entry.user!.displayName as string | null) ?? "Collaborateur·rice",
+      avatarUrl: (entry.user!.avatarUrl as string | null) ?? null,
       role: entry.role as CollaboratorRole,
     }));
 

@@ -125,7 +125,7 @@ export const registerUser = async (
 
     if (insertError) {
       // Contrainte unique
-      if ((insertError as any).code === "23505") {
+      if ((insertError as { code?: string }).code === "23505") {
         return {
           success: false,
           message: "Un compte existe déjà avec cette adresse e-mail.",
