@@ -6,7 +6,7 @@ const normalizeTagName = (value: string) => {
   return value.replace(/\s+/g, " ").trim();
 };
 
-export const slugifyTag = (value: string) => {
+const slugifyTag = (value: string) => {
   return value
     .toLowerCase()
     .normalize("NFD")
