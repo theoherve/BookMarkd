@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { Search, X, Filter } from "lucide-react";
+import Link from "next/link";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -349,9 +350,15 @@ const SearchClient = () => {
               ))}
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-border/60 bg-card/60 p-8 text-center text-sm text-muted-foreground">
-              Aucun résultat pour cette recherche. Essayez un autre titre ou
-              élargissez les filtres.
+            <div className="rounded-2xl border border-dashed border-border/60 bg-card/60 p-8 text-center">
+              <p className="text-sm text-muted-foreground">
+                Aucun résultat pour cette recherche. Essayez un autre titre ou élargissez les filtres.
+              </p>
+              {booksData.supabaseCount === 0 && booksData.externalCount === 0 ? (
+                <Button asChild className="mt-4" aria-label="Ajouter un livre manuellement">
+                  <Link href="/books/create">Ajouter un livre</Link>
+                </Button>
+              ) : null}
             </div>
           )}
         </>

@@ -1,7 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
 import db from "@/lib/supabase/db";
 import { getCurrentSession } from "@/lib/auth/session";
 import { resolveSessionUserId } from "@/lib/auth/user";
@@ -49,7 +47,6 @@ export const createNotification = async (
       },
     ]);
     if (error) throw error;
-    revalidatePath("/notifications");
     return { success: true };
   } catch (error) {
     console.error("[notifications] createNotification error:", error);
@@ -111,7 +108,6 @@ export const markAsRead = async (notificationId: string): Promise<ActionResult> 
       .eq("id", notificationId)
       .eq("user_id", userId);
     if (error) throw error;
-    revalidatePath("/notifications");
     return { success: true };
   } catch (error) {
     if ((error as Error).message === "AUTH_REQUIRED") {
@@ -131,7 +127,6 @@ export const markAllAsRead = async (): Promise<ActionResult> => {
       .eq("user_id", userId)
       .is("read_at", null);
     if (error) throw error;
-    revalidatePath("/notifications");
     return { success: true };
   } catch (error) {
     if ((error as Error).message === "AUTH_REQUIRED") {

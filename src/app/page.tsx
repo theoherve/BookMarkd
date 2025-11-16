@@ -62,7 +62,7 @@ const HomePage = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button asChild className="w-full" variant="ghost">
+                <Button asChild className="w-full" variant="outline">
                   <Link href="/profiles/me" aria-label="Accéder à votre profil">
                     Voir mon profil
                   </Link>
