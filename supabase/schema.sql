@@ -14,6 +14,7 @@ create extension if not exists "pgcrypto";
 create table if not exists public.users (
   id uuid primary key default uuid_generate_v4(),
   email text not null unique,
+  username text unique,
   display_name text not null,
   password_hash text not null,
   avatar_url text,
@@ -118,6 +119,16 @@ create table if not exists public.follows (
   created_at timestamptz not null default now(),
   primary key (follower_id, following_id)
 );
+-- Follow requests (for private follow workflow)
+create table if not exists public.follow_requests (
+  id uuid primary key default uuid_generate_v4(),
+  requester_id uuid not null references public.users(id) on delete cascade,
+  target_id uuid not null references public.users(id) on delete cascade,
+  status text not null check (status in ('pending', 'accepted', 'rejected')),
+  created_at timestamptz not null default now(),
+  responded_at timestamptz,
+  unique (requester_id, target_id)
+);
 create table if not exists public.activities (
   id uuid primary key default uuid_generate_v4(),
   user_id uuid not null references public.users(id) on delete cascade,
@@ -162,6 +173,7 @@ alter table public.lists enable row level security;
 alter table public.list_items enable row level security;
 alter table public.list_collaborators enable row level security;
 alter table public.follows enable row level security;
+alter table public.follow_requests enable row level security;
 alter table public.activities enable row level security;
 alter table public.recommendations enable row level security;
 alter table public.review_comments enable row level security;
@@ -401,6 +413,21 @@ create policy "follows_owner_write" on public.follows for
 insert with check (auth.uid() = follower_id);
 drop policy if exists "follows_owner_delete" on public.follows;
 create policy "follows_owner_delete" on public.follows for delete using (auth.uid() = follower_id);
+-- follow_requests : requester peut créer/supprimer sa demande, target peut lire et mettre à jour
+drop policy if exists "follow_requests_read_self_or_target" on public.follow_requests;
+create policy "follow_requests_read_self_or_target" on public.follow_requests for
+select using (
+    auth.uid() = requester_id
+    or auth.uid() = target_id
+  );
+drop policy if exists "follow_requests_requester_insert" on public.follow_requests;
+create policy "follow_requests_requester_insert" on public.follow_requests for
+insert with check (auth.uid() = requester_id);
+drop policy if exists "follow_requests_requester_delete" on public.follow_requests;
+create policy "follow_requests_requester_delete" on public.follow_requests for delete using (auth.uid() = requester_id);
+drop policy if exists "follow_requests_target_update" on public.follow_requests;
+create policy "follow_requests_target_update" on public.follow_requests for
+update using (auth.uid() = target_id) with check (auth.uid() = target_id);
 -- activities : lecture publique (feed global) mais possibilité de restreindre plus tard.
 drop policy if exists "activities_read_public" on public.activities;
 create policy "activities_read_public" on public.activities for

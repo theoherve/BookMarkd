@@ -1,12 +1,13 @@
 "use client";
 
-import { KeyboardEvent, ReactNode, useState } from "react";
+import { ReactNode, useState } from "react";
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Menu } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import NotificationBell from "@/components/notifications/notification-bell";
 import {
   Sheet,
   SheetContent,
@@ -62,22 +63,6 @@ const AppShell = ({ children }: AppShellProps) => {
     ? session.user.name.split(" ")[0]
     : null;
 
-  const handleAddBook = () => {
-    if (!session?.user) {
-      router.push("/login?callbackUrl=/books/create");
-      return;
-    }
-
-    router.push("/books/create");
-  };
-
-  const handleAddBookKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      handleAddBook();
-    }
-  };
-
   const handleNavigateLogin = () => {
     router.push("/login");
   };
@@ -110,6 +95,7 @@ const AppShell = ({ children }: AppShellProps) => {
           <div className="flex items-center gap-2 sm:gap-3">
             {session?.user ? (
               <>
+                <NotificationBell />
                 <p className="hidden text-sm text-muted-foreground sm:block">
                   Bonjour,{" "}
                   <span className="font-semibold text-foreground">
@@ -145,16 +131,6 @@ const AppShell = ({ children }: AppShellProps) => {
                 </Button>
               </>
             )}
-            <Button
-              aria-label="Ajouter un livre"
-              onClick={handleAddBook}
-              onKeyDown={handleAddBookKeyDown}
-              size="sm"
-              className="text-xs sm:text-sm sm:h-9 sm:px-4"
-            >
-              <span className="hidden sm:inline">Ajouter un livre</span>
-              <span className="sm:hidden">+</span>
-            </Button>
             {/* Menu burger mobile - visible uniquement sur mobile */}
             <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
               <SheetTrigger asChild>
@@ -167,21 +143,20 @@ const AppShell = ({ children }: AppShellProps) => {
                   <Menu className="size-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+              <SheetContent side="right" className="w-[300px] sm:w-[400px] flex h-full flex-col">
                 <SheetHeader>
                   <SheetTitle>Navigation</SheetTitle>
                 </SheetHeader>
                 <nav aria-label="Navigation principale" className="mt-6">
                   <NavigationList emphasis="strong" onLinkClick={handleMenuLinkClick} />
                 </nav>
-                <div className="my-6 h-px w-full bg-border" />
                 {/* Auth section for mobile */}
                 {session?.user ? (
-                  <div className="mt-4 flex flex-col gap-3 px-2">
+                  <div className="mt-auto px-2 pb-4 flex justify-center">
                     <Button
                       variant="destructive"
                       aria-label="Se déconnecter de BookMarkd"
-                      className="self-start px-5"
+                      className="self-center px-5"
                       onClick={() => {
                         setIsMenuOpen(false);
                         void handleSignOut();
@@ -191,11 +166,11 @@ const AppShell = ({ children }: AppShellProps) => {
                     </Button>
                   </div>
                 ) : (
-                  <div className="mt-4 grid grid-cols-1 gap-3 px-2">
+                  <div className="mt-auto px-2 pb-4 grid grid-cols-1 gap-3 place-items-center">
                     <Button
                       variant="default"
                       aria-label="Se connecter à BookMarkd"
-                      className="self-start px-5"
+                      className="self-center px-5"
                       onClick={() => {
                         setIsMenuOpen(false);
                         handleNavigateLogin();
@@ -206,7 +181,7 @@ const AppShell = ({ children }: AppShellProps) => {
                     <Button
                       variant="outline"
                       aria-label="Créer un compte BookMarkd"
-                      className="self-start px-5"
+                      className="self-center px-5"
                       asChild
                       onClick={() => setIsMenuOpen(false)}
                     >

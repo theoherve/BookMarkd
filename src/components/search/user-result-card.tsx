@@ -45,13 +45,17 @@ const UserResultCard = ({ user, initialFollowStatus = "not_following" }: UserRes
           </div>
           <div className="flex-1 min-w-0 space-y-1">
             <CardTitle className="truncate text-lg">
-              <Link
-                href={`/profiles/${user.id}`}
-                className="hover:text-accent-foreground transition-colors"
-                aria-label={`Voir le profil de ${user.displayName}`}
-              >
-                {user.displayName}
-              </Link>
+              {user.username ? (
+                <Link
+                  href={`/profiles/${user.username}`}
+                  className="hover:text-accent-foreground transition-colors"
+                  aria-label={`Voir le profil de ${user.displayName}`}
+                >
+                  {user.displayName}
+                </Link>
+              ) : (
+                <span className="text-foreground">{user.displayName}</span>
+              )}
             </CardTitle>
             {user.bio ? (
               <CardDescription className="line-clamp-2 text-sm">
@@ -71,15 +75,27 @@ const UserResultCard = ({ user, initialFollowStatus = "not_following" }: UserRes
           </Badge>
         </div>
         <div className="flex gap-2">
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
-            className="flex-1"
-            aria-label={`Voir le profil de ${user.displayName}`}
-          >
-            <Link href={`/profiles/${user.id}`}>Voir le profil</Link>
-          </Button>
+          {user.username ? (
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              aria-label={`Voir le profil de ${user.displayName}`}
+            >
+              <Link href={`/profiles/${user.username}`}>Voir le profil</Link>
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              aria-label={`Profil indisponible pour ${user.displayName}`}
+              disabled
+            >
+              Profil indisponible
+            </Button>
+          )}
           <FollowRequestButton
             targetUserId={user.id}
             initialStatus={initialFollowStatus}

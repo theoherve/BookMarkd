@@ -22,7 +22,7 @@ export async function GET(request: Request) {
     // Recherche côté Supabase (ILIKE sur display_name et email)
     const { data: usersData, error: usersError } = await db.client
       .from("users")
-      .select("id, display_name, avatar_url, bio, email")
+      .select("id, username, display_name, avatar_url, bio, email")
       .or(`display_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
       .order("display_name", { ascending: true })
       .limit(LIMIT);
@@ -34,6 +34,7 @@ export async function GET(request: Request) {
     const users = db.toCamel<
       Array<{
         id: string;
+        username: string | null;
         displayName: string;
         avatarUrl: string | null;
         bio: string | null;
@@ -81,6 +82,7 @@ export async function GET(request: Request) {
 
     const formattedUsers = users.map((user) => ({
       id: user.id,
+      username: user.username,
       displayName: user.displayName,
       avatarUrl: user.avatarUrl,
       bio: user.bio,

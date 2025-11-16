@@ -23,6 +23,7 @@ export type SearchResponse = {
 
 export type SearchUser = {
   id: string;
+  username?: string | null;
   displayName: string;
   avatarUrl?: string | null;
   bio?: string | null;
