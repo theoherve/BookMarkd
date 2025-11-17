@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getCurrentSession } from "@/lib/auth/session";
 import db from "@/lib/supabase/db";
 import { createNotification } from "@/server/actions/notifications";
+import { createActivity } from "@/lib/activities/create-activity";
 
 type ActionResult =
   | { success: true }
@@ -63,6 +64,29 @@ export const updateReadingStatus = async (
 
     if (upsertError) {
       throw upsertError;
+    }
+
+    // Récupérer le titre du livre pour l'activité
+    const { data: book, error: bookError } = await db.client
+      .from("books")
+      .select("title")
+      .eq("id", bookId)
+      .maybeSingle();
+
+    if (!bookError && book) {
+      // Créer une activité de changement de statut
+      const statusLabels: Record<string, string> = {
+        to_read: "a ajouté à sa liste de lecture",
+        reading: "a commencé à lire",
+        finished: "a terminé",
+      };
+      const statusNote = statusLabels[status] || "a mis à jour son statut";
+      
+      void createActivity(userId, "status_change", {
+        book_id: bookId,
+        book_title: (book as { title: string }).title,
+        status_note: statusNote,
+      });
     }
 
     revalidateBook(bookId);
@@ -167,6 +191,22 @@ export const rateBook = async (
       throw updateBookError;
     }
 
+    // Récupérer le titre du livre pour l'activité
+    const { data: book, error: bookError } = await db.client
+      .from("books")
+      .select("title")
+      .eq("id", bookId)
+      .maybeSingle();
+
+    if (!bookError && book) {
+      // Créer une activité de notation
+      void createActivity(userId, "rating", {
+        book_id: bookId,
+        book_title: (book as { title: string }).title,
+        rating,
+      });
+    }
+
     revalidateBook(bookId);
     return { success: true };
   } catch (error) {
@@ -221,6 +261,32 @@ export const createReview = async ({
 
     if (insertError) {
       throw insertError;
+    }
+
+    // Récupérer le titre du livre pour l'activité
+    // Ne créer une activité que si la visibilité est "public" ou "friends"
+    if (visibility === "public" || visibility === "friends") {
+      const { data: book, error: bookError } = await db.client
+        .from("books")
+        .select("title")
+        .eq("id", bookId)
+        .maybeSingle();
+
+      if (!bookError && book) {
+        // Créer une activité de commentaire/critique
+        // Extraire un extrait du commentaire (premiers 150 caractères)
+        const reviewSnippet = content.length > 150 
+          ? `${content.substring(0, 150)}...` 
+          : content;
+        
+        await createActivity(userId, "review", {
+          book_id: bookId,
+          book_title: (book as { title: string }).title,
+          review_snippet: reviewSnippet,
+          note: reviewSnippet,
+          visibility, // Inclure la visibilité dans le payload pour filtrage ultérieur
+        });
+      }
     }
 
     // Notifier les followers (optionnel: ici on ne notifie que l'auteur·e lui/elle-même pour simplifier)

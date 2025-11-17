@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import db from "@/lib/supabase/db";
+import { getCurrentSession } from "@/lib/auth/session";
+import { resolveSessionUserId } from "@/lib/auth/user";
 
 const LIMIT = 20;
 
@@ -16,6 +18,9 @@ export async function GET(request: Request) {
         count: 0,
       });
     }
+
+    const session = await getCurrentSession();
+    const viewerId = await resolveSessionUserId(session);
 
     const searchTerm = query.trim();
 
@@ -80,6 +85,47 @@ export async function GET(request: Request) {
       booksReadByUser.set(userId, (booksReadByUser.get(userId) ?? 0) + 1);
     }
 
+    // Récupérer les statuts de suivi pour l'utilisateur connecté
+    const followStatusByUser = new Map<string, "following" | "request_pending" | "request_rejected" | "not_following">();
+    
+    if (viewerId) {
+      // Vérifier les follows existants
+      const { data: followsRows, error: followsError } = await db.client
+        .from("follows")
+        .select("following_id")
+        .eq("follower_id", viewerId)
+        .in("following_id", userIds);
+
+      if (!followsError && followsRows) {
+        for (const row of followsRows) {
+          const followingId = row.following_id as string;
+          followStatusByUser.set(followingId, "following");
+        }
+      }
+
+      // Vérifier les demandes en attente ou rejetées
+      const { data: requestsRows, error: requestsError } = await db.client
+        .from("follow_requests")
+        .select("target_id, status")
+        .eq("requester_id", viewerId)
+        .in("target_id", userIds);
+
+      if (!requestsError && requestsRows) {
+        for (const row of requestsRows) {
+          const targetId = row.target_id as string;
+          const status = row.status as string;
+          // Ne pas écraser "following" si déjà défini
+          if (!followStatusByUser.has(targetId)) {
+            if (status === "pending") {
+              followStatusByUser.set(targetId, "request_pending");
+            } else if (status === "rejected") {
+              followStatusByUser.set(targetId, "request_rejected");
+            }
+          }
+        }
+      }
+    }
+
     const formattedUsers = users.map((user) => ({
       id: user.id,
       username: user.username,
@@ -90,6 +136,7 @@ export async function GET(request: Request) {
         followers: followersByUser.get(user.id) ?? 0,
         booksRead: booksReadByUser.get(user.id) ?? 0,
       },
+      followStatus: followStatusByUser.get(user.id) ?? ("not_following" as const),
     }));
 
     return NextResponse.json({

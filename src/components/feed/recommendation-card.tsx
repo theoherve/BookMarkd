@@ -36,10 +36,14 @@ const RecommendationCard = ({ item }: RecommendationCardProps) => {
       ? "Recommandé par vos amis"
       : item.source === "global"
         ? "Tendances BookMarkd"
-        : "Parce que vous avez aimé un titre similaire";
+        : "Basé sur vos lectures";
 
   const bookSlug = generateBookSlug(item.title, item.author);
   const bookHref = `/books/${bookSlug}`;
+  
+  // Pour les recommandations basées sur les tags (source "similar"), 
+  // utiliser la raison qui contient les tags en commun
+  const isTagBased = item.source === "similar" && (item.reason?.includes("tag") || item.reason?.includes("Basé sur"));
 
   return (
     <Card
@@ -87,7 +91,7 @@ const RecommendationCard = ({ item }: RecommendationCardProps) => {
                 ? "Calcul basé sur vos amis et leurs activités récentes."
                 : item.source === "global"
                   ? "Titres les plus populaires sur BookMarkd cette semaine."
-                  : "Suggestions générées à partir de vos lectures similaires."}
+                  : "Suggestions générées à partir des tags de vos livres terminés, en cours ou dans votre liste de lecture."}
             </TooltipContent>
           </Tooltip>
           <Badge
@@ -113,16 +117,23 @@ const RecommendationCard = ({ item }: RecommendationCardProps) => {
           </div>
         ) : null}
         {item.tags && item.tags.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {item.tags.slice(0, 4).map((tag) => (
-              <Badge
-                key={`${item.id}-${tag}`}
-                variant="outline"
-                className="text-xs font-medium"
-              >
-                #{tag}
-              </Badge>
-            ))}
+          <div className="space-y-2">
+            {isTagBased && (
+              <p className="text-xs font-medium text-muted-foreground">
+                Tags communs avec vos lectures :
+              </p>
+            )}
+            <div className="flex flex-wrap gap-2">
+              {item.tags.slice(0, 4).map((tag) => (
+                <Badge
+                  key={`${item.id}-${tag}`}
+                  variant={isTagBased ? "secondary" : "outline"}
+                  className="text-xs font-medium"
+                >
+                  #{tag}
+                </Badge>
+              ))}
+            </div>
           </div>
         ) : null}
       </CardContent>

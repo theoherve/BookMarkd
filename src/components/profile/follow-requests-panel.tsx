@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useState, useTransition, useEffect } from "react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +16,7 @@ type FollowRequest = {
   id: string;
   requester: {
     id: string;
+    username: string | null;
     displayName: string;
     avatarUrl: string | null;
     bio: string | null;
@@ -107,10 +109,16 @@ const FollowRequestsPanel = () => {
             .toUpperCase()
             .slice(0, 2);
 
+          const profileUrl = request.requester.username
+            ? `/profiles/${request.requester.username}`
+            : `/profiles/${request.requester.id}`;
+
           return (
-            <div
+            <Link
               key={request.id}
-              className="flex items-start gap-4 rounded-lg border border-border/50 bg-card/70 p-4"
+              href={profileUrl}
+              className="flex items-start gap-4 rounded-lg border border-border/50 bg-card/70 p-4 transition hover:bg-card/90"
+              aria-label={`Voir le profil de ${request.requester.displayName}`}
             >
               <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-border/50 bg-muted">
                 {request.requester.avatarUrl ? (
@@ -138,10 +146,14 @@ const FollowRequestsPanel = () => {
                     </p>
                   ) : null}
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
                   <Button
                     size="sm"
-                    onClick={() => handleAccept(request.id)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleAccept(request.id);
+                    }}
                     disabled={isPending}
                     aria-label={`Accepter la demande de ${request.requester.displayName}`}
                   >
@@ -150,7 +162,11 @@ const FollowRequestsPanel = () => {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => handleReject(request.id)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleReject(request.id);
+                    }}
                     disabled={isPending}
                     aria-label={`Refuser la demande de ${request.requester.displayName}`}
                   >
@@ -158,7 +174,7 @@ const FollowRequestsPanel = () => {
                   </Button>
                 </div>
               </div>
-            </div>
+            </Link>
           );
         })}
       </CardContent>

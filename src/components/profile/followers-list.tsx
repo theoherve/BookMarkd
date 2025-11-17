@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 
 type Follower = {
   id: string;
+  username: string | null;
   displayName: string;
   avatarUrl: string | null;
   bio: string | null;
@@ -75,11 +76,16 @@ const FollowersList = ({ userId }: FollowersListProps) => {
             .toUpperCase()
             .slice(0, 2);
 
+          const profileUrl = follower.username
+            ? `/profiles/${follower.username}`
+            : `/profiles/${follower.id}`;
+
           return (
             <Link
               key={follower.id}
-              href={`/profiles/${follower.id}`}
+              href={profileUrl}
               className="flex items-center gap-3 rounded-lg border border-border/50 bg-card/70 p-3 transition hover:bg-card/90"
+              aria-label={`Voir le profil de ${follower.displayName}`}
             >
               <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-border/50 bg-muted">
                 {follower.avatarUrl ? (

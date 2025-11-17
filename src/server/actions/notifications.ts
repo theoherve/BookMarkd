@@ -11,6 +11,7 @@ type ActionResult =
 export type NotificationType =
   | "follow_request"
   | "follow_request_accepted"
+  | "follow"
   | "review_like"
   | "review_comment"
   | "recommendation";
@@ -86,9 +87,82 @@ export const getNotifications = async (
       .limit(limit);
     if (error) throw error;
 
-    const notifications = (data ?? []).map((row) =>
+    let notifications = (data ?? []).map((row) =>
       db.toCamel<NotificationItem>(row),
     );
+
+    // Enrichir les notifications de type follow_request avec le requestId depuis la base de données
+    const followRequestNotifications = notifications.filter((n) => n.type === "follow_request");
+    if (followRequestNotifications.length > 0) {
+      // Récupérer toutes les demandes en attente pour cet utilisateur
+      const { data: pendingRequests, error: requestsError } = await db.client
+        .from("follow_requests")
+        .select("id, requester_id, created_at")
+        .eq("target_id", userId)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+
+      if (!requestsError && pendingRequests) {
+        // Créer un map pour associer requesterId -> requestId (prendre la plus récente si plusieurs)
+        const requesterToRequestMap = new Map<string, string>();
+        for (const req of pendingRequests) {
+          const requesterId = req.requester_id as string;
+          if (requesterId) {
+            // Garder la demande la plus récente pour chaque requester
+            const existingRequestId = requesterToRequestMap.get(requesterId);
+            if (!existingRequestId) {
+              requesterToRequestMap.set(requesterId, req.id as string);
+            }
+          }
+        }
+
+        // Enrichir les notifications
+        notifications = notifications.map((n) => {
+          if (n.type === "follow_request") {
+            const payload = n.payload || {};
+            let requestId = payload.requestId as string | undefined;
+            let requesterId = payload.requesterId as string | undefined;
+
+            // Si le requestId n'est pas présent mais qu'on a le requesterId, le chercher
+            if (!requestId && requesterId) {
+              requestId = requesterToRequestMap.get(requesterId);
+            }
+
+            // Si toujours pas de requestId, essayer de trouver via la date de création
+            // (associer la notification avec la demande la plus proche en date)
+            if (!requestId && pendingRequests.length > 0) {
+              const notificationDate = new Date(n.createdAt).getTime();
+              const matchingRequest = pendingRequests
+                .map((req) => ({
+                  id: req.id as string,
+                  requesterId: req.requester_id as string,
+                  createdAt: new Date(req.created_at as string).getTime(),
+                }))
+                .sort((a, b) => Math.abs(a.createdAt - notificationDate) - Math.abs(b.createdAt - notificationDate))[0];
+
+              if (matchingRequest) {
+                requestId = matchingRequest.id;
+                // Mettre à jour le requesterId aussi si absent
+                if (!requesterId) {
+                  requesterId = matchingRequest.requesterId;
+                }
+              }
+            }
+
+            return {
+              ...n,
+              payload: {
+                ...payload,
+                ...(requestId && { requestId }),
+                ...(requesterId && { requesterId }),
+              },
+            };
+          }
+          return n;
+        });
+      }
+    }
+
     return { success: true, notifications };
   } catch (error) {
     if ((error as Error).message === "AUTH_REQUIRED") {

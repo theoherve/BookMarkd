@@ -31,6 +31,7 @@ export type SearchUser = {
     followers: number;
     booksRead: number;
   };
+  followStatus?: "following" | "request_pending" | "request_rejected" | "not_following";
 };
 
 export type UserSearchResponse = {

@@ -50,7 +50,7 @@ const BookFeedCard = ({ item }: BookFeedCardProps) => {
       <CardHeader className="space-y-3">
         <Badge
           variant="secondary"
-          className="w-fit rounded-full bg-accent/20 px-3 py-1 text-[11px] uppercase tracking-[0.35em] text-accent-foreground"
+          className="w-fit rounded-full bg-accent/20 px-3 py-1 text-[11px] uppercase tracking-[0.35em] text-accent"
         >
           {statusLabels[item.status]}
         </Badge>

@@ -107,7 +107,7 @@ const SearchClient = () => {
           onClick={() => setActiveTab("books")}
           className={`px-4 py-2 text-sm font-medium transition-colors ${
             activeTab === "books"
-              ? "border-b-2 border-accent text-accent-foreground"
+              ? "border-b-2 border-primary text-primary"
               : "text-muted-foreground hover:text-foreground"
           }`}
           aria-label="Rechercher des livres"
@@ -119,7 +119,7 @@ const SearchClient = () => {
           onClick={() => setActiveTab("users")}
           className={`px-4 py-2 text-sm font-medium transition-colors ${
             activeTab === "users"
-              ? "border-b-2 border-accent text-accent-foreground"
+              ? "border-b-2 border-primary text-primary"
               : "text-muted-foreground hover:text-foreground"
           }`}
           aria-label="Rechercher des utilisateurs"
@@ -380,7 +380,7 @@ const SearchClient = () => {
           {hasUserResults ? (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {usersData.users.map((user) => (
-                <UserResultCard key={user.id} user={user} initialFollowStatus="not_following" />
+                <UserResultCard key={user.id} user={user} initialFollowStatus={user.followStatus ?? "not_following"} />
               ))}
             </div>
           ) : (
