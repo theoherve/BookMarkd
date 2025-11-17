@@ -172,13 +172,14 @@ export const getProfileDashboard = async (
         .select(
           `
           id,
+          book_id,
           status,
           rating,
           rated_at,
           note_private,
           created_at,
           updated_at,
-          book:book_id ( title, author )
+          book:book_id ( id, title, author )
         `
         )
         .eq("user_id", userId)
@@ -203,9 +204,10 @@ export const getProfileDashboard = async (
         .select(
           `
           id,
+          book_id,
           content,
           created_at,
-          book:book_id ( title, author )
+          book:book_id ( id, title, author )
         `
         )
         .eq("user_id", userId)
@@ -233,7 +235,7 @@ export const getProfileDashboard = async (
           content,
           created_at,
           review:review_id (
-            book:book_id ( title, author )
+            book:book_id ( id, title, author )
           )
         `
         )
@@ -258,7 +260,7 @@ export const getProfileDashboard = async (
               id,
               note,
               created_at,
-              book:book_id ( title, author ),
+              book:book_id ( id, title, author ),
               list:list_id ( title, owner_id )
             `
             )
@@ -297,7 +299,7 @@ export const getProfileDashboard = async (
           user_id,
           created_at,
           review:review_id (
-            book:book_id ( title, author )
+            book:book_id ( id, title, author )
           )
         `
         )
@@ -343,7 +345,7 @@ export const getProfileDashboard = async (
           `
           id,
           updated_at,
-          book:book_id ( title, author )
+          book:book_id ( id, title, author )
         `
         )
         .eq("user_id", userId)
@@ -466,6 +468,7 @@ export const getProfileDashboard = async (
           id: `readlist_${userBook.id}`,
           type: "readlist_add",
           bookTitle: userBook.book.title,
+          bookId: userBook.book.id,
           bookSlug: generateBookSlug(userBook.book.title, userBook.book.author),
           listTitle: null,
           note: userBook.notePrivate ?? null,
@@ -484,6 +487,7 @@ export const getProfileDashboard = async (
           id: `rating_${userBook.id}_${ratedAtTime}`,
           type: "rating",
           bookTitle: userBook.book.title,
+          bookId: userBook.book.id,
           bookSlug: generateBookSlug(userBook.book.title, userBook.book.author),
           listTitle: null,
           note: userBook.notePrivate ?? null,
@@ -505,6 +509,7 @@ export const getProfileDashboard = async (
           id: `status_${userBook.id}_${updatedAtTime}`,
           type: "status_change",
           bookTitle: userBook.book.title,
+          bookId: userBook.book.id,
           bookSlug: generateBookSlug(userBook.book.title, userBook.book.author),
           listTitle: null,
           note: userBook.notePrivate ?? null,
@@ -524,6 +529,7 @@ export const getProfileDashboard = async (
         id: `review_${review.id}`,
         type: "review",
         bookTitle: review.book.title,
+        bookId: review.book.id,
         bookSlug: generateBookSlug(review.book.title, review.book.author),
         listTitle: null,
         note: review.content,
@@ -542,6 +548,7 @@ export const getProfileDashboard = async (
         id: `comment_${comment.id}`,
         type: "review_comment",
         bookTitle: comment.review.book.title,
+        bookId: comment.review.book.id,
         bookSlug: generateBookSlug(
           comment.review.book.title,
           comment.review.book.author
@@ -578,6 +585,7 @@ export const getProfileDashboard = async (
         id: `listitem_${item.id}`,
         type: "list_item_add",
         bookTitle: item.book.title,
+        bookId: item.book.id,
         bookSlug: generateBookSlug(item.book.title, item.book.author),
         listTitle: item.list.title,
         note: item.note ?? null,
@@ -596,6 +604,7 @@ export const getProfileDashboard = async (
         id: `like_${like.reviewId}_${like.userId}`,
         type: "review_like",
         bookTitle: like.review.book.title,
+        bookId: like.review.book.id,
         bookSlug: generateBookSlug(
           like.review.book.title,
           like.review.book.author
@@ -635,6 +644,7 @@ export const getProfileDashboard = async (
         id: `topbook_${topBook.id}_${new Date(topBook.updatedAt).getTime()}`,
         type: "top_book_update",
         bookTitle: topBook.book.title,
+        bookId: topBook.book.id,
         bookSlug: generateBookSlug(topBook.book.title, topBook.book.author),
         listTitle: null,
         note: null,

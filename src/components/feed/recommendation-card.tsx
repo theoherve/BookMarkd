@@ -39,6 +39,7 @@ const RecommendationCard = ({ item }: RecommendationCardProps) => {
         : "Parce que vous avez aimé un titre similaire";
 
   const bookSlug = generateBookSlug(item.title, item.author);
+  const bookHref = `/books/${bookSlug}`;
 
   return (
     <Card
@@ -56,7 +57,7 @@ const RecommendationCard = ({ item }: RecommendationCardProps) => {
         </Badge>
         <CardTitle className="text-base font-semibold text-foreground">
           <Link
-            href={`/books/${bookSlug}`}
+            href={bookHref}
             className="hover:text-accent-foreground transition-colors"
             aria-label={`Voir les détails de ${item.title}`}
           >
@@ -144,7 +145,7 @@ const RecommendationCard = ({ item }: RecommendationCardProps) => {
           </DialogContent>
         </Dialog>
         <Link
-          href={`/books/${bookSlug}#reviews`}
+          href={`${bookHref}#reviews`}
           aria-label={`Commenter ${item.title}`}
           className="inline-flex"
         >

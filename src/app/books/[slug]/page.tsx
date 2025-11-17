@@ -143,7 +143,7 @@ const getBookDetail = async (
   viewer: ViewerInfo;
 }> => {
   // S'assurer que slug est valide
-  if (!slug || typeof slug !== "string") {
+  if (!slug || typeof slug !== "string" || slug.trim() === "") {
     return {
       book: null,
       viewer: {
@@ -155,13 +155,13 @@ const getBookDetail = async (
 
   // S'assurer que viewerId est soit une string valide, soit null, jamais undefined
   const validViewerId = viewerId && typeof viewerId === "string" ? viewerId : null;
-  
-  // Vérifier si c'est un UUID (rétrocompatibilité avec les anciennes URLs)
-  const bookId = extractBookIdFromSlug(slug);
-  
+
   try {
     let targetBookId: string | null = null;
 
+    // Vérifier si c'est un UUID (rétrocompatibilité avec les anciennes URLs)
+    const bookId = extractBookIdFromSlug(slug);
+    
     if (bookId) {
       // Recherche par ID (rétrocompatibilité)
       targetBookId = bookId;
@@ -171,6 +171,7 @@ const getBookDetail = async (
         .from("books")
         .select("id, title, author")
         .limit(10000);
+      
       if (booksError) {
         throw booksError;
       }
@@ -248,6 +249,7 @@ const getBookDetail = async (
       )
       .eq("id", targetBookId)
       .maybeSingle();
+    
     if (bookError) {
       throw bookError;
     }
@@ -306,61 +308,63 @@ const getBookDetail = async (
           created_at: string;
           visibility: "public" | "friends" | "private";
           spoiler: boolean;
-          user?: Array<{ id: string; display_name: string; avatar_url: string | null }> | null;
-          review_likes?: Array<{ user?: Array<{ id: string; display_name: string; avatar_url: string | null }> | null }> | null;
+          user?: Array<{ id: string; display_name: string; avatar_url: string | null }> | { id: string; display_name: string; avatar_url: string | null } | null;
+          review_likes?: Array<{ user?: Array<{ id: string; display_name: string; avatar_url: string | null }> | { id: string; display_name: string; avatar_url: string | null } | null }> | null;
           review_comments?: Array<{
             id: string;
             content: string;
             created_at: string;
-            user?: Array<{ id: string; display_name: string; avatar_url: string | null }> | null;
+            user?: Array<{ id: string; display_name: string; avatar_url: string | null }> | { id: string; display_name: string; avatar_url: string | null } | null;
           }> | null;
-        }) => ({
-          id: review.id,
-          title: review.title,
-          content: review.content,
-          created_at: review.created_at,
-          visibility: review.visibility,
-          spoiler: review.spoiler,
-          user: review.user
-            ? review.user.map((u: { id: string; display_name: string; avatar_url: string | null }) => ({
+        }) => {
+          // Normaliser user : peut être un tableau, un objet unique, ou null
+          const normalizeUser = (user: any) => {
+            if (!user) return [];
+            if (Array.isArray(user)) {
+              return user.map((u: { id: string; display_name: string; avatar_url: string | null }) => ({
                 id: u.id,
                 display_name: u.display_name,
                 avatar_url: u.avatar_url,
-              }))
-            : [],
-          review_likes: review.review_likes
-            ? review.review_likes.map((like: {
-                user?: Array<{ id: string; display_name: string; avatar_url: string | null }> | null;
-              }) => ({
-                user: like.user
-                  ? like.user.map((u: { id: string; display_name: string; avatar_url: string | null }) => ({
-                      id: u.id,
-                      display_name: u.display_name,
-                      avatar_url: u.avatar_url,
-                    }))
-                  : [],
-              }))
-            : [],
-          review_comments: review.review_comments
-            ? review.review_comments.map((comment: {
-                id: string;
-                content: string;
-                created_at: string;
-                user?: Array<{ id: string; display_name: string; avatar_url: string | null }> | null;
-              }) => ({
-                id: comment.id,
-                content: comment.content,
-                created_at: comment.created_at,
-                user: comment.user
-                  ? comment.user.map((u: { id: string; display_name: string; avatar_url: string | null }) => ({
-                      id: u.id,
-                      display_name: u.display_name,
-                      avatar_url: u.avatar_url,
-                    }))
-                  : [],
-              }))
-            : [],
-        })) ?? [],
+              }));
+            }
+            // C'est un objet unique
+            return [{
+              id: user.id,
+              display_name: user.display_name,
+              avatar_url: user.avatar_url,
+            }];
+          };
+
+          return {
+            id: review.id,
+            title: review.title,
+            content: review.content,
+            created_at: review.created_at,
+            visibility: review.visibility,
+            spoiler: review.spoiler,
+            user: normalizeUser(review.user),
+            review_likes: review.review_likes
+              ? review.review_likes.map((like: {
+                  user?: Array<{ id: string; display_name: string; avatar_url: string | null }> | { id: string; display_name: string; avatar_url: string | null } | null;
+                }) => ({
+                  user: normalizeUser(like.user),
+                }))
+              : [],
+            review_comments: review.review_comments
+              ? review.review_comments.map((comment: {
+                  id: string;
+                  content: string;
+                  created_at: string;
+                  user?: Array<{ id: string; display_name: string; avatar_url: string | null }> | { id: string; display_name: string; avatar_url: string | null } | null;
+                }) => ({
+                  id: comment.id,
+                  content: comment.content,
+                  created_at: comment.created_at,
+                  user: normalizeUser(comment.user),
+                }))
+              : [],
+          };
+        }) ?? [],
     };
 
     return {
@@ -370,7 +374,7 @@ const getBookDetail = async (
         rating: typeof userBook?.rating === "number" ? userBook.rating : null,
       },
     };
-  } catch {
+  } catch (error) {
     return {
       book: null,
       viewer: {
@@ -530,3 +534,4 @@ const BookPage = async ({ params }: BookPageProps) => {
 };
 
 export default BookPage;
+
