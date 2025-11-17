@@ -37,6 +37,9 @@ export type RecentActivity = {
   rating: number | null;
   status: "to_read" | "reading" | "finished" | null;
   occurredAt: string;
+  // Pour les activités de type "follow"
+  followedUserId?: string | null;
+  followedUserUsername?: string | null;
 };
 
 export type ReadListBook = {

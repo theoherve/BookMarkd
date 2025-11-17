@@ -106,7 +106,7 @@ const FeedClient = ({ limit }: FeedClientProps = {}) => {
           description="Ce que votre cercle lecture a partagé ces derniers jours."
         >
           {data.activities.length === 0 ? (
-            <EmptyState message="Aucune activité récente. Ajoutez vos premières notes !" />
+            <EmptyState message="Aucune activité récente de vos amis. Ajoutez des ami·e·s pour suivre leurs activités !" />
           ) : (
             applyLimit(data.activities, limit).map((activity) => (
               <ActivityCard key={activity.id} item={activity} />

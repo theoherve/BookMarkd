@@ -156,6 +156,14 @@ const RecentActivitiesSection = ({ activities }: RecentActivitiesSectionProps) =
 
           // Si l'activité a un bookSlug, rendre la carte cliquable
           const bookHref = activity.bookSlug ? `/books/${activity.bookSlug}` : null;
+          
+          // Si l'activité est de type "follow", rendre la carte cliquable vers le profil
+          const profileHref = activity.type === "follow" && activity.followedUserId
+            ? activity.followedUserUsername
+              ? `/profiles/${activity.followedUserUsername}`
+              : `/profiles/${activity.followedUserId}`
+            : null;
+          
           if (bookHref) {
             return (
               <Link
@@ -163,6 +171,19 @@ const RecentActivitiesSection = ({ activities }: RecentActivitiesSectionProps) =
                 href={bookHref}
                 className="block transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-lg"
                 aria-label={`Voir le livre ${activity.bookTitle}`}
+              >
+                {ActivityCardContent}
+              </Link>
+            );
+          }
+          
+          if (profileHref) {
+            return (
+              <Link
+                key={activity.id}
+                href={profileHref}
+                className="block transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-lg"
+                aria-label={`Voir le profil de ${activity.note ?? "l'utilisateur"}`}
               >
                 {ActivityCardContent}
               </Link>

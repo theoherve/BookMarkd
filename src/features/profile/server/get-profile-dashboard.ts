@@ -325,7 +325,7 @@ export const getProfileDashboard = async (
           follower_id,
           following_id,
           created_at,
-          following:following_id ( display_name )
+          following:following_id ( id, username, display_name )
         `
         )
         .eq("follower_id", userId)
@@ -337,7 +337,7 @@ export const getProfileDashboard = async (
               followerId: string;
               followingId: string;
               createdAt: string;
-              following?: { displayName: string | null };
+              following?: { id: string; username: string | null; displayName: string | null };
             }>
           >(r.data ?? [])
         ),
@@ -637,6 +637,8 @@ export const getProfileDashboard = async (
         rating: null,
         status: null,
         occurredAt: follow.createdAt,
+        followedUserId: follow.following.id,
+        followedUserUsername: follow.following.username,
       });
     });
 

@@ -92,14 +92,28 @@ export const requestFollow = async (
       };
     }
 
+    // Récupérer le nom du demandeur pour la notification
+    const { data: requester, error: requesterErr } = await db.client
+      .from("users")
+      .select("display_name")
+      .eq("id", requesterId)
+      .maybeSingle();
+    if (requesterErr) {
+      throw requesterErr;
+    }
+
     // Créer la demande
-    const { error: createErr } = await db.client.from("follow_requests").insert([
-      {
-        requester_id: requesterId,
-        target_id: targetUserId,
-        status: "pending",
-      },
-    ]);
+    const { data: newRequest, error: createErr } = await db.client
+      .from("follow_requests")
+      .insert([
+        {
+          requester_id: requesterId,
+          target_id: targetUserId,
+          status: "pending",
+        },
+      ])
+      .select("id")
+      .single();
     if (createErr) {
       throw createErr;
     }
@@ -107,7 +121,11 @@ export const requestFollow = async (
     revalidatePath("/profiles/me");
     revalidatePath(`/profiles/${targetUserId}`);
     // Notification pour l'utilisateur cible
-    void createNotification(targetUserId, "follow_request", {});
+    void createNotification(targetUserId, "follow_request", {
+      requestId: newRequest.id,
+      requesterId: requesterId,
+      requesterName: requester?.display_name ?? null,
+    });
     return { success: true };
   } catch (error) {
     if ((error as Error).message === "AUTH_REQUIRED") {
@@ -188,7 +206,7 @@ export const acceptFollowRequest = async (
         status,
         requester_id,
         target_id,
-        requester:requester_id ( id, display_name )
+        requester:requester_id ( id, username, display_name )
       `,
       )
       .eq("id", requestId)
@@ -243,12 +261,24 @@ export const acceptFollowRequest = async (
     if (upsertErr) throw upsertErr;
 
     revalidatePath("/profiles/me");
+    revalidatePath("/notifications");
     revalidatePath(`/profiles/${(request as { requester?: { id?: string } }).requester?.id ?? ""}`);
+    
+    const requester = request as { requester?: { id?: string; username?: string | null; display_name?: string } };
+    
     // Notification pour l'auteur de la demande (le demandeur)
     void createNotification(request.requester_id as string, "follow_request_accepted", {
       targetUserId: request.target_id,
-      targetUserName: (request as { requester?: { id?: string; display_name?: string } }).requester?.display_name ?? null,
+      targetUserName: requester.requester?.display_name ?? null,
     });
+    
+    // Notification pour la personne qui a été suivie (le target)
+    void createNotification(request.target_id as string, "follow", {
+      followerId: request.requester_id,
+      followerUsername: requester.requester?.username ?? null,
+      followerName: requester.requester?.display_name ?? null,
+    });
+    
     return { success: true };
   } catch (error) {
     if ((error as Error).message === "AUTH_REQUIRED") {
@@ -261,6 +291,50 @@ export const acceptFollowRequest = async (
     return {
       success: false,
       message: "Impossible d'accepter la demande.",
+    };
+  }
+};
+
+export const findFollowRequestByRequester = async (
+  requesterId: string,
+): Promise<{ success: true; requestId: string } | { success: false; message: string }> => {
+  try {
+    const userId = await requireSession();
+
+    const { data: request, error } = await db.client
+      .from("follow_requests")
+      .select("id")
+      .eq("requester_id", requesterId)
+      .eq("target_id", userId)
+      .eq("status", "pending")
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    if (!request) {
+      return {
+        success: false,
+        message: "Aucune demande en attente trouvée.",
+      };
+    }
+
+    return {
+      success: true,
+      requestId: request.id as string,
+    };
+  } catch (error) {
+    if ((error as Error).message === "AUTH_REQUIRED") {
+      return {
+        success: false,
+        message: "Vous devez être connecté·e.",
+      };
+    }
+    console.error("[follow] findFollowRequestByRequester error:", error);
+    return {
+      success: false,
+      message: "Impossible de trouver la demande.",
     };
   }
 };
@@ -312,6 +386,7 @@ export const rejectFollowRequest = async (
     if (updErr) throw updErr;
 
     revalidatePath("/profiles/me");
+    revalidatePath("/notifications");
     return { success: true };
   } catch (error) {
     if ((error as Error).message === "AUTH_REQUIRED") {
@@ -454,7 +529,7 @@ export const getFollowRequests = async () => {
         `
         id,
         created_at,
-        requester:requester_id ( id, display_name, avatar_url, bio )
+        requester:requester_id ( id, username, display_name, avatar_url, bio )
       `,
       )
       .eq("target_id", userId)
@@ -470,12 +545,13 @@ export const getFollowRequests = async () => {
         db.toCamel<{
           id: string;
           createdAt: string;
-          requester?: {
-            id: string;
-            displayName: string;
-            avatarUrl: string | null;
-            bio: string | null;
-          };
+        requester?: {
+          id: string;
+          username: string | null;
+          displayName: string;
+          avatarUrl: string | null;
+          bio: string | null;
+        };
         }>(req),
       )
       .filter((r) => Boolean(r.requester))
@@ -560,7 +636,7 @@ export const getFollowers = async (userId: string) => {
       .select(
         `
         created_at,
-        follower:follower_id ( id, display_name, avatar_url, bio )
+        follower:follower_id ( id, username, display_name, avatar_url, bio )
       `,
       )
       .eq("following_id", userId)
@@ -573,6 +649,7 @@ export const getFollowers = async (userId: string) => {
         createdAt: string;
         follower?: {
           id: string;
+          username: string | null;
           displayName: string;
           avatarUrl: string | null;
           bio: string | null;
@@ -580,6 +657,7 @@ export const getFollowers = async (userId: string) => {
       }>(row);
       return {
         id: r.follower!.id,
+        username: r.follower!.username,
         displayName: r.follower!.displayName,
         avatarUrl: r.follower!.avatarUrl,
         bio: r.follower!.bio,
@@ -599,7 +677,7 @@ export const getFollowing = async (userId: string) => {
       .select(
         `
         created_at,
-        following:following_id ( id, display_name, avatar_url, bio )
+        following:following_id ( id, username, display_name, avatar_url, bio )
       `,
       )
       .eq("follower_id", userId)
@@ -612,6 +690,7 @@ export const getFollowing = async (userId: string) => {
         createdAt: string;
         following?: {
           id: string;
+          username: string | null;
           displayName: string;
           avatarUrl: string | null;
           bio: string | null;
@@ -619,6 +698,7 @@ export const getFollowing = async (userId: string) => {
       }>(row);
       return {
         id: r.following!.id,
+        username: r.following!.username,
         displayName: r.following!.displayName,
         avatarUrl: r.following!.avatarUrl,
         bio: r.following!.bio,

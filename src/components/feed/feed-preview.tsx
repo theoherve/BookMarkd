@@ -58,7 +58,7 @@ const FeedPreview = () => {
         description="Les derniers partages de votre cercle de lecture."
       >
         {activities.length === 0 ? (
-          <EmptyPreview message="Aucune activité récente. Commencez par noter un livre !" />
+          <EmptyPreview message="Aucune activité récente de vos amis. Ajoutez des ami·e·s pour suivre leurs activités !" />
         ) : (
           <PreviewRow>
             {activities.map((activity) => (
