@@ -56,8 +56,6 @@ const renderNotification = (n: UiNotification) => {
 
   if (n.type === "follow") {
     const followerName = (n.payload.followerName as string) ?? "Un utilisateur";
-    const followerId = (n.payload.followerId as string) ?? null;
-    const followerUsername = (n.payload.followerUsername as string) ?? null;
     return (
       <>
         <CardTitle className="text-sm font-medium">

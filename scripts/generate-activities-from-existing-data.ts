@@ -171,10 +171,10 @@ const generateActivities = async () => {
       const userId = (entry as { user_id: string }).user_id;
       const bookId = (entry as { book_id: string }).book_id;
       const status = (entry as { status: string | null }).status;
-      const updatedAt = new Date((entry as { updated_at: string }).updatedAt).getTime();
-      const createdAt = new Date((entry as { created_at: string }).createdAt).getTime();
-      const ratedAt = (entry as { rated_at: string | null }).ratedAt
-        ? new Date((entry as { rated_at: string }).ratedAt).getTime()
+      const updatedAt = new Date((entry as { updated_at: string }).updated_at).getTime();
+      const createdAt = new Date((entry as { created_at: string }).created_at).getTime();
+      const ratedAt = (entry as { rated_at: string | null }).rated_at
+        ? new Date((entry as { rated_at: string }).rated_at).getTime()
         : null;
 
       const book = Array.isArray((entry as { book: unknown }).book)
