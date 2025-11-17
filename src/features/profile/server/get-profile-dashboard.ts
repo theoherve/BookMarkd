@@ -189,13 +189,14 @@ export const getProfileDashboard = async (
           db.toCamel<
             Array<{
               id: string;
+              bookId: string;
               status: string | null;
               rating: number | null;
               ratedAt: string | null;
               notePrivate: string | null;
               createdAt: string;
               updatedAt: string;
-              book?: { title: string; author: string };
+              book?: { id: string; title: string; author: string };
             }>
           >(r.data ?? [])
         ),
@@ -217,9 +218,10 @@ export const getProfileDashboard = async (
           db.toCamel<
             Array<{
               id: string;
+              bookId: string;
               content: string;
               createdAt: string;
-              book?: { title: string; author: string };
+              book?: { id: string; title: string; author: string };
             }>
           >(r.data ?? [])
         ),
@@ -248,7 +250,7 @@ export const getProfileDashboard = async (
               id: string;
               content: string;
               createdAt: string;
-              review?: { book?: { title: string; author: string } };
+              review?: { book?: { id: string; title: string; author: string } };
             }>
           >(r.data ?? [])
         ),
@@ -273,7 +275,7 @@ export const getProfileDashboard = async (
                   id: string;
                   note: string | null;
                   createdAt: string;
-                  book?: { title: string; author: string };
+                  book?: { id: string; title: string; author: string };
                   list?: { title: string; ownerId: string };
                 }>
               >(r.data ?? [])
@@ -283,7 +285,7 @@ export const getProfileDashboard = async (
               id: string;
               note: string | null;
               createdAt: string;
-              book?: { title: string; author: string };
+              book?: { id: string; title: string; author: string };
               list?: { title: string; ownerId: string };
             }>
           ),
@@ -312,7 +314,7 @@ export const getProfileDashboard = async (
               reviewId: string;
               userId: string;
               createdAt: string;
-              review?: { book?: { title: string; author: string } };
+              review?: { book?: { id: string; title: string; author: string } };
             }>
           >(r.data ?? [])
         ),
@@ -356,7 +358,7 @@ export const getProfileDashboard = async (
             Array<{
               id: string;
               updatedAt: string;
-              book?: { title: string; author: string };
+              book?: { id: string; title: string; author: string };
             }>
           >(r.data ?? [])
         ),
@@ -433,6 +435,7 @@ export const getProfileDashboard = async (
         id: item.id,
         type: item.type as RecentActivity["type"],
         bookTitle,
+        bookId: null, // Les anciennes activités n'ont pas l'ID du livre dans le payload
         bookSlug: null, // Les anciennes activités n'ont pas l'auteur dans le payload
         listTitle: null,
         note:
@@ -468,7 +471,7 @@ export const getProfileDashboard = async (
           id: `readlist_${userBook.id}`,
           type: "readlist_add",
           bookTitle: userBook.book.title,
-          bookId: userBook.book.id,
+          bookId: userBook.bookId,
           bookSlug: generateBookSlug(userBook.book.title, userBook.book.author),
           listTitle: null,
           note: userBook.notePrivate ?? null,
@@ -487,7 +490,7 @@ export const getProfileDashboard = async (
           id: `rating_${userBook.id}_${ratedAtTime}`,
           type: "rating",
           bookTitle: userBook.book.title,
-          bookId: userBook.book.id,
+          bookId: userBook.bookId,
           bookSlug: generateBookSlug(userBook.book.title, userBook.book.author),
           listTitle: null,
           note: userBook.notePrivate ?? null,
@@ -509,7 +512,7 @@ export const getProfileDashboard = async (
           id: `status_${userBook.id}_${updatedAtTime}`,
           type: "status_change",
           bookTitle: userBook.book.title,
-          bookId: userBook.book.id,
+          bookId: userBook.bookId,
           bookSlug: generateBookSlug(userBook.book.title, userBook.book.author),
           listTitle: null,
           note: userBook.notePrivate ?? null,
@@ -529,7 +532,7 @@ export const getProfileDashboard = async (
         id: `review_${review.id}`,
         type: "review",
         bookTitle: review.book.title,
-        bookId: review.book.id,
+        bookId: review.bookId,
         bookSlug: generateBookSlug(review.book.title, review.book.author),
         listTitle: null,
         note: review.content,
@@ -567,6 +570,7 @@ export const getProfileDashboard = async (
         id: `list_${list.id}`,
         type: "list_create",
         bookTitle: null,
+        bookId: null,
         bookSlug: null,
         listTitle: list.title,
         note: null,
@@ -626,6 +630,7 @@ export const getProfileDashboard = async (
         id: `follow_${follow.followerId}_${follow.followingId}`,
         type: "follow",
         bookTitle: null,
+        bookId: null,
         bookSlug: null,
         listTitle: null,
         note: follow.following.displayName,

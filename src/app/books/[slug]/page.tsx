@@ -317,8 +317,10 @@ const getBookDetail = async (
             user?: Array<{ id: string; display_name: string; avatar_url: string | null }> | { id: string; display_name: string; avatar_url: string | null } | null;
           }> | null;
         }) => {
-          // Normaliser user : peut être un tableau, un objet unique, ou null
-          const normalizeUser = (user: any) => {
+          // Normaliser user : peut être un tableau, un objet unique, null ou undefined
+          const normalizeUser = (
+            user: Array<{ id: string; display_name: string; avatar_url: string | null }> | { id: string; display_name: string; avatar_url: string | null } | null | undefined
+          ) => {
             if (!user) return [];
             if (Array.isArray(user)) {
               return user.map((u: { id: string; display_name: string; avatar_url: string | null }) => ({
@@ -374,7 +376,7 @@ const getBookDetail = async (
         rating: typeof userBook?.rating === "number" ? userBook.rating : null,
       },
     };
-  } catch (error) {
+  } catch {
     return {
       book: null,
       viewer: {

@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatRelativeTimeFromNow } from "@/lib/datetime";
 import { formatRating } from "@/lib/utils";
-import { generateBookSlug } from "@/lib/slug";
 import type { RecentActivity } from "@/features/profile/types";
 
 type RecentActivitiesSectionProps = {
