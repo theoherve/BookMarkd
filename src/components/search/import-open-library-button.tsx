@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { importOpenLibraryBook } from "@/server/actions/import-open-library";
+import { generateBookSlug } from "@/lib/slug";
 
 type ImportOpenLibraryButtonProps = {
   openLibraryId: string;
@@ -70,7 +71,7 @@ const ImportOpenLibraryButton = ({
               className="h-auto p-0 text-xs font-medium"
               asChild
             >
-              <a href={`/books/${importedBookId}`}>Ouvrir la fiche</a>
+              <a href={`/books/${generateBookSlug(title, author)}`}>Ouvrir la fiche</a>
             </Button>
           ) : null}
         </p>

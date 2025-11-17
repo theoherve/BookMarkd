@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getNotifications, markAllAsRead, markAsRead } from "@/server/actions/notifications";
+import { generateBookSlug } from "@/lib/slug";
 
 type UiNotification = {
   id: string;
@@ -84,7 +85,13 @@ const renderNotification = (n: UiNotification) => {
 
   if (n.type === "recommendation") {
     const bookTitle = (n.payload.bookTitle as string) ?? "un livre";
+    const bookAuthor = (n.payload.bookAuthor as string) ?? "";
     const bookSlug = (n.payload.bookSlug as string) ?? "";
+    const bookHref = bookSlug
+      ? `/books/${bookSlug}`
+      : bookTitle && bookAuthor
+        ? `/books/${generateBookSlug(bookTitle, bookAuthor)}`
+        : null;
     return (
       <>
         <CardTitle className="text-sm font-medium">
@@ -92,8 +99,8 @@ const renderNotification = (n: UiNotification) => {
         </CardTitle>
         <CardDescription className="text-sm">
           Nous pensons que « {bookTitle} » pourrait vous plaire.{" "}
-          {bookSlug ? (
-            <Link className="underline" href={`/books/${bookSlug}`}>
+          {bookHref ? (
+            <Link className="underline" href={bookHref}>
               Voir
             </Link>
           ) : null}

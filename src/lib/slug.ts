@@ -31,3 +31,31 @@ export const extractBookIdFromSlug = (slug: string): string | null => {
   return null;
 };
 
+
+/**
+ * Tente d'extraire un titre et un auteur à partir d'un slug "titre-par-auteur".
+ * Retourne null si le format ne correspond pas.
+ */
+export const parseBookSlug = (
+  slug: string,
+): { title: string; author: string } | null => {
+  if (!slug || typeof slug !== "string") {
+    return null;
+  }
+  const parts = slug.split("-par-");
+  if (parts.length !== 2) {
+    return null;
+  }
+  const toText = (segment: string) =>
+    segment
+      .replace(/-+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  const title = toText(parts[0] ?? "");
+  const author = toText(parts[1] ?? "");
+  if (!title || !author) {
+    return null;
+  }
+  return { title, author };
+};
+

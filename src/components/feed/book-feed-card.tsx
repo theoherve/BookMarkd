@@ -38,6 +38,8 @@ const statusLabels: Record<FeedFriendBook["status"], string> = {
 const BookFeedCard = ({ item }: BookFeedCardProps) => {
   const updatedAtLabel = formatRelativeTimeFromNow(item.updatedAt);
   const bookSlug = generateBookSlug(item.title, item.author);
+  const detailHref = `/books/${bookSlug}`;
+  const commentHref = `${detailHref}#reviews`;
 
   return (
     <Card
@@ -55,7 +57,7 @@ const BookFeedCard = ({ item }: BookFeedCardProps) => {
         <div className="space-y-1">
           <CardTitle className="text-lg font-semibold text-foreground">
             <Link
-              href={`/books/${bookSlug}`}
+              href={detailHref}
               className="hover:text-accent-foreground transition-colors"
               aria-label={`Voir les détails de ${item.title}`}
             >
@@ -103,7 +105,7 @@ const BookFeedCard = ({ item }: BookFeedCardProps) => {
           </DialogContent>
         </Dialog>
         <Link
-          href={`/books/${bookSlug}#reviews`}
+          href={commentHref}
           aria-label={`Commenter ${item.title}`}
           className="inline-flex"
         >

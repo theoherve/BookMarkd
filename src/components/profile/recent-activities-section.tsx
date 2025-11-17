@@ -155,11 +155,12 @@ const RecentActivitiesSection = ({ activities }: RecentActivitiesSectionProps) =
           );
 
           // Si l'activité a un bookSlug, rendre la carte cliquable
-          if (activity.bookSlug) {
+          const bookHref = activity.bookSlug ? `/books/${activity.bookSlug}` : null;
+          if (bookHref) {
             return (
               <Link
                 key={activity.id}
-                href={`/books/${activity.bookSlug}`}
+                href={bookHref}
                 className="block transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-lg"
                 aria-label={`Voir le livre ${activity.bookTitle}`}
               >
