@@ -1,20 +1,15 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode } from "react";
 import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Menu } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import NotificationBell from "@/components/notifications/notification-bell";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import OfflineBanner from "@/components/pwa/offline-banner";
+import InstallPwaCta from "@/components/pwa/install-pwa-cta";
+import MobileBottomNav from "@/components/layout/mobile-bottom-nav";
 
 type NavigationLink = {
   href: string;
@@ -27,7 +22,7 @@ type AppShellProps = {
 };
 
 const navigationLinks: NavigationLink[] = [
-  { href: "/feed", label: "Feed", ariaLabel: "Voir le fil d'actualité" },
+  { href: "/", label: "Accueil", ariaLabel: "Retourner à l'accueil" },
   { href: "/search", label: "Recherche", ariaLabel: "Ouvrir la recherche" },
   { href: "/lists", label: "Listes", ariaLabel: "Consulter vos listes" },
   { href: "/profiles/me", label: "Profil", ariaLabel: "Voir votre profil" },
@@ -58,7 +53,6 @@ const NavigationList = ({ onLinkClick, emphasis = "normal" }: { onLinkClick?: ()
 const AppShell = ({ children }: AppShellProps) => {
   const router = useRouter();
   const { data: session } = useSession();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const firstName = session?.user?.name
     ? session.user.name.split(" ")[0]
     : null;
@@ -69,10 +63,6 @@ const AppShell = ({ children }: AppShellProps) => {
 
   const handleSignOut = async () => {
     await signOut({ callbackUrl: "/" });
-  };
-
-  const handleMenuLinkClick = () => {
-    setIsMenuOpen(false);
   };
 
   return (
@@ -115,88 +105,36 @@ const AppShell = ({ children }: AppShellProps) => {
               <>
                 <Button
                   variant="ghost"
+                  size="sm"
                   aria-label="Créer un compte BookMarkd"
-                  className="hidden text-sm text-muted-foreground sm:inline-flex"
+                  className="hidden text-xs text-muted-foreground sm:inline-flex"
                   asChild
                 >
-                  <Link href="/signup">Créer un compte</Link>
+                  <Link href="/signup">S&apos;inscrire</Link>
                 </Button>
                 <Button
                   variant="outline"
+                  size="sm"
                   aria-label="Se connecter à BookMarkd"
                   onClick={handleNavigateLogin}
-                  className="hidden sm:inline-flex"
+                  className="text-xs sm:text-sm"
                 >
-                  Se connecter
+                  <span className="hidden sm:inline">Se connecter</span>
+                  <span className="sm:hidden">Connexion</span>
                 </Button>
               </>
             )}
-            {/* Menu burger mobile - visible uniquement sur mobile */}
-            <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-              <SheetTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Ouvrir le menu de navigation"
-                  className="md:hidden"
-                >
-                  <Menu className="size-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[300px] sm:w-[400px] flex h-full flex-col">
-                <SheetHeader>
-                  <SheetTitle>Navigation</SheetTitle>
-                </SheetHeader>
-                <nav aria-label="Navigation principale" className="mt-6">
-                  <NavigationList emphasis="strong" onLinkClick={handleMenuLinkClick} />
-                </nav>
-                {/* Auth section for mobile */}
-                {session?.user ? (
-                  <div className="mt-auto px-2 pb-4 flex justify-center">
-                    <Button
-                      variant="destructive"
-                      aria-label="Se déconnecter de BookMarkd"
-                      className="self-center px-5"
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        void handleSignOut();
-                      }}
-                    >
-                      Se déconnecter
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="mt-auto px-2 pb-4 grid grid-cols-1 gap-3 place-items-center">
-                    <Button
-                      variant="default"
-                      aria-label="Se connecter à BookMarkd"
-                      className="self-center px-5"
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        handleNavigateLogin();
-                      }}
-                    >
-                      Se connecter
-                    </Button>
-                    <Button
-                      variant="outline"
-                      aria-label="Créer un compte BookMarkd"
-                      className="self-center px-5"
-                      asChild
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <Link href="/signup">Créer un compte</Link>
-                    </Button>
-                  </div>
-                )}
-              </SheetContent>
-            </Sheet>
           </div>
         </div>
       </header>
-      <main className="flex-1">
-        <div className="mx-auto w-full max-w-6xl px-6 py-10">{children}</div>
+      <OfflineBanner />
+      <main className="flex-1 pb-20 md:pb-0">
+        <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 md:py-10">
+          {children}
+        </div>
       </main>
+      <MobileBottomNav />
+      <InstallPwaCta />
     </div>
   );
 };

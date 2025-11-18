@@ -129,7 +129,7 @@ export const importOpenLibraryBook = async (
             Boolean(row),
           );
 
-        // Créer les relations (Prisma gère automatiquement les conflits avec createMany + skipDuplicates)
+        // Créer les relations (Supabase ignore automatiquement les doublons)
         if (bookTagData.length > 0) {
           // Upsert-like: try insert, ignore duplicates
           await db.client.from("book_tags").upsert(bookTagData, {

@@ -48,7 +48,12 @@ const ListSummaryCard = ({ list }: ListSummaryCardProps) => {
         <span className="rounded-full bg-muted px-3 py-1">{roleLabel}</span>
       </CardContent>
       <CardFooter>
-        <Button asChild aria-label={ariaLabel} className="w-full">
+        <Button
+          asChild
+          aria-label={ariaLabel}
+          className="w-full min-h-[48px] sm:min-h-0"
+          size="sm"
+        >
           <Link href={`/lists/${list.id}`} tabIndex={0}>
             Voir la liste
           </Link>

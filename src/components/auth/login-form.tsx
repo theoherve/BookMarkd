@@ -74,7 +74,7 @@ const LoginForm = ({ callbackUrl }: LoginFormProps) => {
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-6 rounded-2xl border border-border bg-card/70 p-8 shadow-sm backdrop-blur"
+      className="space-y-6 rounded-2xl border border-border bg-card/70 p-4 sm:p-8 shadow-sm backdrop-blur"
     >
       <div className="space-y-2 text-center">
         <h1 className="text-2xl font-semibold text-foreground">
@@ -99,6 +99,7 @@ const LoginForm = ({ callbackUrl }: LoginFormProps) => {
             onChange={handleEmailChange}
             autoComplete="email"
             required
+            className="min-h-[48px] sm:min-h-0"
           />
         </div>
         <div className="space-y-2">
@@ -117,6 +118,7 @@ const LoginForm = ({ callbackUrl }: LoginFormProps) => {
             onChange={handlePasswordChange}
             autoComplete="current-password"
             required
+            className="min-h-[48px] sm:min-h-0"
           />
         </div>
       </div>

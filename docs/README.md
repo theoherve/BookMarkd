@@ -20,7 +20,7 @@ BookMarkd est une application web Next.js qui permet aux lectrices et lecteurs d
 - Gestion d’état client : Zustand + TanStack Query.
 - Authentification : NextAuth (adapter OAuth futur).
 - Base de données : PostgreSQL (SQLite pour le dev local).
-- ORM : Drizzle (ou Prisma, cf. `ARCHITECTURE.md`).
+- ORM : Supabase client (cf. `ARCHITECTURE.md`).
 - Déploiement cible : Vercel + Supabase (Postgres, Auth, Storage).
 
 ## Auth & inscription
@@ -37,7 +37,7 @@ pnpm run dev
 ```
 
 - Créer un fichier `.env.local` (voir `ARCHITECTURE.md`).
-- Lancer la base locale : `pnpm db:push` (Drizzle) ou `pnpm prisma db push`.
+- Lancer la base locale : voir `supabase/schema.sql` pour la configuration.
 
 ## Roadmap initiale
 

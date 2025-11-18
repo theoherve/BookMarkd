@@ -3,12 +3,9 @@
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-  requestFollow,
-  cancelFollowRequest,
-  unfollowUser,
-} from "@/server/actions/follow";
+import { cancelFollowRequest } from "@/server/actions/follow";
 import type { FollowStatus } from "@/server/actions/follow";
+import { useOfflineQueue } from "@/hooks/use-offline-queue";
 
 type FollowRequestButtonProps = {
   targetUserId: string;
@@ -22,15 +19,24 @@ const FollowRequestButton = ({
   const [status, setStatus] = useState<FollowStatus>(initialStatus);
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState<string | null>(null);
+  const { queueAction } = useOfflineQueue();
 
   const handleRequest = () => {
     startTransition(async () => {
-      const result = await requestFollow(targetUserId);
-      if (result.success) {
-        setStatus("request_pending");
-        setFeedback(null);
-      } else {
-        setFeedback(result.message);
+      try {
+        const queueResult = await queueAction({
+          type: "requestFollow",
+          targetUserId,
+        });
+
+        if (queueResult.success) {
+          setStatus("request_pending");
+          setFeedback(null);
+        } else {
+          setFeedback("Impossible d'envoyer la demande");
+        }
+      } catch {
+        setFeedback("Erreur lors de la demande");
       }
     });
   };
@@ -49,12 +55,20 @@ const FollowRequestButton = ({
 
   const handleUnfollow = () => {
     startTransition(async () => {
-      const result = await unfollowUser(targetUserId);
-      if (result.success) {
-        setStatus("not_following");
-        setFeedback(null);
-      } else {
-        setFeedback(result.message);
+      try {
+        const queueResult = await queueAction({
+          type: "unfollowUser",
+          targetUserId,
+        });
+
+        if (queueResult.success) {
+          setStatus("not_following");
+          setFeedback(null);
+        } else {
+          setFeedback("Impossible de se désabonner");
+        }
+      } catch {
+        setFeedback("Erreur lors du désabonnement");
       }
     });
   };

@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Heart } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { likeReview, unlikeReview } from "@/server/actions/review";
+import { useOfflineQueue } from "@/hooks/use-offline-queue";
 
 type ReviewLikeButtonProps = {
   reviewId: string;
@@ -17,24 +17,30 @@ const ReviewLikeButton = ({
   initialLikesCount,
   initialHasLiked,
 }: ReviewLikeButtonProps) => {
+  const { queueAction } = useOfflineQueue();
   const [likesCount, setLikesCount] = useState(initialLikesCount);
   const [hasLiked, setHasLiked] = useState(initialHasLiked);
   const [isPending, startTransition] = useTransition();
 
   const handleToggleLike = () => {
     startTransition(async () => {
-      if (hasLiked) {
-        const result = await unlikeReview(reviewId);
-        if (result.success) {
-          setHasLiked(false);
-          setLikesCount((prev) => Math.max(0, prev - 1));
-        }
-      } else {
-        const result = await likeReview(reviewId);
-        if (result.success) {
-          setHasLiked(true);
-          setLikesCount((prev) => prev + 1);
-        }
+      const nextHasLiked = !hasLiked;
+      const previousCount = likesCount;
+      setHasLiked(nextHasLiked);
+      setLikesCount((prev) => {
+        const delta = nextHasLiked ? 1 : -1;
+        return Math.max(0, prev + delta);
+      });
+
+      try {
+        await queueAction({
+          type: nextHasLiked ? "likeReview" : "unlikeReview",
+          reviewId,
+        });
+      } catch (error) {
+        console.error("Impossible de synchroniser le like :", error);
+        setHasLiked(!nextHasLiked);
+        setLikesCount(previousCount);
       }
     });
   };

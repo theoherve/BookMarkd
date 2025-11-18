@@ -1,0 +1,133 @@
+name: PWA Tests & Lighthouse
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  lighthouse:
+    name: Lighthouse PWA Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build application
+        run: pnpm build
+        env:
+          NODE_ENV: production
+
+      - name: Start server
+        run: pnpm start &
+        env:
+          PORT: 3000
+
+      - name: Wait for server
+        run: |
+          timeout=60
+          elapsed=0
+          while ! curl -f http://localhost:3000 > /dev/null 2>&1; do
+            if [ $elapsed -ge $timeout ]; then
+              echo "Server failed to start within $timeout seconds"
+              exit 1
+            fi
+            sleep 2
+            elapsed=$((elapsed + 2))
+          done
+          echo "Server is ready"
+
+      - name: Run Lighthouse PWA audit
+        run: pnpm lighthouse:pwa
+        env:
+          LIGHTHOUSE_BASE_URL: http://localhost:3000
+
+      - name: Upload Lighthouse reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-reports
+          path: lighthouse-reports/
+          retention-days: 7
+
+  playwright:
+    name: Playwright PWA Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm playwright:install --with-deps
+
+      - name: Build application
+        run: pnpm build
+        env:
+          NODE_ENV: production
+
+      - name: Start server
+        run: pnpm start &
+        env:
+          PORT: 3000
+
+      - name: Wait for server
+        run: |
+          timeout=60
+          elapsed=0
+          while ! curl -f http://localhost:3000 > /dev/null 2>&1; do
+            if [ $elapsed -ge $timeout ]; then
+              echo "Server failed to start within $timeout seconds"
+              exit 1
+            fi
+            sleep 2
+            elapsed=$((elapsed + 2))
+          done
+          echo "Server is ready"
+
+      - name: Run PWA tests
+        run: pnpm test:pwa
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-results
+          path: test-results/
+          retention-days: 7
+

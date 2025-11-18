@@ -1,9 +1,9 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
-import { updateReadingStatus } from "@/server/actions/book";
+import { useOfflineQueue } from "@/hooks/use-offline-queue";
 
 type ReadingStatus = "to_read" | "reading" | "finished";
 
@@ -22,10 +22,33 @@ const ReadingStatusForm = ({
   bookId,
   currentStatus,
 }: ReadingStatusFormProps) => {
+  const { queueAction } = useOfflineQueue();
   const [isPending, startTransition] = useTransition();
+  const [localStatus, setLocalStatus] = useState<ReadingStatus | null>(null);
+  
+  // Use prop as source of truth, but allow local overrides
+  const selectedStatus = useMemo(() => {
+    return localStatus ?? currentStatus ?? null;
+  }, [localStatus, currentStatus]);
+
   const handleUpdate = (status: ReadingStatus) => {
-    startTransition(() => {
-      updateReadingStatus(bookId, status);
+    if (status === selectedStatus) {
+      return;
+    }
+
+    const previousStatus = selectedStatus;
+    setLocalStatus(status);
+    startTransition(async () => {
+      try {
+        await queueAction({
+          type: "updateReadingStatus",
+          bookId,
+          status,
+        });
+      } catch (error) {
+        console.error("Impossible de mettre à jour le statut :", error);
+        setLocalStatus(previousStatus ?? null);
+      }
     });
   };
 
@@ -38,10 +61,10 @@ const ReadingStatusForm = ({
         {statusOptions.map((option) => (
           <Button
             key={option.value}
-            variant={currentStatus === option.value ? "default" : "outline"}
+            variant={selectedStatus === option.value ? "default" : "outline"}
             disabled={isPending}
             onClick={() => handleUpdate(option.value)}
-            aria-pressed={currentStatus === option.value}
+            aria-pressed={selectedStatus === option.value}
           >
             {option.label}
           </Button>
