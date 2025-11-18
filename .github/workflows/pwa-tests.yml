@@ -34,11 +34,23 @@ jobs:
         run: pnpm build
         env:
           NODE_ENV: production
+          SUPABASE_URL: https://placeholder.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          NEXTAUTH_SECRET: placeholder-nextauth-secret-for-ci-build
+          NEXTAUTH_URL: http://localhost:3000
 
       - name: Start server
         run: pnpm start &
         env:
           PORT: 3000
+          SUPABASE_URL: https://placeholder.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          NEXTAUTH_SECRET: placeholder-nextauth-secret-for-ci-build
+          NEXTAUTH_URL: http://localhost:3000
 
       - name: Wait for server
         run: |
@@ -96,11 +108,23 @@ jobs:
         run: pnpm build
         env:
           NODE_ENV: production
+          SUPABASE_URL: https://placeholder.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          NEXTAUTH_SECRET: placeholder-nextauth-secret-for-ci-build
+          NEXTAUTH_URL: http://localhost:3000
 
       - name: Start server
         run: pnpm start &
         env:
           PORT: 3000
+          SUPABASE_URL: https://placeholder.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          NEXTAUTH_SECRET: placeholder-nextauth-secret-for-ci-build
+          NEXTAUTH_URL: http://localhost:3000
 
       - name: Wait for server
         run: |
