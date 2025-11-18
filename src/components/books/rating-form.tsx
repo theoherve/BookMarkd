@@ -91,13 +91,13 @@ const RatingForm = ({ bookId, currentRating }: RatingFormProps) => {
                 aria-label={`Noter ${star} sur 5`}
                 onClick={() => handleStarClick(star)}
                 disabled={isPending}
-                className="relative text-2xl transition hover:scale-110 disabled:cursor-not-allowed disabled:opacity-50"
+                className="relative inline-flex h-8 w-8 items-center justify-center text-2xl transition hover:scale-110 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {/* Étoile de fond (vide) */}
                 <span className="text-muted-foreground">★</span>
                 {/* Étoile colorée (pleine ou partielle) */}
                 <span
-                  className={`absolute inset-0 overflow-hidden ${
+                  className={`absolute inset-0 flex items-center justify-center overflow-hidden ${
                     state === "full"
                       ? "text-accent-foreground"
                       : state === "half"
