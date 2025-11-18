@@ -206,7 +206,8 @@ export const acceptFollowRequest = async (
         status,
         requester_id,
         target_id,
-        requester:requester_id ( id, username, display_name )
+        requester:requester_id ( id, username, display_name ),
+        target:target_id ( id, username, display_name )
       `,
       )
       .eq("id", requestId)
@@ -260,23 +261,31 @@ export const acceptFollowRequest = async (
       );
     if (upsertErr) throw upsertErr;
 
+    // Convertir les données avec toCamel pour accéder aux jointures
+    const requestData = db.toCamel<{
+      requesterId: string;
+      targetId: string;
+      requester?: { id: string; username: string | null; displayName: string };
+      target?: { id: string; username: string | null; displayName: string };
+    }>(request);
+    
     revalidatePath("/profiles/me");
     revalidatePath("/notifications");
-    revalidatePath(`/profiles/${(request as { requester?: { id?: string } }).requester?.id ?? ""}`);
-    
-    const requester = request as { requester?: { id?: string; username?: string | null; display_name?: string } };
+    revalidatePath(`/profiles/${requestData.requester?.id ?? ""}`);
     
     // Notification pour l'auteur de la demande (le demandeur)
-    void createNotification(request.requester_id as string, "follow_request_accepted", {
-      targetUserId: request.target_id,
-      targetUserName: requester.requester?.display_name ?? null,
+    // On lui dit que target (celui qui accepte) a accepté sa demande
+    // target = l'utilisateur qui a accepté = celui dont on doit afficher le nom
+    void createNotification(requestData.requesterId, "follow_request_accepted", {
+      targetUserId: requestData.targetId,
+      targetUserName: requestData.target?.displayName ?? null,
     });
     
     // Notification pour la personne qui a été suivie (le target)
-    void createNotification(request.target_id as string, "follow", {
-      followerId: request.requester_id,
-      followerUsername: requester.requester?.username ?? null,
-      followerName: requester.requester?.display_name ?? null,
+    void createNotification(requestData.targetId, "follow", {
+      followerId: requestData.requesterId,
+      followerUsername: requestData.requester?.username ?? null,
+      followerName: requestData.requester?.displayName ?? null,
     });
     
     return { success: true };

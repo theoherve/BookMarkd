@@ -129,14 +129,16 @@ const PreviewSection = ({
 
 const PreviewRow = ({ children }: { children: ReactNode }) => {
   return (
-    <div className="flex gap-4 overflow-x-auto pb-2">
+    <div className="flex items-stretch gap-4 overflow-x-auto pb-2">
       {children}
     </div>
   );
 };
 
 const PreviewItem = ({ children }: { children: ReactNode }) => {
-  return <div className="min-w-[280px] max-w-[320px] flex-1">{children}</div>;
+  return (
+    <div className="flex h-min-[300px] w-[280px] shrink-0">{children}</div>
+  );
 };
 
 const EmptyPreview = ({ message }: { message: string }) => (
