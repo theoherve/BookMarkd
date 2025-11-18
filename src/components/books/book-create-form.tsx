@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { createBook } from "@/server/actions/book";
 import { generateBookSlug } from "@/lib/slug";
@@ -14,8 +14,16 @@ import { Textarea } from "@/components/ui/textarea";
 
 const BookCreateForm = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  
+  // Récupérer les valeurs des query params pour pré-remplir le formulaire
+  const initialTitle = searchParams.get("title") || "";
+  const initialAuthor = searchParams.get("author") || "";
+  
+  const [title, setTitle] = useState(initialTitle);
+  const [author, setAuthor] = useState(initialAuthor);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -32,11 +40,11 @@ const BookCreateForm = () => {
       }
 
       // Générer le slug à partir des données du formulaire
-      const title = formData.get("title")?.toString().trim() || "";
-      const author = formData.get("author")?.toString().trim() || "";
+      const formTitle = formData.get("title")?.toString().trim() || "";
+      const formAuthor = formData.get("author")?.toString().trim() || "";
       
-      if (title && author) {
-        const slug = generateBookSlug(title, author);
+      if (formTitle && formAuthor) {
+        const slug = generateBookSlug(formTitle, formAuthor);
         router.push(`/books/${slug}`);
       } else {
         // Fallback vers l'ID si les données ne sont pas disponibles
@@ -71,6 +79,8 @@ const BookCreateForm = () => {
               required
               placeholder="Ex. Le Nom du vent"
               disabled={isPending}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
             />
           </div>
 
@@ -86,6 +96,8 @@ const BookCreateForm = () => {
               required
               placeholder="Ex. Patrick Rothfuss"
               disabled={isPending}
+              value={author}
+              onChange={(e) => setAuthor(e.target.value)}
             />
           </div>
 

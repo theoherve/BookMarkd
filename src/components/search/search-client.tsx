@@ -139,13 +139,13 @@ const SearchClient = () => {
             <div className="flex items-center gap-2 w-full md:w-auto">
               <label
                 htmlFor="genre"
-                className="text-sm font-medium text-muted-foreground"
+                className="text-sm font-medium text-muted-foreground shrink-0"
               >
                 Genre
               </label>
               <select
                 id="genre"
-                className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="min-w-0 max-w-full truncate rounded-md border border-border bg-card pl-3 pr-8 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 value={selectedGenre ?? ""}
                 onChange={(event) =>
                   setSelectedGenre(event.target.value || undefined)
@@ -163,7 +163,7 @@ const SearchClient = () => {
             <div className="flex items-center gap-2 w-full md:w-auto">
               <label
                 htmlFor="author"
-                className="text-sm font-medium text-muted-foreground"
+                className="text-sm font-medium text-muted-foreground shrink-0"
               >
                 Auteur
               </label>
@@ -172,7 +172,7 @@ const SearchClient = () => {
                 value={author}
                 onChange={(event) => setAuthor(event.target.value)}
                 placeholder="Nom de l'auteur·rice"
-                className="w-48"
+                className="min-w-0 max-w-full truncate md:w-48"
                 aria-label="Filtrer par auteur"
               />
             </div>
@@ -180,13 +180,13 @@ const SearchClient = () => {
             <div className="flex items-center gap-2 w-full md:w-auto">
               <label
                 htmlFor="minRating"
-                className="text-sm font-medium text-muted-foreground"
+                className="text-sm font-medium text-muted-foreground shrink-0"
               >
                 Note min.
               </label>
               <select
                 id="minRating"
-                className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="min-w-0 max-w-full truncate rounded-md border border-border bg-card pl-3 pr-8 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 value={minRating ?? ""}
                 onChange={(event) =>
                   setMinRating(event.target.value ? parseFloat(event.target.value) : undefined)
@@ -204,13 +204,13 @@ const SearchClient = () => {
             <div className="flex items-center gap-2 w-full md:w-auto">
               <label
                 htmlFor="readingStatus"
-                className="text-sm font-medium text-muted-foreground"
+                className="text-sm font-medium text-muted-foreground shrink-0"
               >
                 État
               </label>
               <select
                 id="readingStatus"
-                className="rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="min-w-0 max-w-full truncate rounded-md border border-border bg-card pl-3 pr-8 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 value={readingStatus ?? ""}
                 onChange={(event) =>
                   setReadingStatus(event.target.value as "to_read" | "reading" | "finished" | undefined || undefined)
@@ -233,52 +233,51 @@ const SearchClient = () => {
             </label>
           </div>
         ) : null}
-        <div className="flex w-full flex-1 items-center gap-3">
-          <Search className="h-5 w-5 text-muted-foreground" aria-hidden />
-          <Input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={
-              activeTab === "books"
-                ? "Rechercher un titre, une autrice..."
-                : "Rechercher un utilisateur..."
-            }
-            aria-label={
-              activeTab === "books"
-                ? "Rechercher un livre"
-                : "Rechercher un utilisateur"
-            }
-            className="flex-1"
-          />
-          {query ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label="Effacer la recherche"
-              onClick={handleClear}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          ) : null}
-          {activeTab === "books" ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              aria-label={showFilters ? "Masquer les filtres" : "Afficher les filtres"}
-              onClick={() => setShowFilters((v) => !v)}
-              className="inline-flex items-center gap-2"
-            >
-              <Filter className="h-4 w-4" />
-              <span className="hidden sm:inline">Filtres</span>
-            </Button>
-          ) : null}
-          <Button type="submit" aria-label="Lancer la recherche" className="ml-auto">
+        <div className="flex w-full flex-col gap-3 md:flex-row md:items-center">
+          <div className="flex w-full items-center gap-3">
+            <Search className="h-5 w-5 text-muted-foreground" aria-hidden />
+            <Input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={
+                activeTab === "books"
+                  ? "Rechercher un titre, une autrice..."
+                  : "Rechercher un utilisateur..."
+              }
+              aria-label={
+                activeTab === "books"
+                  ? "Rechercher un livre"
+                  : "Rechercher un utilisateur"
+              }
+              className="flex-1"
+            />
+            {query ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Effacer la recherche"
+                onClick={handleClear}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            ) : null}
+            {activeTab === "books" ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={showFilters ? "Masquer les filtres" : "Afficher les filtres"}
+                onClick={() => setShowFilters((v) => !v)}
+              >
+                <Filter className="h-5 w-5" />
+              </Button>
+            ) : null}
+          </div>
+          <Button type="submit" aria-label="Lancer la recherche" className="w-full md:w-auto md:ml-auto">
             Rechercher
           </Button>
         </div>
-        <div className="flex flex-wrap items-center gap-4" />
       </form>
 
       {activeTab === "books" && activeFilters.length > 0 ? (
@@ -356,7 +355,21 @@ const SearchClient = () => {
               </p>
               {booksData.supabaseCount === 0 && booksData.externalCount === 0 ? (
                 <Button asChild className="mt-4" aria-label="Ajouter un livre manuellement">
-                  <Link href="/books/create">Ajouter un livre</Link>
+                  <Link 
+                    href={(() => {
+                      const params = new URLSearchParams();
+                      if (submittedQuery) {
+                        params.set("title", submittedQuery);
+                      }
+                      if (author.trim()) {
+                        params.set("author", author.trim());
+                      }
+                      const queryString = params.toString();
+                      return `/books/create${queryString ? `?${queryString}` : ""}`;
+                    })()}
+                  >
+                    Ajouter un livre
+                  </Link>
                 </Button>
               ) : null}
             </div>
