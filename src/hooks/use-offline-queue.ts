@@ -20,23 +20,57 @@ export const useOfflineQueue = () => {
   useEffect(() => {
     void updatePendingCount();
 
+    // Vérifier l'état initial
+    const checkOnlineStatus = () => {
+      setIsOnline(navigator.onLine);
+    };
+
     const handleOnline = () => {
-      setIsOnline(true);
-      void syncOfflineActions().then(() => {
-        void updatePendingCount();
-      });
+      // Vérifier navigator.onLine immédiatement et aussi dans un setTimeout
+      // pour gérer les cas où la propriété est modifiée de manière asynchrone
+      const currentStatus = navigator.onLine;
+      setIsOnline(currentStatus);
+      
+      setTimeout(() => {
+        // Vérifier à nouveau au cas où navigator.onLine aurait changé
+        if (navigator.onLine !== currentStatus) {
+          setIsOnline(navigator.onLine);
+        }
+        if (navigator.onLine) {
+          void syncOfflineActions().then(() => {
+            void updatePendingCount();
+          });
+        }
+      }, 0);
     };
 
     const handleOffline = () => {
-      setIsOnline(false);
+      // Vérifier navigator.onLine immédiatement et aussi dans un setTimeout
+      // pour gérer les cas où la propriété est modifiée de manière asynchrone
+      const currentStatus = navigator.onLine;
+      setIsOnline(currentStatus);
+      
+      setTimeout(() => {
+        // Vérifier à nouveau au cas où navigator.onLine aurait changé
+        if (navigator.onLine !== currentStatus) {
+          setIsOnline(navigator.onLine);
+        }
+      }, 0);
     };
+
+    // Vérifier l'état initial
+    checkOnlineStatus();
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
 
+    // Vérifier périodiquement l'état (pour les cas où les événements ne sont pas fiables)
+    const interval = setInterval(checkOnlineStatus, 1000);
+
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
+      clearInterval(interval);
     };
   }, [updatePendingCount]);
 

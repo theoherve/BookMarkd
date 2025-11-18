@@ -15,7 +15,11 @@ const OfflineBanner = () => {
   }
 
   return (
-    <div className="border-b border-border bg-muted/50 px-6 py-3 text-sm">
+    <div 
+      className="border-b border-border bg-muted/50 px-6 py-3 text-sm"
+      data-testid="offline-banner"
+      data-online={isOnline.toString()}
+    >
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           {!isOnline ? (
