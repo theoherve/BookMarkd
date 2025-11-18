@@ -74,7 +74,7 @@ const BookFeedCard = ({ item }: BookFeedCardProps) => {
           {item.readerName} — {updatedAtLabel}
         </p>
         {typeof item.averageRating === "number" ? (
-          <p className="text-sm font-medium text-accent-foreground">
+          <p className="text-sm font-medium text-foreground">
             Note moyenne : {formatRating(item.averageRating)}/5
           </p>
         ) : null}

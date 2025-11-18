@@ -39,7 +39,7 @@ const ActivityCard = ({ item }: ActivityCardProps) => {
       role="article"
       tabIndex={0}
       aria-label={`${item.userName} ${actionLabels[item.type]} ${item.bookTitle ?? "contenu"}`}
-      className="transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-accent"
+      className="flex h-full w-full flex-col transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-accent"
     >
       <CardHeader className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between gap-2">
@@ -57,7 +57,7 @@ const ActivityCard = ({ item }: ActivityCardProps) => {
           {item.bookTitle ?? "Nouvelle activité"}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="flex flex-1 flex-col space-y-3 overflow-y-auto">
         {typeof item.rating === "number" && item.rating > 0 ? (
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <Badge

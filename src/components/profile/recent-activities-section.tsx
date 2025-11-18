@@ -14,16 +14,16 @@ type RecentActivitiesSectionProps = {
 };
 
 const actionLabels: Record<RecentActivity["type"], string> = {
-  rating: "a noté",
-  review: "a publié une critique",
-  status_change: "a mis à jour son statut",
-  readlist_add: "a ajouté à sa read list",
-  review_comment: "a commenté",
-  list_create: "a créé une liste",
-  list_item_add: "a ajouté à une liste",
-  review_like: "a aimé une critique",
-  follow: "a suivi",
-  top_book_update: "a mis à jour son top 3",
+  rating: "avez noté",
+  review: "avez publié une critique",
+  status_change: "avez mis à jour votre statut",
+  readlist_add: "avez ajouté à votre read list",
+  review_comment: "avez commenté",
+  list_create: "avez créé une liste",
+  list_item_add: "avez ajouté à une liste",
+  review_like: "avez aimé une critique",
+  follow: "avez suivi",
+  top_book_update: "avez mis à jour votre top 3",
 };
 
 const RecentActivitiesSection = ({ activities }: RecentActivitiesSectionProps) => {
@@ -73,7 +73,7 @@ const RecentActivitiesSection = ({ activities }: RecentActivitiesSectionProps) =
           Vos dernières actions sur BookMarkd.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-4">
         {displayedActivities.map((activity) => {
           const occurredAtLabel = formatRelativeTimeFromNow(activity.occurredAt);
           const ratingStars =
@@ -84,36 +84,36 @@ const RecentActivitiesSection = ({ activities }: RecentActivitiesSectionProps) =
               : null;
 
           const ActivityCardContent = (
-            <div className="flex flex-col gap-3 rounded-lg border border-border/50 bg-background/60 p-3 sm:flex-row sm:items-start">
-              <div className="flex-1 space-y-1 min-w-0">
+            <div className="flex flex-col gap-4 rounded-lg border border-border/50 bg-background/60 p-5 sm:flex-row sm:items-start">
+              <div className="flex-1 space-y-2 min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-semibold text-foreground">
+                  <span className="text-base font-semibold text-foreground">
                     Vous
                   </span>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-base text-muted-foreground">
                     {actionLabels[activity.type]}
                   </span>
                   {activity.bookTitle ? (
-                    <span className="text-sm font-medium text-foreground line-clamp-1">
+                    <span className="text-base font-medium text-foreground line-clamp-1">
                       {activity.bookTitle}
                     </span>
                   ) : null}
                   {activity.listTitle ? (
                     <>
-                      <span className="text-sm text-muted-foreground">dans</span>
-                      <span className="text-sm font-medium text-foreground line-clamp-1">
+                      <span className="text-base text-muted-foreground">dans</span>
+                      <span className="text-base font-medium text-foreground line-clamp-1">
                         {activity.listTitle}
                       </span>
                     </>
                   ) : null}
                   {activity.type === "follow" && activity.note ? (
-                    <span className="text-sm font-medium text-foreground line-clamp-1">
+                    <span className="text-base font-medium text-foreground line-clamp-1">
                       {activity.note}
                     </span>
                   ) : null}
                 </div>
                 {activity.note && activity.type !== "follow" ? (
-                  <p className="text-sm text-muted-foreground line-clamp-2">
+                  <p className="text-base text-muted-foreground line-clamp-2">
                     {activity.note}
                   </p>
                 ) : null}
@@ -148,7 +148,7 @@ const RecentActivitiesSection = ({ activities }: RecentActivitiesSectionProps) =
                   </div>
                 ) : null}
               </div>
-              <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
+              <span className="text-sm text-muted-foreground whitespace-nowrap shrink-0">
                 {occurredAtLabel}
               </span>
             </div>

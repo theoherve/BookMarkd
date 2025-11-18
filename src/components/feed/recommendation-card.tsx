@@ -50,9 +50,9 @@ const RecommendationCard = ({ item }: RecommendationCardProps) => {
       role="article"
       tabIndex={0}
       aria-label={`Recommandation ${item.title}`}
-      className="space-y-0 border border-dashed border-border/70 bg-card/60 transition hover:border-accent hover:shadow-sm"
+      className="flex h-full w-full flex-col space-y-0 border border-dashed border-border/70 bg-card/60 transition hover:border-accent hover:shadow-sm"
     >
-      <CardHeader className="space-y-1.5">
+      <CardHeader className="flex-shrink-0 space-y-1.5">
         <Badge
           variant="outline"
           className="w-fit rounded-full border-dashed px-3 py-1 text-[11px] uppercase tracking-[0.35em] text-muted-foreground"
@@ -72,7 +72,7 @@ const RecommendationCard = ({ item }: RecommendationCardProps) => {
           par {item.author}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="flex flex-1 flex-col space-y-4 overflow-y-auto">
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">
             {item.reason ?? sourceLabel}
@@ -137,7 +137,7 @@ const RecommendationCard = ({ item }: RecommendationCardProps) => {
           </div>
         ) : null}
       </CardContent>
-      <CardFooter className="flex flex-wrap items-center gap-3 border-t border-border/60 bg-card/40 p-4">
+      <CardFooter className="flex flex-shrink-0 flex-wrap items-center gap-3 border-t border-border/60 bg-card/40 p-4">
         <AddToReadlistButton bookId={item.bookId} disabled={item.viewerHasInReadlist} />
         <Dialog>
           <DialogTrigger asChild>
