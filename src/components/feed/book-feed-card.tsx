@@ -86,20 +86,22 @@ const BookFeedCard = ({ item }: BookFeedCardProps) => {
               : `${item.readerName} a ajouté ce livre à sa pile à lire.`}
         </p>
       </CardContent>
-      <CardFooter className="flex flex-wrap items-center gap-3 pt-0">
+      <CardFooter className="flex flex-wrap items-center gap-2 sm:gap-3 pt-0">
         <AddToReadlistButton bookId={item.bookId} />
         <Dialog>
           <DialogTrigger asChild>
             <Button
               variant="outline"
+              size="sm"
               aria-label={`Ouvrir la fenêtre pour noter ${item.title}`}
+              className="min-h-[48px] sm:min-h-0"
             >
               Noter
             </Button>
           </DialogTrigger>
           <DialogContent aria-label={`Noter ${item.title}`}>
             <DialogHeader>
-              <DialogTitle>Noter “{item.title}”</DialogTitle>
+              <DialogTitle>Noter &quot;{item.title}&quot;</DialogTitle>
             </DialogHeader>
             <RatingForm bookId={item.bookId} />
           </DialogContent>
@@ -109,7 +111,9 @@ const BookFeedCard = ({ item }: BookFeedCardProps) => {
           aria-label={`Commenter ${item.title}`}
           className="inline-flex"
         >
-          <Button>Commenter</Button>
+          <Button size="sm" className="min-h-[48px] sm:min-h-0">
+            Commenter
+          </Button>
         </Link>
       </CardFooter>
     </Card>

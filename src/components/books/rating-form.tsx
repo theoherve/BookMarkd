@@ -2,9 +2,9 @@
 
 import { useState, useTransition } from "react";
 
-import { rateBook } from "@/server/actions/book";
 import { formatRating } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useOfflineQueue } from "@/hooks/use-offline-queue";
 
 type RatingFormProps = {
   bookId: string;
@@ -14,6 +14,7 @@ type RatingFormProps = {
 const stars = [1, 2, 3, 4, 5];
 
 const RatingForm = ({ bookId, currentRating }: RatingFormProps) => {
+  const { queueAction } = useOfflineQueue();
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
   const [confirmedRating, setConfirmedRating] = useState<number | null>(
     currentRating ?? null,
@@ -41,9 +42,19 @@ const RatingForm = ({ bookId, currentRating }: RatingFormProps) => {
       return;
     }
     
+    const previousRating = confirmedRating;
     setConfirmedRating(selectedRating);
-    startTransition(() => {
-      rateBook(bookId, selectedRating);
+    startTransition(async () => {
+      try {
+        await queueAction({
+          type: "rateBook",
+          bookId,
+          rating: selectedRating,
+        });
+      } catch (error) {
+        console.error("Impossible d'enregistrer la note :", error);
+        setConfirmedRating(previousRating ?? null);
+      }
     });
     // Réinitialiser la sélection après validation
     setSelectedRating(null);

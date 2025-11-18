@@ -276,7 +276,7 @@ const getBookDetail = async (
       userBook = userBookRow ?? null;
     }
 
-    // Transformer les données Prisma en format RawBook
+    // Transformer les données Supabase en format RawBook
     const book = bookRow!;
     const rawBook: RawBook = {
       id: book.id,

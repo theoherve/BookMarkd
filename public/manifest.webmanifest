@@ -1,0 +1,53 @@
+{
+  "id": "/",
+  "name": "BookMarkd",
+  "short_name": "BookMarkd",
+  "lang": "fr-FR",
+  "dir": "ltr",
+  "scope": "/",
+  "start_url": "/?source=pwa",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#fdfaf5",
+  "theme_color": "#fdfaf5",
+  "description": "BookMarkd est votre hub lecture social : suivez vos livres, découvrez ceux de vos amis et recevez des recommandations personnalisées.",
+  "categories": ["books", "productivity", "social"],
+  "icons": [
+    { "src": "/pwa/icon-64.png", "sizes": "64x64", "type": "image/png" },
+    { "src": "/pwa/icon-120.png", "sizes": "120x120", "type": "image/png" },
+    { "src": "/pwa/icon-152.png", "sizes": "152x152", "type": "image/png" },
+    { "src": "/pwa/icon-167.png", "sizes": "167x167", "type": "image/png" },
+    { "src": "/pwa/icon-180.png", "sizes": "180x180", "type": "image/png", "purpose": "any" },
+    { "src": "/pwa/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/pwa/icon-256.png", "sizes": "256x256", "type": "image/png" },
+    { "src": "/pwa/icon-384.png", "sizes": "384x384", "type": "image/png" },
+    { "src": "/pwa/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/pwa/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/pwa/icon-192-monochrome.png", "sizes": "192x192", "type": "image/png", "purpose": "monochrome" },
+    { "src": "/pwa/icon-1024.png", "sizes": "1024x1024", "type": "image/png" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Flux de lecture",
+      "short_name": "Feed",
+      "description": "Consulter les dernières activités de lecture",
+      "url": "/feed"
+    },
+    {
+      "name": "Rechercher un livre",
+      "short_name": "Recherche",
+      "description": "Trouver un livre ou un lecteur",
+      "url": "/search"
+    },
+    {
+      "name": "Mes listes",
+      "short_name": "Listes",
+      "description": "Accéder rapidement à vos listes BookMarkd",
+      "url": "/lists"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}
+

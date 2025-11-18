@@ -4,7 +4,7 @@ import { FormEvent, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { createReview } from "@/server/actions/book";
+import { useOfflineQueue } from "@/hooks/use-offline-queue";
 
 type ReviewFormProps = {
   bookId: string;
@@ -18,21 +18,32 @@ const ReviewForm = ({ bookId }: ReviewFormProps) => {
   const [spoiler, setSpoiler] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const { queueAction } = useOfflineQueue();
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     startTransition(async () => {
-      const result = await createReview({
-        bookId,
-        visibility,
-        content,
-        spoiler,
-      });
-      if (result.success) {
-        setContent("");
-        setFeedback("Avis publié ✅");
-      } else {
-        setFeedback(result.message);
+      try {
+        const queueResult = await queueAction({
+          type: "createReview",
+          bookId,
+          visibility,
+          content,
+          spoiler,
+        });
+
+        if (queueResult.success) {
+          setContent("");
+          setFeedback(
+            queueResult.queued
+              ? "Avis enregistré, sera publié à la reconnexion ✅"
+              : "Avis publié ✅",
+          );
+        } else {
+          setFeedback("Impossible de publier l'avis");
+        }
+      } catch {
+        setFeedback("Erreur lors de la publication");
       }
     });
   };

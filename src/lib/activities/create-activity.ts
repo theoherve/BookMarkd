@@ -1,6 +1,11 @@
 import db from "@/lib/supabase/db";
 
-type ActivityType = "rating" | "review" | "status_change" | "list_update" | "follow";
+type ActivityType =
+  | "rating"
+  | "review"
+  | "status_change"
+  | "list_update"
+  | "follow";
 
 type ActivityPayload = {
   book_id?: string;
@@ -20,7 +25,7 @@ type ActivityPayload = {
 export const createActivity = async (
   userId: string,
   type: ActivityType,
-  payload: ActivityPayload,
+  payload: ActivityPayload
 ): Promise<void> => {
   try {
     await db.client.from("activities").insert([
@@ -35,4 +40,3 @@ export const createActivity = async (
     console.error("[activities] createActivity error:", error);
   }
 };
-

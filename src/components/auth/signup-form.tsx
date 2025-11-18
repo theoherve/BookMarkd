@@ -42,7 +42,7 @@ const SignUpForm = () => {
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-6 rounded-3xl border border-border bg-card/60 p-8 shadow-sm backdrop-blur"
+      className="space-y-6 rounded-3xl border border-border bg-card/60 p-4 sm:p-8 shadow-sm backdrop-blur"
     >
       <div className="space-y-2 text-center">
         <h1 className="text-2xl font-semibold text-foreground">
@@ -64,6 +64,7 @@ const SignUpForm = () => {
             onChange={(event) => setDisplayName(event.target.value)}
             autoComplete="name"
             required
+            className="min-h-[48px] sm:min-h-0"
           />
         </div>
         <div className="space-y-2">
@@ -77,6 +78,7 @@ const SignUpForm = () => {
             onChange={(event) => setEmail(event.target.value)}
             autoComplete="email"
             required
+            className="min-h-[48px] sm:min-h-0"
           />
         </div>
         <div className="space-y-2">
@@ -90,6 +92,7 @@ const SignUpForm = () => {
             onChange={(event) => setPassword(event.target.value)}
             autoComplete="new-password"
             required
+            className="min-h-[48px] sm:min-h-0"
           />
         </div>
         <div className="space-y-2">
@@ -103,11 +106,16 @@ const SignUpForm = () => {
             onChange={(event) => setConfirmPassword(event.target.value)}
             autoComplete="new-password"
             required
+            className="min-h-[48px] sm:min-h-0"
           />
         </div>
       </div>
 
-      <Button type="submit" disabled={isPending}>
+      <Button
+        type="submit"
+        disabled={isPending}
+        className="w-full min-h-[48px] sm:min-h-0"
+      >
         {isPending ? "Création..." : "Créer mon compte"}
       </Button>
       {feedback ? (

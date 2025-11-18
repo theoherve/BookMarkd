@@ -11,14 +11,15 @@ export const metadata: Metadata = {
 };
 
 type LoginPageProps = {
-  searchParams?: Record<string, string | string[] | undefined>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 const LoginPage = async ({ searchParams }: LoginPageProps) => {
   const session = await getCurrentSession();
+  const params = await searchParams;
 
   if (session?.user) {
-    const callbackUrlRaw = searchParams?.callbackUrl;
+    const callbackUrlRaw = params?.callbackUrl;
     const callbackUrl = Array.isArray(callbackUrlRaw)
       ? callbackUrlRaw[0]
       : callbackUrlRaw;
@@ -28,7 +29,7 @@ const LoginPage = async ({ searchParams }: LoginPageProps) => {
     redirect(redirectUrl);
   }
 
-  const callbackUrlRaw = searchParams?.callbackUrl;
+  const callbackUrlRaw = params?.callbackUrl;
   const callbackUrl = Array.isArray(callbackUrlRaw)
     ? callbackUrlRaw[0]
     : callbackUrlRaw;

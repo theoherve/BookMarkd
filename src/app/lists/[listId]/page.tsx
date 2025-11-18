@@ -11,16 +11,17 @@ import { getAvailableBooks } from "@/features/lists/server/get-available-books";
 import { getCurrentSession } from "@/lib/auth/session";
 
 type ListDetailPageProps = {
-  params: {
+  params: Promise<{
     listId: string;
-  };
+  }>;
 };
 
 const ListDetailPage = async ({ params }: ListDetailPageProps) => {
   const session = await getCurrentSession();
   const viewerId = session?.user?.id ?? null;
+  const resolvedParams = await params;
 
-  const detail = await getListDetail(params.listId, viewerId);
+  const detail = await getListDetail(resolvedParams.listId, viewerId);
 
   if (!detail) {
     notFound();
