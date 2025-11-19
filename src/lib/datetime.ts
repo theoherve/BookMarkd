@@ -40,3 +40,15 @@ export const formatRelativeTimeFromNow = (dateInput: string | Date) => {
   return relativeTimeFormatter.format(Math.round(value), unit);
 };
 
+export const formatAbsoluteDateTime = (dateInput: string | Date) => {
+  const date = typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+  
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+};
+
