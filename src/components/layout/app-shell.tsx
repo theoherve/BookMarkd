@@ -66,7 +66,7 @@ const AppShell = ({ children }: AppShellProps) => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
+    <div className="flex min-h-[100dvh] flex-col bg-background text-foreground">
       <header className="border-b border-border bg-card/60 backdrop-blur">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
           <Link
@@ -128,7 +128,7 @@ const AppShell = ({ children }: AppShellProps) => {
         </div>
       </header>
       <OfflineBanner />
-      <main className="flex-1 pb-20 md:pb-0">
+      <main className="flex-1 pb-24 safe-area-bottom-offset md:pb-0">
         <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 md:py-10">
           {children}
         </div>

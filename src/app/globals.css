@@ -189,6 +189,10 @@ button {
     padding-bottom: env(safe-area-inset-bottom, 0);
   }
 
+  .safe-area-bottom-offset {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0) + 80px);
+  }
+
   .safe-area-inset-top {
     padding-top: env(safe-area-inset-top, 0);
   }
