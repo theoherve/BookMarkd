@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import db from "@/lib/supabase/db";
 import { searchOpenLibrary } from "@/lib/open-library";
+import { searchGoogleBooks, canUseGoogleBooks } from "@/lib/google-books";
+import { incrementGoogleBooksQuota } from "@/lib/google-books/quota-tracker";
 import type { SearchBook, SearchResponse } from "@/features/search/types";
 
 const DB_LIMIT = 12;
-const OPEN_LIBRARY_LIMIT = 6;
+const EXTERNAL_LIMIT = 6;
 
 type DbBookRow = {
   id: string;
@@ -173,21 +175,70 @@ export async function GET(request: Request) {
       includeExternal &&
       formattedDbBooks.length < DB_LIMIT
     ) {
-      const openLibraryResults = await searchOpenLibrary(
-        query,
-        OPEN_LIBRARY_LIMIT,
-      );
+      // Priorité 1: Essayer Google Books si le quota n'est pas atteint
+      const canUseGoogle = await canUseGoogleBooks();
+      const remainingSlots = DB_LIMIT - formattedDbBooks.length;
+      const externalLimit = Math.min(remainingSlots, EXTERNAL_LIMIT);
 
-      externalBooks = openLibraryResults.map((item) => ({
-        id: item.id,
-        title: item.title,
-        author: item.author,
-        coverUrl: item.coverUrl,
-        publicationYear: item.publicationYear,
-        source: "open_library",
-        reason:
-          "Résultat Open Library – à ajouter à BookMarkd si vous ne le trouvez pas.",
-      }));
+      if (canUseGoogle) {
+        try {
+          // Incrémenter le quota avant la requête
+          const quotaOk = await incrementGoogleBooksQuota();
+          
+          if (quotaOk) {
+            const googleBooksResults = await searchGoogleBooks(
+              query,
+              externalLimit,
+            );
+
+            // Si Google Books retourne des résultats, les utiliser
+            if (googleBooksResults.length > 0) {
+              externalBooks = googleBooksResults.map((item) => ({
+                id: item.id,
+                title: item.title,
+                author: item.author,
+                coverUrl: item.coverUrl,
+                summary: item.summary ?? null,
+                publicationYear: item.publicationYear,
+                source: "google_books",
+                reason:
+                  "Résultat Google Books – à ajouter à BookMarkd si vous ne le trouvez pas.",
+              }));
+            } else {
+              // Aucun résultat ou erreur (403, etc.) - le fallback sera utilisé
+              console.log(
+                "[books/search] Google Books returned no results, falling back to OpenLibrary"
+              );
+            }
+          } else {
+            console.warn(
+              "[books/search] Google Books quota limit reached, falling back to OpenLibrary"
+            );
+          }
+        } catch (error) {
+          console.error("[books/search] Google Books error:", error);
+          // En cas d'erreur inattendue, on continue avec OpenLibrary
+        }
+      }
+
+      // Priorité 2: Fallback vers OpenLibrary si Google Books n'a rien retourné ou quota atteint
+      if (externalBooks.length === 0) {
+        const openLibraryResults = await searchOpenLibrary(
+          query,
+          externalLimit,
+        );
+
+        externalBooks = openLibraryResults.map((item) => ({
+          id: item.id,
+          title: item.title,
+          author: item.author,
+          coverUrl: item.coverUrl,
+          publicationYear: item.publicationYear,
+          source: "open_library",
+          reason:
+            "Résultat Open Library – à ajouter à BookMarkd si vous ne le trouvez pas.",
+        }));
+      }
     }
 
     const payload: SearchResponse = {

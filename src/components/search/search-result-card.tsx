@@ -16,6 +16,7 @@ import {
 import type { SearchBook } from "@/features/search/types";
 import AddToReadlistButton from "@/components/search/add-to-readlist-button";
 import ImportOpenLibraryButton from "@/components/search/import-open-library-button";
+import ImportGoogleBooksButton from "@/components/search/import-google-books-button";
 import { Button } from "@/components/ui/button";
 
 type SearchResultCardProps = {
@@ -25,10 +26,18 @@ type SearchResultCardProps = {
 const sourceBadges: Record<SearchBook["source"], string> = {
   supabase: "Catalogue BookMarkd",
   open_library: "Open Library",
+  google_books: "Google Books",
 };
 
-const buildExternalLink = (bookId: string) => {
-  return `https://openlibrary.org${bookId.replace("openlib:", "/works/")}`;
+const buildExternalLink = (bookId: string, source: SearchBook["source"]) => {
+  if (source === "google_books") {
+    const volumeId = bookId.replace("googlebooks:", "");
+    return `https://books.google.com/books?id=${volumeId}`;
+  }
+  if (source === "open_library") {
+    return `https://openlibrary.org${bookId.replace("openlib:", "/works/")}`;
+  }
+  return null;
 };
 
 const SearchResultCard = ({ book }: SearchResultCardProps) => {
@@ -108,23 +117,41 @@ const SearchResultCard = ({ book }: SearchResultCardProps) => {
           </>
         ) : (
           <div className="space-y-2">
-            <Button variant="outline" asChild>
-              <a
-                href={buildExternalLink(book.id)}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Ouvrir sur Open Library
-              </a>
-            </Button>
-            <ImportOpenLibraryButton
-              openLibraryId={book.id}
-              title={book.title}
-              author={book.author}
-              coverUrl={book.coverUrl ?? undefined}
-              publicationYear={book.publicationYear ?? undefined}
-              summary={book.summary ?? undefined}
-            />
+            {(() => {
+              const externalLink = buildExternalLink(book.id, book.source);
+              return externalLink ? (
+                <Button variant="outline" asChild>
+                  <a
+                    href={externalLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {book.source === "google_books"
+                      ? "Ouvrir sur Google Books"
+                      : "Ouvrir sur Open Library"}
+                  </a>
+                </Button>
+              ) : null;
+            })()}
+            {book.source === "google_books" ? (
+              <ImportGoogleBooksButton
+                googleBooksId={book.id}
+                title={book.title}
+                author={book.author}
+                coverUrl={book.coverUrl ?? undefined}
+                publicationYear={book.publicationYear ?? undefined}
+                summary={book.summary ?? undefined}
+              />
+            ) : (
+              <ImportOpenLibraryButton
+                openLibraryId={book.id}
+                title={book.title}
+                author={book.author}
+                coverUrl={book.coverUrl ?? undefined}
+                publicationYear={book.publicationYear ?? undefined}
+                summary={book.summary ?? undefined}
+              />
+            )}
           </div>
         )}
       </CardFooter>

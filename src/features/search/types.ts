@@ -11,7 +11,7 @@ export type SearchBook = {
   }>;
   averageRating?: number | null;
   publicationYear?: number | null;
-  source: "supabase" | "open_library";
+  source: "supabase" | "open_library" | "google_books";
   reason?: string | null;
 };
 
