@@ -126,7 +126,7 @@ const ProfilePage = async () => {
           <FollowRequestsPanel />
         </section>
 
-        <section className="space-y-6 md:grid md:grid-cols-[1fr_1fr] md:gap-6 md:space-y-0">
+        <section className="space-y-6 md:grid md:grid-cols-[1fr_3fr] md:gap-6 md:space-y-0 md:items-stretch">
           <RecentActivitiesSection activities={dashboard.recentActivities} />
           <ReadListSection readList={dashboard.readList} />
         </section>

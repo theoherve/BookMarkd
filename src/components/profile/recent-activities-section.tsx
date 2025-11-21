@@ -62,7 +62,7 @@ const RecentActivitiesSection = ({ activities }: RecentActivitiesSectionProps) =
   const handleShowLess = () => {
     setDisplayedCount(INITIAL_COUNT);
   };
-
+  
   return (
     <Card className="border-border/60 bg-card/80 backdrop-blur">
       <CardHeader>
