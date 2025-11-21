@@ -150,7 +150,7 @@ const KeywordPicker = ({
                 size="sm"
                 onClick={() => handleToggleKeyword(keyword.id)}
                 onKeyDown={(e) => handleKeyDown(e, keyword.id)}
-                aria-pressed={isSelected}
+                aria-checked={isSelected}
                 role="checkbox"
                 tabIndex={0}
                 className="text-sm"
@@ -241,10 +241,8 @@ const KeywordPicker = ({
 
 const KeywordCloud = ({
   feelings,
-  viewerId,
 }: {
   feelings: BookFeeling[];
-  viewerId?: string | null;
 }) => {
   // Agréger les feelings par keyword
   const aggregated = feelings.reduce(
@@ -375,7 +373,7 @@ const BookFeelingsSection = ({
         <h3 className="text-sm font-medium text-foreground">
           Mots-clés de la communauté
         </h3>
-        <KeywordCloud feelings={allFeelings} viewerId={viewerId} />
+        <KeywordCloud feelings={allFeelings} />
       </div>
     </section>
   );
