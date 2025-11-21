@@ -16,7 +16,13 @@ import ReviewsList, {
   BookReview,
 } from "@/components/books/reviews-list";
 import BookReadersList from "@/components/books/book-readers-list";
+import BookFeelingsSection from "@/components/books/book-feelings-section";
 import { getBookReaders } from "@/features/books/server/get-book-readers";
+import {
+  getAllFeelingKeywords,
+  getBookFeelings,
+  getViewerFeelings,
+} from "@/features/books/server/get-book-feelings";
 import { getCurrentSession } from "@/lib/auth/session";
 import { formatRating } from "@/lib/utils";
 import { generateBookSlug, extractBookIdFromSlug } from "@/lib/slug";
@@ -422,22 +428,32 @@ const BookPage = async ({ params }: BookPageProps) => {
 
   const tags =
     book.book_tags?.map((relation) => relation.tag).filter(Boolean) ?? [];
-  // Préparer l'ensemble des auteurs des reviews pour vérifier les relations de suivi
+  
+  // Préparer l'ensemble des auteurs (reviews + feelings) pour vérifier les relations de suivi
   let viewerFollowingIds: Set<string> | undefined = undefined;
-  if (viewerId && Array.isArray(book.reviews) && book.reviews.length > 0) {
-    const authorIds = Array.from(
-      new Set(
-        book.reviews
-          .map((r) => r.user?.[0]?.id)
-          .filter((id): id is string => Boolean(id)),
-      ),
-    );
-    if (authorIds.length > 0) {
+  if (viewerId) {
+    const authorIds = new Set<string>();
+    
+    // Ajouter les auteurs des reviews
+    if (Array.isArray(book.reviews) && book.reviews.length > 0) {
+      book.reviews.forEach((r) => {
+        const id = r.user?.[0]?.id;
+        if (id) authorIds.add(id);
+      });
+    }
+    
+    // Récupérer les feelings pour obtenir aussi leurs auteurs
+    const allFeelingsTemp = await getBookFeelings(book.id, viewerId, undefined);
+    allFeelingsTemp.forEach((f) => {
+      authorIds.add(f.userId);
+    });
+    
+    if (authorIds.size > 0) {
       const { data: followsRows } = await db.client
         .from("follows")
         .select("following_id")
         .eq("follower_id", viewerId)
-        .in("following_id", authorIds);
+        .in("following_id", Array.from(authorIds));
       const ids =
         (followsRows ?? []).map(
           (row: { following_id: string }) => row.following_id,
@@ -445,8 +461,19 @@ const BookPage = async ({ params }: BookPageProps) => {
       viewerFollowingIds = new Set(ids);
     }
   }
+  
   const reviews = mapReviews(book.reviews, viewerId, viewerFollowingIds);
   const readers = await getBookReaders(book.id);
+
+  // Récupérer les feelings avec les followingIds corrects
+  const [availableKeywords, allFeelings, viewerFeelingsData] = await Promise.all([
+    getAllFeelingKeywords(),
+    getBookFeelings(book.id, viewerId, viewerFollowingIds),
+    viewerId ? getViewerFeelings(book.id, viewerId) : Promise.resolve({ keywordIds: [], visibility: "public" as const }),
+  ]);
+  
+  const viewerFeelings = viewerFeelingsData.keywordIds;
+  const viewerFeelingsVisibility = viewerFeelingsData.visibility;
 
   return (
     <AppShell>
@@ -523,6 +550,17 @@ const BookPage = async ({ params }: BookPageProps) => {
 
           <section className="space-y-6">
             <BookReadersList readers={readers} />
+          </section>
+
+          <section className="space-y-6">
+            <BookFeelingsSection
+              bookId={book.id}
+              availableKeywords={availableKeywords}
+              viewerFeelings={viewerFeelings}
+              viewerFeelingsVisibility={viewerFeelingsVisibility}
+              allFeelings={allFeelings}
+              viewerId={viewerId}
+            />
           </section>
 
           <section className="space-y-6">

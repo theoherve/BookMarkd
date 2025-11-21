@@ -12,7 +12,9 @@ const resolveEnvVar = (primaryKey: string, fallbackKeys: string[]) => {
   }
 
   throw new Error(
-    `Supabase environment variable "${primaryKey}" is missing. Tried fallbacks: ${fallbackKeys.join(", ")}`,
+    `Supabase environment variable "${primaryKey}" is missing. Tried fallbacks: ${fallbackKeys.join(
+      ", "
+    )}`
   );
 };
 
@@ -30,4 +32,3 @@ export const createSupabaseServiceClient = () => {
     },
   });
 };
-
