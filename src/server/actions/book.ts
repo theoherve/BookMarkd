@@ -471,3 +471,246 @@ export const createBook = async (
     };
   }
 };
+
+// ============================================================================
+// Feeling Keywords Actions
+// ============================================================================
+
+type FeelingKeyword = {
+  id: string;
+  label: string;
+  slug: string;
+  source: "admin" | "user";
+};
+
+type UpsertBookFeelingsResult =
+  | { success: true; keywords: FeelingKeyword[] }
+  | { success: false; message: string };
+
+const generateSlug = (label: string): string => {
+  return label
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Supprime les accents
+    .replace(/[^a-z0-9]+/g, "-") // Remplace les caractères non alphanumériques par des tirets
+    .replace(/^-+|-+$/g, ""); // Supprime les tirets en début et fin
+};
+
+export const createFeelingKeyword = async (
+  label: string,
+): Promise<{ success: true; keyword: FeelingKeyword } | { success: false; message: string }> => {
+  try {
+    const userId = await requireSession();
+
+    if (!label || !label.trim()) {
+      return {
+        success: false,
+        message: "Le mot-clé ne peut pas être vide.",
+      };
+    }
+
+    const trimmedLabel = label.trim();
+    const slug = generateSlug(trimmedLabel);
+
+    // Vérifier si le slug existe déjà
+    const { data: existing, error: checkError } = await db.client
+      .from("feeling_keywords")
+      .select("id, label, slug, source")
+      .eq("slug", slug)
+      .maybeSingle();
+
+    if (checkError) {
+      throw checkError;
+    }
+
+    // Si existe déjà, retourner l'existant
+    if (existing) {
+      return {
+        success: true,
+        keyword: {
+          id: existing.id as string,
+          label: existing.label as string,
+          slug: existing.slug as string,
+          source: (existing.source as "admin" | "user") ?? "user",
+        },
+      };
+    }
+
+    // Créer le nouveau mot-clé
+    const { data: inserted, error: insertError } = await db.client
+      .from("feeling_keywords")
+      .insert([
+        {
+          label: trimmedLabel,
+          slug,
+          source: "user",
+          created_by: userId,
+        },
+      ])
+      .select("id, label, slug, source")
+      .single();
+
+    if (insertError) {
+      throw insertError;
+    }
+
+    return {
+      success: true,
+      keyword: {
+        id: inserted.id as string,
+        label: inserted.label as string,
+        slug: inserted.slug as string,
+        source: (inserted.source as "admin" | "user") ?? "user",
+      },
+    };
+  } catch (error) {
+    if ((error as Error).message === "AUTH_REQUIRED") {
+      return {
+        success: false,
+        message: "Vous devez être connecté·e pour créer un mot-clé.",
+      };
+    }
+    console.error("[book] createFeelingKeyword error:", error);
+    return {
+      success: false,
+      message: "Impossible de créer ce mot-clé.",
+    };
+  }
+};
+
+export const upsertBookFeelings = async (
+  bookId: string,
+  keywordIds: string[],
+  visibility: "public" | "friends" | "private",
+): Promise<UpsertBookFeelingsResult> => {
+  try {
+    const userId = await requireSession();
+
+    if (!Array.isArray(keywordIds)) {
+      return {
+        success: false,
+        message: "Les mots-clés doivent être un tableau.",
+      };
+    }
+
+    // Récupérer les feelings existants de l'utilisateur pour ce livre
+    const { data: existingFeelings, error: existingError } = await db.client
+      .from("user_book_feelings")
+      .select("keyword_id")
+      .eq("user_id", userId)
+      .eq("book_id", bookId);
+
+    if (existingError) {
+      throw existingError;
+    }
+
+    const existingKeywordIds = new Set(
+      (existingFeelings ?? []).map((f) => f.keyword_id as string),
+    );
+
+    // Identifier les mots-clés à supprimer (présents dans existing mais pas dans keywordIds)
+    const toDelete = Array.from(existingKeywordIds).filter(
+      (id) => !keywordIds.includes(id),
+    );
+
+    // Identifier les mots-clés à ajouter (présents dans keywordIds mais pas dans existing)
+    const toAdd = keywordIds.filter((id) => !existingKeywordIds.has(id));
+
+    // Supprimer les feelings qui ne sont plus sélectionnés
+    if (toDelete.length > 0) {
+      const { error: deleteError } = await db.client
+        .from("user_book_feelings")
+        .delete()
+        .eq("user_id", userId)
+        .eq("book_id", bookId)
+        .in("keyword_id", toDelete);
+
+      if (deleteError) {
+        throw deleteError;
+      }
+    }
+
+    // Ajouter les nouveaux feelings
+    if (toAdd.length > 0) {
+      const feelingsToInsert = toAdd.map((keywordId) => ({
+        user_id: userId,
+        book_id: bookId,
+        keyword_id: keywordId,
+        visibility,
+      }));
+
+      const { error: insertError } = await db.client
+        .from("user_book_feelings")
+        .insert(feelingsToInsert);
+
+      if (insertError) {
+        throw insertError;
+      }
+    }
+
+    // Mettre à jour la visibilité des feelings existants qui restent
+    if (keywordIds.length > 0) {
+      const { error: updateError } = await db.client
+        .from("user_book_feelings")
+        .update({ visibility })
+        .eq("user_id", userId)
+        .eq("book_id", bookId)
+        .in("keyword_id", keywordIds);
+
+      if (updateError) {
+        throw updateError;
+      }
+    }
+
+    // Récupérer les mots-clés finaux pour retour
+    const { data: finalFeelings, error: finalError } = await db.client
+      .from("user_book_feelings")
+      .select(
+        `
+        keyword_id,
+        feeling_keywords:keyword_id (
+          id,
+          label,
+          slug,
+          source
+        )
+      `,
+      )
+      .eq("user_id", userId)
+      .eq("book_id", bookId);
+
+    if (finalError) {
+      throw finalError;
+    }
+
+    const keywords: FeelingKeyword[] = (finalFeelings ?? [])
+      .map((f) => {
+        const keyword = Array.isArray(f.feeling_keywords)
+          ? f.feeling_keywords[0]
+          : f.feeling_keywords;
+        if (!keyword) return null;
+        return {
+          id: keyword.id as string,
+          label: keyword.label as string,
+          slug: keyword.slug as string,
+          source: (keyword.source as "admin" | "user") ?? "user",
+        };
+      })
+      .filter((k): k is FeelingKeyword => k !== null);
+
+    revalidateBook(bookId);
+    return { success: true, keywords };
+  } catch (error) {
+    if ((error as Error).message === "AUTH_REQUIRED") {
+      return {
+        success: false,
+        message: "Vous devez être connecté·e pour modifier vos mots-clés.",
+      };
+    }
+    console.error("[book] upsertBookFeelings error:", error);
+    return {
+      success: false,
+      message: "Impossible de sauvegarder vos mots-clés.",
+    };
+  }
+};

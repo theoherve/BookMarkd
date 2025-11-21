@@ -122,13 +122,13 @@ const ProfilePage = async () => {
           <TopBooksSelector initialTopBooks={dashboard.topBooks} />
         </section>
 
-        <section className="space-y-6">
-          <FollowRequestsPanel />
-        </section>
-
         <section className="space-y-6 md:grid md:grid-cols-[1fr_3fr] md:gap-6 md:space-y-0 md:items-stretch">
           <RecentActivitiesSection activities={dashboard.recentActivities} />
           <ReadListSection readList={dashboard.readList} />
+        </section>
+
+        <section className="space-y-6">
+          <FollowRequestsPanel />
         </section>
 
         <section className="grid gap-4 md:grid-cols-3">
