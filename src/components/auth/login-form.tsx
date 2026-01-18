@@ -144,17 +144,17 @@ const LoginForm = ({ callbackUrl }: LoginFormProps) => {
       <p className="text-xs text-muted-foreground text-center">
         Pas encore de compte ?{" "}
         <Button variant="link" className="h-auto p-0 text-xs" asChild>
-          <a href="/signup">S'inscrire</a>
+          <a href="/signup">S&apos;inscrire</a>
         </Button>
       </p>
 
       <div className="space-y-1 text-xs text-muted-foreground">
         <p>Démo :</p>
         <p>
-          <span className="font-medium">Email :</span> camille@example.com
+          <span className="font-medium">Email :</span> victoire@example.com
         </p>
         <p>
-          <span className="font-medium">Mot de passe :</span> bookmarkd123
+          <span className="font-medium">Mot de passe :</span> BookMarkd123
         </p>
       </div>
     </form>
