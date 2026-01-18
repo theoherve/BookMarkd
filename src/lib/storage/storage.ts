@@ -111,7 +111,6 @@ export const uploadCover = async (
 ): Promise<{ path: string; publicUrl: string } | null> => {
   try {
     const fileName = generateCoverFileName(bookId, extension);
-    const path = getCoverStoragePath(bookId, extension);
 
     // Supprimer l'ancienne cover s'elle existe (peu importe l'extension)
     const { data: existingFiles } = await supabase.storage
@@ -161,7 +160,6 @@ export const uploadAvatar = async (
 ): Promise<{ path: string; publicUrl: string } | null> => {
   try {
     const fileName = generateAvatarFileName(userId, extension);
-    const path = getAvatarStoragePath(userId, extension);
 
     // Supprimer l'ancien avatar s'il existe
     const { data: existingFiles } = await supabase.storage

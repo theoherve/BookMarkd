@@ -1,5 +1,4 @@
 import { getAvatarPublicUrl, avatarExistsInStorage } from "./storage";
-import { createSupabaseServiceClient } from "@/lib/supabase/service-client";
 
 /**
  * Vérifie si une URL est une URL Supabase Storage
@@ -28,9 +27,12 @@ export const getUserAvatarUrl = async (
   userId: string,
   dbAvatarUrl?: string | null,
 ): Promise<string | null> => {
+  // Normaliser undefined à null
+  const normalizedDbUrl = dbAvatarUrl ?? null;
+
   // 1. Si l'URL de la DB est déjà une URL Supabase Storage, l'utiliser directement
-  if (isSupabaseStorageUrl(dbAvatarUrl)) {
-    return dbAvatarUrl;
+  if (isSupabaseStorageUrl(normalizedDbUrl)) {
+    return normalizedDbUrl;
   }
 
   // 2. Vérifier si un avatar existe dans Supabase Storage
@@ -44,8 +46,8 @@ export const getUserAvatarUrl = async (
   }
 
   // 3. Fallback sur l'URL de la base de données si disponible
-  if (dbAvatarUrl) {
-    return dbAvatarUrl;
+  if (normalizedDbUrl) {
+    return normalizedDbUrl;
   }
 
   return null;
