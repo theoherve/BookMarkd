@@ -105,7 +105,7 @@ const UserFeedbacksSection = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Vous n'avez pas encore soumis de feedback.
+            Vous n&apos;avez pas encore soumis de feedback.
           </p>
           <Button asChild variant="outline">
             <Link href="/feedback">Soumettre un feedback</Link>
@@ -174,7 +174,7 @@ const UserFeedbacksSection = () => {
 
               {feedback.status === "pending" && (
                 <p className="text-xs text-muted-foreground italic">
-                  Votre feedback est en cours d'examen. Nous vous tiendrons au
+                  Votre feedback est en cours d&apos;examen. Nous vous tiendrons au
                   courant de son évolution.
                 </p>
               )}

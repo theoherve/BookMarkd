@@ -71,6 +71,7 @@ export const getAllFeelingKeywords = async (): Promise<FeelingKeyword[]> => {
     });
 
     // Retourner sans le usageCount (pas nécessaire dans le type)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     return keywordsWithUsage.map(({ usageCount, ...keyword }) => keyword);
   } catch (error) {
     console.error("[books] getAllFeelingKeywords error:", error);

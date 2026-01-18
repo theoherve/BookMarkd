@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState, useTransition } from "react";
+import { FormEvent, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,13 +14,9 @@ const FeedbackForm = () => {
   const [type, setType] = useState<FeedbackType>("suggestion");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [browserInfo, setBrowserInfo] = useState<ReturnType<typeof getBrowserInfo> | null>(null);
+  const [browserInfo] = useState<ReturnType<typeof getBrowserInfo>>(() => getBrowserInfo());
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-
-  useEffect(() => {
-    setBrowserInfo(getBrowserInfo());
-  }, []);
 
   const handleTypeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setType(event.target.value as FeedbackType);
