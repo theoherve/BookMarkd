@@ -1,4 +1,5 @@
 import db from "@/lib/supabase/db";
+import { getUserAvatarUrl } from "@/lib/storage/avatars";
 
 export type PublicProfile = {
   id: string;
@@ -66,6 +67,9 @@ export const getPublicProfile = async (
       avatarUrl: string | null;
       bio: string | null;
     }>(userRow);
+
+    // Résoudre l'URL de l'avatar avec priorité Supabase Storage
+    const resolvedAvatarUrl = await getUserAvatarUrl(user.id, user.avatarUrl);
 
     // 2) Recent user_books with book join
     const { data: userBooksRows, error: userBooksError } = await db.client
@@ -184,7 +188,7 @@ export const getPublicProfile = async (
       id: user.id,
       username: user.username,
       displayName: user.displayName,
-      avatarUrl: user.avatarUrl,
+      avatarUrl: resolvedAvatarUrl,
       bio: user.bio,
       stats: {
         booksRead,

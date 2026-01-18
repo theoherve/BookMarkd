@@ -1,5 +1,6 @@
 import db from "@/lib/supabase/db";
 import { generateBookSlug } from "@/lib/slug";
+import { getUserAvatarUrl } from "@/lib/storage/avatars";
 
 import type {
   ProfileDashboard,
@@ -63,6 +64,9 @@ export const getProfileDashboard = async (
       bio: string | null;
       avatarUrl: string | null;
     }>(userRow);
+
+    // Résoudre l'URL de l'avatar avec priorité Supabase Storage
+    const resolvedAvatarUrl = await getUserAvatarUrl(userId, user.avatarUrl);
 
     // Étape 2 : Statistiques de base (3 requêtes en parallèle)
     const [ownedListsCount, collaborativeListsCount, recommendationsCount] =
@@ -689,7 +693,7 @@ export const getProfileDashboard = async (
       displayName: user.displayName ?? "Utilisateur·rice",
       email: user.email ?? "",
       bio: user.bio ?? null,
-      avatarUrl: user.avatarUrl ?? null,
+      avatarUrl: resolvedAvatarUrl ?? null,
       ownedLists: ownedListsCount,
       collaborativeLists: collaborativeListsCount,
       recommendationsCount,
