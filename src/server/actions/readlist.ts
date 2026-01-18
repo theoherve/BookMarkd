@@ -10,6 +10,10 @@ type AddBookToReadlistResult =
   | { success: true }
   | { success: false; message: string };
 
+type RemoveBookFromReadlistResult =
+  | { success: true }
+  | { success: false; message: string };
+
 export const addBookToReadlist = async (
   bookId: string,
 ): Promise<AddBookToReadlistResult> => {
@@ -60,6 +64,7 @@ export const addBookToReadlist = async (
     revalidatePath("/"); // feed
     revalidatePath("/search");
     revalidatePath(`/books/${bookId}`);
+    revalidatePath("/profiles/me");
 
     return { success: true };
   } catch (error) {
@@ -67,6 +72,46 @@ export const addBookToReadlist = async (
     return {
       success: false,
       message: "Impossible d'ajouter ce livre à votre readlist.",
+    };
+  }
+};
+
+export const removeBookFromReadlist = async (
+  bookId: string,
+): Promise<RemoveBookFromReadlistResult> => {
+  const session = await getCurrentSession();
+
+  const userId = await resolveSessionUserId(session);
+
+  if (!userId) {
+    return {
+      success: false,
+      message: "Vous devez être connecté·e pour retirer un livre.",
+    };
+  }
+
+  try {
+    const { error: deleteError } = await db.client
+      .from("user_books")
+      .delete()
+      .eq("user_id", userId)
+      .eq("book_id", bookId);
+
+    if (deleteError) {
+      throw deleteError;
+    }
+
+    revalidatePath("/"); // feed
+    revalidatePath("/search");
+    revalidatePath(`/books/${bookId}`);
+    revalidatePath("/profiles/me");
+
+    return { success: true };
+  } catch (error) {
+    console.error("[readlist] removeBookFromReadlist error:", error);
+    return {
+      success: false,
+      message: "Impossible de retirer ce livre de votre readlist.",
     };
   }
 };

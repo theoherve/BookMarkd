@@ -17,25 +17,62 @@ export type BookFeeling = {
 };
 
 /**
- * Récupère tous les mots-clés disponibles (admin + user)
+ * Récupère tous les mots-clés disponibles (admin + user) triés par usage global
  */
 export const getAllFeelingKeywords = async (): Promise<FeelingKeyword[]> => {
   try {
-    const { data, error } = await db.client
+    // Récupérer tous les mots-clés
+    const { data: keywordsData, error: keywordsError } = await db.client
       .from("feeling_keywords")
-      .select("id, label, slug, source")
-      .order("label", { ascending: true });
+      .select("id, label, slug, source");
 
-    if (error) {
-      throw error;
+    if (keywordsError) {
+      throw keywordsError;
     }
 
-    return (data ?? []).map((k) => ({
+    if (!keywordsData || keywordsData.length === 0) {
+      return [];
+    }
+
+    // Récupérer les compteurs d'utilisation par keyword_id
+    const keywordIds = keywordsData.map((k) => k.id as string);
+    
+    const { data: usageData, error: usageError } = await db.client
+      .from("user_book_feelings")
+      .select("keyword_id")
+      .in("keyword_id", keywordIds);
+
+    if (usageError) {
+      throw usageError;
+    }
+
+    // Calculer le nombre d'utilisations pour chaque mot-clé
+    const usageCounts = new Map<string, number>();
+    (usageData ?? []).forEach((row) => {
+      const keywordId = row.keyword_id as string;
+      usageCounts.set(keywordId, (usageCounts.get(keywordId) ?? 0) + 1);
+    });
+
+    // Combiner les données et trier
+    const keywordsWithUsage = (keywordsData ?? []).map((k) => ({
       id: k.id as string,
       label: k.label as string,
       slug: k.slug as string,
       source: (k.source as "admin" | "user") ?? "user",
+      usageCount: usageCounts.get(k.id as string) ?? 0,
     }));
+
+    // Trier par usage décroissant, puis alphabétiquement si égal
+    keywordsWithUsage.sort((a, b) => {
+      if (b.usageCount !== a.usageCount) {
+        return b.usageCount - a.usageCount;
+      }
+      return a.label.localeCompare(b.label);
+    });
+
+    // Retourner sans le usageCount (pas nécessaire dans le type)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    return keywordsWithUsage.map(({ usageCount, ...keyword }) => keyword);
   } catch (error) {
     console.error("[books] getAllFeelingKeywords error:", error);
     return [];
