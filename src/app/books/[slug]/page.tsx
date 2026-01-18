@@ -26,6 +26,7 @@ import {
 import { getCurrentSession } from "@/lib/auth/session";
 import { formatRating } from "@/lib/utils";
 import { generateBookSlug, extractBookIdFromSlug } from "@/lib/slug";
+import { getBookCoverUrl } from "@/lib/storage/covers";
 
 type BookPageProps = {
   params: Promise<{
@@ -284,11 +285,15 @@ const getBookDetail = async (
 
     // Transformer les données Supabase en format RawBook
     const book = bookRow!;
+    
+    // Résoudre l'URL de la cover avec priorité Supabase Storage
+    const resolvedCoverUrl = await getBookCoverUrl(book.id, book.cover_url);
+    
     const rawBook: RawBook = {
       id: book.id,
       title: book.title,
       author: book.author,
-      cover_url: book.cover_url,
+      cover_url: resolvedCoverUrl,
       summary: book.summary,
       average_rating:
         typeof book.average_rating === "number" ? book.average_rating : null,
