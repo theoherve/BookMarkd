@@ -94,7 +94,7 @@ const LoginForm = ({ callbackUrl }: LoginFormProps) => {
             id="email"
             name="email"
             type="email"
-            placeholder="camille@example.com"
+            placeholder="victoire@example.com"
             value={email}
             onChange={handleEmailChange}
             autoComplete="email"

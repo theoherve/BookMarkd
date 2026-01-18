@@ -26,6 +26,7 @@ const navigationLinks: NavigationLink[] = [
   { href: "/search", label: "Recherche", ariaLabel: "Ouvrir la recherche" },
   { href: "/lists", label: "Listes", ariaLabel: "Consulter vos listes" },
   { href: "/profiles/me", label: "Profil", ariaLabel: "Voir votre profil" },
+  { href: "/feedback", label: "Feedback", ariaLabel: "Suggérer une fonctionnalité ou rapporter une erreur" },
 ];
 
 const NavigationList = ({ onLinkClick, emphasis = "normal" }: { onLinkClick?: () => void; emphasis?: "normal" | "strong" }) => {

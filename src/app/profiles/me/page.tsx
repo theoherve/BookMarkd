@@ -14,6 +14,7 @@ import RecentActivitiesSection from "@/components/profile/recent-activities-sect
 import ReadListSection from "@/components/profile/read-list-section";
 import ProfileEditButton from "@/components/profile/profile-edit-button";
 import FollowRequestsPanel from "@/components/profile/follow-requests-panel";
+import UserFeedbacksSection from "@/components/profile/user-feedbacks-section";
 
 import { getCurrentSession } from "@/lib/auth/session";
 import { resolveSessionUserId } from "@/lib/auth/user";
@@ -129,6 +130,10 @@ const ProfilePage = async () => {
 
         <section className="space-y-6">
           <FollowRequestsPanel />
+        </section>
+
+        <section className="space-y-6">
+          <UserFeedbacksSection />
         </section>
 
         <section className="grid gap-4 md:grid-cols-3">
