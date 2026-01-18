@@ -141,6 +141,13 @@ const LoginForm = ({ callbackUrl }: LoginFormProps) => {
         {isSubmitting ? "Connexion..." : "Se connecter"}
       </Button>
 
+      <p className="text-xs text-muted-foreground text-center">
+        Pas encore de compte ?{" "}
+        <Button variant="link" className="h-auto p-0 text-xs" asChild>
+          <a href="/signup">S'inscrire</a>
+        </Button>
+      </p>
+
       <div className="space-y-1 text-xs text-muted-foreground">
         <p>Démo :</p>
         <p>
