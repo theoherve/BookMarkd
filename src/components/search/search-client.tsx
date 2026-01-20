@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState, useEffect } from "react";
+import { FormEvent, useMemo, useState, useEffect, useRef } from "react";
 import { Search, X, Filter } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -19,16 +19,25 @@ type SearchTab = "books" | "users";
 
 const SearchClient = () => {
   const searchParams = useSearchParams();
+  const urlQuery = searchParams.get("q");
+  const initialQuery = urlQuery ? decodeURIComponent(urlQuery) : "";
   const [activeTab, setActiveTab] = useState<SearchTab>("books");
-  const [query, setQuery] = useState("");
-  const [submittedQuery, setSubmittedQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
+  const [submittedQuery, setSubmittedQuery] = useState(initialQuery);
+  const lastProcessedQueryRef = useRef<string | null>(urlQuery);
 
   useEffect(() => {
-    const urlQuery = searchParams.get("q");
-    if (urlQuery) {
-      const decodedQuery = decodeURIComponent(urlQuery);
-      setQuery(decodedQuery);
-      setSubmittedQuery(decodedQuery);
+    const currentUrlQuery = searchParams.get("q");
+    if (currentUrlQuery !== lastProcessedQueryRef.current) {
+      lastProcessedQueryRef.current = currentUrlQuery;
+      if (currentUrlQuery) {
+        const decodedQuery = decodeURIComponent(currentUrlQuery);
+        setQuery(decodedQuery);
+        setSubmittedQuery(decodedQuery);
+      } else {
+        setQuery("");
+        setSubmittedQuery("");
+      }
     }
   }, [searchParams]);
   const [selectedGenre, setSelectedGenre] = useState<string | undefined>();

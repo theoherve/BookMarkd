@@ -10,15 +10,11 @@ import { useOfflineQueue } from "@/hooks/use-offline-queue";
 type FollowRequestButtonProps = {
   targetUserId: string;
   initialStatus?: FollowStatus;
-  className?: string;
-  size?: "default" | "sm" | "lg" | "icon";
 };
 
 const FollowRequestButton = ({
   targetUserId,
   initialStatus = "not_following",
-  className,
-  size = "sm",
 }: FollowRequestButtonProps) => {
   const [status, setStatus] = useState<FollowStatus>(initialStatus);
   const [isPending, startTransition] = useTransition();

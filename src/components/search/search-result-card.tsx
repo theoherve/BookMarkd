@@ -2,7 +2,6 @@
 
 import { useState, useTransition, useEffect } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
@@ -12,13 +11,10 @@ import { generateBookSlug } from "@/lib/slug";
 import {
   Card,
   CardContent,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import type { SearchBook } from "@/features/search/types";
-import AddToReadlistButton from "@/components/search/add-to-readlist-button";
-import { Button } from "@/components/ui/button";
 import { importGoogleBooksBook } from "@/server/actions/import-google-books";
 import { importOpenLibraryBook } from "@/server/actions/import-open-library";
 import { checkUserAdminStatus } from "@/lib/auth/admin";
@@ -50,7 +46,6 @@ const SearchResultCard = ({ book }: SearchResultCardProps) => {
   const isSupabaseBook = book.source === "supabase";
   const [isAdmin, setIsAdmin] = useState(false);
   const [isImporting, startTransition] = useTransition();
-  const [importError, setImportError] = useState<string | null>(null);
 
   // Vérifier le statut admin au chargement
   useEffect(() => {
@@ -71,7 +66,6 @@ const SearchResultCard = ({ book }: SearchResultCardProps) => {
     }
 
     // Pour les livres externes, importer automatiquement
-    setImportError(null);
     startTransition(async () => {
       try {
         const result =
@@ -96,18 +90,14 @@ const SearchResultCard = ({ book }: SearchResultCardProps) => {
         if (result.success) {
           // Rediriger vers la fiche du livre importé
           router.push(`/books/${generateBookSlug(book.title, book.author)}`);
-        } else {
-          setImportError(result.message);
         }
       } catch (error) {
         console.error("[SearchResultCard] Import error:", error);
-        setImportError("Une erreur est survenue lors de l'import.");
       }
     });
   };
 
   const externalLink = buildExternalLink(book.id, book.source);
-  const showGoogleBooksLink = book.source === "google_books" && isAdmin && externalLink;
 
   return (
     <Card
