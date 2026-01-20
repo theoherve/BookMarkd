@@ -1,10 +1,10 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { SearchUser } from "@/features/search/types";
 import FollowRequestButton from "@/components/profile/follow-request-button";
@@ -16,6 +16,7 @@ type UserResultCardProps = {
 };
 
 const UserResultCard = ({ user, initialFollowStatus = "not_following" }: UserResultCardProps) => {
+  const router = useRouter();
 
   const avatarInitials = user.displayName
     .split(" ")
@@ -24,8 +25,34 @@ const UserResultCard = ({ user, initialFollowStatus = "not_following" }: UserRes
     .toUpperCase()
     .slice(0, 2);
 
+  const handleCardClick = () => {
+    if (user.username) {
+      router.push(`/profiles/${user.username}`);
+    }
+  };
+
+  const handleButtonClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
   return (
-    <Card className="border-border/60 bg-card/80 backdrop-blur transition hover:shadow-sm">
+    <Card
+      className="border-border/60 bg-card/80 backdrop-blur transition hover:shadow-sm cursor-pointer"
+      onClick={user.username ? handleCardClick : undefined}
+      role={user.username ? "button" : undefined}
+      tabIndex={user.username ? 0 : undefined}
+      onKeyDown={
+        user.username
+          ? (e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleCardClick();
+            }
+          }
+          : undefined
+      }
+      aria-label={user.username ? `Voir le profil de ${user.displayName}` : undefined}
+    >
       <CardHeader className="space-y-3">
         <div className="flex items-start gap-4">
           <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-border bg-muted">
@@ -74,14 +101,15 @@ const UserResultCard = ({ user, initialFollowStatus = "not_following" }: UserRes
             {user.stats.booksRead} livre{user.stats.booksRead > 1 ? "s" : ""} lu{user.stats.booksRead > 1 ? "s" : ""}
           </Badge>
         </div>
-        <div className="flex gap-2">
-          {user.username ? (
+        <div className="w-full">
+          {/* {user.username ? (
             <Button
               asChild
               variant="outline"
               size="sm"
-              className="flex-1"
+              className="flex-1 h-9"
               aria-label={`Voir le profil de ${user.displayName}`}
+              onClick={handleButtonClick}
             >
               <Link href={`/profiles/${user.username}`}>Voir le profil</Link>
             </Button>
@@ -89,17 +117,21 @@ const UserResultCard = ({ user, initialFollowStatus = "not_following" }: UserRes
             <Button
               variant="outline"
               size="sm"
-              className="flex-1"
+              className="flex-1 h-9"
               aria-label={`Profil indisponible pour ${user.displayName}`}
               disabled
+              onClick={handleButtonClick}
             >
               Profil indisponible
             </Button>
-          )}
-          <FollowRequestButton
-            targetUserId={user.id}
-            initialStatus={initialFollowStatus}
-          />
+          )} */}
+          <div className="flex-1" onClick={handleButtonClick}>
+            <FollowRequestButton
+              targetUserId={user.id}
+              initialStatus={initialFollowStatus}
+              size="sm"
+            />
+          </div>
         </div>
       </CardContent>
     </Card>

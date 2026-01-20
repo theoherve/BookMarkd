@@ -1,8 +1,9 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useState, useEffect } from "react";
 import { Search, X, Filter } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -17,9 +18,19 @@ import { Badge } from "@/components/ui/badge";
 type SearchTab = "books" | "users";
 
 const SearchClient = () => {
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<SearchTab>("books");
   const [query, setQuery] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
+
+  useEffect(() => {
+    const urlQuery = searchParams.get("q");
+    if (urlQuery) {
+      const decodedQuery = decodeURIComponent(urlQuery);
+      setQuery(decodedQuery);
+      setSubmittedQuery(decodedQuery);
+    }
+  }, [searchParams]);
   const [selectedGenre, setSelectedGenre] = useState<string | undefined>();
   const [minRating, setMinRating] = useState<number | undefined>();
   const [readingStatus, setReadingStatus] = useState<"to_read" | "reading" | "finished" | undefined>();

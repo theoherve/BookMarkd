@@ -10,11 +10,15 @@ import { useOfflineQueue } from "@/hooks/use-offline-queue";
 type FollowRequestButtonProps = {
   targetUserId: string;
   initialStatus?: FollowStatus;
+  className?: string;
+  size?: "default" | "sm" | "lg" | "icon";
 };
 
 const FollowRequestButton = ({
   targetUserId,
   initialStatus = "not_following",
+  className,
+  size = "sm",
 }: FollowRequestButtonProps) => {
   const [status, setStatus] = useState<FollowStatus>(initialStatus);
   const [isPending, startTransition] = useTransition();
@@ -75,12 +79,13 @@ const FollowRequestButton = ({
 
   if (status === "following") {
     return (
-      <div className="space-y-2">
+      <div className="w-full">
         <Button
-          variant="outline"
+          variant="destructive"
           onClick={handleUnfollow}
           disabled={isPending}
           aria-label="Se désabonner"
+          className="w-full"
         >
           Se désabonner
         </Button>
@@ -93,12 +98,13 @@ const FollowRequestButton = ({
 
   if (status === "request_pending") {
     return (
-      <div className="space-y-2">
+      <div className="w-full">
         <Button
           variant="outline"
           onClick={handleCancel}
           disabled={isPending}
           aria-label="Annuler la demande"
+          className="w-full"
         >
           Demande envoyée
         </Button>
@@ -110,11 +116,12 @@ const FollowRequestButton = ({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="w-full">
       <Button
         onClick={handleRequest}
         disabled={isPending}
         aria-label="Demander à suivre"
+        className="w-full"
       >
         Demander à suivre
       </Button>

@@ -26,7 +26,7 @@ const RatingForm = ({ bookId, currentRating }: RatingFormProps) => {
 
   const handleStarClick = (starValue: number) => {
     const currentDisplay = selectedRating ?? confirmedRating ?? 0;
-    
+
     // Si on clique sur la même étoile que la note actuellement affichée
     if (currentDisplay === starValue) {
       // Passer à la note avec 0.5
@@ -41,7 +41,7 @@ const RatingForm = ({ bookId, currentRating }: RatingFormProps) => {
     if (selectedRating === null) {
       return;
     }
-    
+
     const previousRating = confirmedRating;
     setConfirmedRating(selectedRating);
     startTransition(async () => {
@@ -62,7 +62,7 @@ const RatingForm = ({ bookId, currentRating }: RatingFormProps) => {
 
   const getStarState = (starValue: number) => {
     const rating = displayRating ?? 0;
-    
+
     if (rating >= starValue) {
       return "full";
     }
@@ -83,7 +83,7 @@ const RatingForm = ({ bookId, currentRating }: RatingFormProps) => {
         <div className="flex items-center gap-1">
           {stars.map((star) => {
             const state = getStarState(star);
-            
+
             return (
               <button
                 key={star}
@@ -94,16 +94,15 @@ const RatingForm = ({ bookId, currentRating }: RatingFormProps) => {
                 className="relative inline-flex h-8 w-8 items-center justify-center text-2xl transition hover:scale-110 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {/* Étoile de fond (vide) */}
-                <span className="text-muted-foreground">★</span>
+                <span className="text-muted-foreground drop-shadow-[0_0_16px_rgba(214,176,135)]">★</span>
                 {/* Étoile colorée (pleine ou partielle) */}
                 <span
-                  className={`absolute inset-0 flex items-center justify-center overflow-hidden ${
-                    state === "full"
-                      ? "text-accent-foreground"
-                      : state === "half"
-                        ? "text-accent-foreground"
-                        : "text-transparent"
-                  }`}
+                  className={`absolute inset-0 flex items-center justify-center overflow-hidden ${state === "full"
+                    ? "text-[#c4a652]"
+                    : state === "half"
+                      ? "text-[#c4a652]"
+                      : "text-transparent"
+                    }`}
                   style={
                     state === "half"
                       ? { clipPath: "inset(0 50% 0 0)" }

@@ -1,7 +1,10 @@
 "use client";
 
+import { useState, useTransition, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { formatRating } from "@/lib/utils";
@@ -15,9 +18,10 @@ import {
 } from "@/components/ui/card";
 import type { SearchBook } from "@/features/search/types";
 import AddToReadlistButton from "@/components/search/add-to-readlist-button";
-import ImportOpenLibraryButton from "@/components/search/import-open-library-button";
-import ImportGoogleBooksButton from "@/components/search/import-google-books-button";
 import { Button } from "@/components/ui/button";
+import { importGoogleBooksBook } from "@/server/actions/import-google-books";
+import { importOpenLibraryBook } from "@/server/actions/import-open-library";
+import { checkUserAdminStatus } from "@/lib/auth/admin";
 
 type SearchResultCardProps = {
   book: SearchBook;
@@ -41,10 +45,97 @@ const buildExternalLink = (bookId: string, source: SearchBook["source"]) => {
 };
 
 const SearchResultCard = ({ book }: SearchResultCardProps) => {
+  const { data: session } = useSession();
+  const router = useRouter();
   const isSupabaseBook = book.source === "supabase";
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isImporting, startTransition] = useTransition();
+  const [importError, setImportError] = useState<string | null>(null);
+
+  // Vérifier le statut admin au chargement
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (session?.user?.id) {
+        const adminStatus = await checkUserAdminStatus(session.user.id);
+        setIsAdmin(adminStatus);
+      }
+    };
+    checkAdmin();
+  }, [session?.user?.id]);
+
+  const handleCardClick = () => {
+    if (isSupabaseBook) {
+      // Pour les livres déjà dans BookMarkd, rediriger vers la fiche
+      router.push(`/books/${generateBookSlug(book.title, book.author)}`);
+      return;
+    }
+
+    // Pour les livres externes, importer automatiquement
+    setImportError(null);
+    startTransition(async () => {
+      try {
+        const result =
+          book.source === "google_books"
+            ? await importGoogleBooksBook({
+              googleBooksId: book.id,
+              title: book.title,
+              author: book.author,
+              coverUrl: book.coverUrl ?? undefined,
+              publicationYear: book.publicationYear ?? undefined,
+              summary: book.summary ?? undefined,
+            })
+            : await importOpenLibraryBook({
+              openLibraryId: book.id,
+              title: book.title,
+              author: book.author,
+              coverUrl: book.coverUrl ?? undefined,
+              publicationYear: book.publicationYear ?? undefined,
+              summary: book.summary ?? undefined,
+            });
+
+        if (result.success) {
+          // Rediriger vers la fiche du livre importé
+          router.push(`/books/${generateBookSlug(book.title, book.author)}`);
+        } else {
+          setImportError(result.message);
+        }
+      } catch (error) {
+        console.error("[SearchResultCard] Import error:", error);
+        setImportError("Une erreur est survenue lors de l'import.");
+      }
+    });
+  };
+
+  const externalLink = buildExternalLink(book.id, book.source);
+  const showGoogleBooksLink = book.source === "google_books" && isAdmin && externalLink;
 
   return (
-    <Card className="flex h-full flex-col overflow-hidden border-border/70 bg-card/80 transition hover:shadow-md">
+    <Card
+      className={`flex h-full flex-col overflow-hidden border-border/70 bg-card/80 transition hover:shadow-md ${!isSupabaseBook && !isImporting
+        ? "cursor-pointer"
+        : isImporting
+          ? "opacity-60 cursor-wait"
+          : ""
+        }`}
+      onClick={!isSupabaseBook ? handleCardClick : undefined}
+      role={!isSupabaseBook ? "button" : undefined}
+      tabIndex={!isSupabaseBook ? 0 : undefined}
+      onKeyDown={
+        !isSupabaseBook
+          ? (e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleCardClick();
+            }
+          }
+          : undefined
+      }
+      aria-label={
+        !isSupabaseBook
+          ? `Importer ${book.title} par ${book.author} dans BookMarkd`
+          : undefined
+      }
+    >
       <CardHeader className="flex flex-row gap-4">
         <div className="relative h-28 w-20 flex-shrink-0 overflow-hidden rounded-md border border-border/40 bg-muted">
           {book.coverUrl ? (
@@ -56,7 +147,7 @@ const SearchResultCard = ({ book }: SearchResultCardProps) => {
               className="object-cover"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
+            <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground p-1">
               Pas de couverture
             </div>
           )}
@@ -101,11 +192,11 @@ const SearchResultCard = ({ book }: SearchResultCardProps) => {
             livre.
           </p>
         )}
-        {book.reason ? (
+        {/* {book.reason ? (
           <p className="text-xs text-accent-foreground">{book.reason}</p>
-        ) : null}
+        ) : null} */}
       </CardContent>
-      <CardFooter className="flex flex-col gap-3 border-t border-border/60 bg-card/40 p-4">
+      {/* <CardFooter className="flex flex-col gap-3 border-t border-border/60 bg-card/40 p-4">
         {isSupabaseBook ? (
           <>
             <AddToReadlistButton bookId={book.id} />
@@ -116,48 +207,38 @@ const SearchResultCard = ({ book }: SearchResultCardProps) => {
             </Button>
           </>
         ) : (
-          <div className="space-y-2">
-            {(() => {
-              const externalLink = buildExternalLink(book.id, book.source);
-              return externalLink ? (
-                <Button variant="outline" asChild>
-                  <a
-                    href={externalLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {book.source === "google_books"
-                      ? "Ouvrir sur Google Books"
-                      : "Ouvrir sur Open Library"}
-                  </a>
-                </Button>
-              ) : null;
-            })()}
-            {book.source === "google_books" ? (
-              <ImportGoogleBooksButton
-                googleBooksId={book.id}
-                title={book.title}
-                author={book.author}
-                coverUrl={book.coverUrl ?? undefined}
-                publicationYear={book.publicationYear ?? undefined}
-                summary={book.summary ?? undefined}
-              />
+          <div className="space-y-2 w-full">
+            {isImporting ? (
+              <p className="text-sm text-muted-foreground text-center">
+                Import en cours...
+              </p>
+            ) : importError ? (
+              <p className="text-sm text-destructive text-center">{importError}</p>
             ) : (
-              <ImportOpenLibraryButton
-                openLibraryId={book.id}
-                title={book.title}
-                author={book.author}
-                coverUrl={book.coverUrl ?? undefined}
-                publicationYear={book.publicationYear ?? undefined}
-                summary={book.summary ?? undefined}
-              />
+              <p className="text-xs text-muted-foreground text-center">
+                Cliquez sur la carte pour importer ce livre dans BookMarkd
+              </p>
             )}
+            {showGoogleBooksLink ? (
+              <Button
+                variant="outline"
+                asChild
+                onClick={(e) => e.stopPropagation()}
+              >
+                <a
+                  href={externalLink ?? undefined}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Ouvrir sur Google Books
+                </a>
+              </Button>
+            ) : null}
           </div>
         )}
-      </CardFooter>
+      </CardFooter> */}
     </Card>
   );
 };
 
 export default SearchResultCard;
-
