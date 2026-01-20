@@ -20,7 +20,7 @@ type SearchTab = "books" | "users";
 const SearchClient = () => {
   const searchParams = useSearchParams();
   const urlQuery = searchParams.get("q");
-  const initialQuery = urlQuery ? decodeURIComponent(urlQuery) : "";
+  const initialQuery = useMemo(() => (urlQuery ? decodeURIComponent(urlQuery) : ""), [urlQuery]);
   const [activeTab, setActiveTab] = useState<SearchTab>("books");
   const [query, setQuery] = useState(initialQuery);
   const [submittedQuery, setSubmittedQuery] = useState(initialQuery);
@@ -30,14 +30,16 @@ const SearchClient = () => {
     const currentUrlQuery = searchParams.get("q");
     if (currentUrlQuery !== lastProcessedQueryRef.current) {
       lastProcessedQueryRef.current = currentUrlQuery;
-      if (currentUrlQuery) {
-        const decodedQuery = decodeURIComponent(currentUrlQuery);
-        setQuery(decodedQuery);
-        setSubmittedQuery(decodedQuery);
-      } else {
-        setQuery("");
-        setSubmittedQuery("");
-      }
+      queueMicrotask(() => {
+        if (currentUrlQuery) {
+          const decodedQuery = decodeURIComponent(currentUrlQuery);
+          setQuery(decodedQuery);
+          setSubmittedQuery(decodedQuery);
+        } else {
+          setQuery("");
+          setSubmittedQuery("");
+        }
+      });
     }
   }, [searchParams]);
   const [selectedGenre, setSelectedGenre] = useState<string | undefined>();

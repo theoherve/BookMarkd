@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useTransition } from "react";
 import Image from "next/image";
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +16,6 @@ import {
 import type { SearchBook } from "@/features/search/types";
 import { importGoogleBooksBook } from "@/server/actions/import-google-books";
 import { importOpenLibraryBook } from "@/server/actions/import-open-library";
-import { checkUserAdminStatus } from "@/lib/auth/admin";
 
 type SearchResultCardProps = {
   book: SearchBook;
@@ -29,34 +27,10 @@ const sourceBadges: Record<SearchBook["source"], string> = {
   google_books: "Google Books",
 };
 
-const buildExternalLink = (bookId: string, source: SearchBook["source"]) => {
-  if (source === "google_books") {
-    const volumeId = bookId.replace("googlebooks:", "");
-    return `https://books.google.com/books?id=${volumeId}`;
-  }
-  if (source === "open_library") {
-    return `https://openlibrary.org${bookId.replace("openlib:", "/works/")}`;
-  }
-  return null;
-};
-
 const SearchResultCard = ({ book }: SearchResultCardProps) => {
-  const { data: session } = useSession();
   const router = useRouter();
   const isSupabaseBook = book.source === "supabase";
-  const [isAdmin, setIsAdmin] = useState(false);
   const [isImporting, startTransition] = useTransition();
-
-  // Vérifier le statut admin au chargement
-  useEffect(() => {
-    const checkAdmin = async () => {
-      if (session?.user?.id) {
-        const adminStatus = await checkUserAdminStatus(session.user.id);
-        setIsAdmin(adminStatus);
-      }
-    };
-    checkAdmin();
-  }, [session?.user?.id]);
 
   const handleCardClick = () => {
     if (isSupabaseBook) {
@@ -96,8 +70,6 @@ const SearchResultCard = ({ book }: SearchResultCardProps) => {
       }
     });
   };
-
-  const externalLink = buildExternalLink(book.id, book.source);
 
   return (
     <Card

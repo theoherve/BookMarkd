@@ -129,7 +129,6 @@ const UserResultCard = ({ user, initialFollowStatus = "not_following" }: UserRes
             <FollowRequestButton
               targetUserId={user.id}
               initialStatus={initialFollowStatus}
-              size="sm"
             />
           </div>
         </div>
