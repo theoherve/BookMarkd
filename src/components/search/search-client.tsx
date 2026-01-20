@@ -1,8 +1,9 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useState, useEffect, useRef } from "react";
 import { Search, X, Filter } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -17,9 +18,30 @@ import { Badge } from "@/components/ui/badge";
 type SearchTab = "books" | "users";
 
 const SearchClient = () => {
+  const searchParams = useSearchParams();
+  const urlQuery = searchParams.get("q");
+  const initialQuery = useMemo(() => (urlQuery ? decodeURIComponent(urlQuery) : ""), [urlQuery]);
   const [activeTab, setActiveTab] = useState<SearchTab>("books");
-  const [query, setQuery] = useState("");
-  const [submittedQuery, setSubmittedQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
+  const [submittedQuery, setSubmittedQuery] = useState(initialQuery);
+  const lastProcessedQueryRef = useRef<string | null>(urlQuery);
+
+  useEffect(() => {
+    const currentUrlQuery = searchParams.get("q");
+    if (currentUrlQuery !== lastProcessedQueryRef.current) {
+      lastProcessedQueryRef.current = currentUrlQuery;
+      queueMicrotask(() => {
+        if (currentUrlQuery) {
+          const decodedQuery = decodeURIComponent(currentUrlQuery);
+          setQuery(decodedQuery);
+          setSubmittedQuery(decodedQuery);
+        } else {
+          setQuery("");
+          setSubmittedQuery("");
+        }
+      });
+    }
+  }, [searchParams]);
   const [selectedGenre, setSelectedGenre] = useState<string | undefined>();
   const [minRating, setMinRating] = useState<number | undefined>();
   const [readingStatus, setReadingStatus] = useState<"to_read" | "reading" | "finished" | undefined>();

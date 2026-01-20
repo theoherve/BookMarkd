@@ -1,10 +1,7 @@
-import Link from "next/link";
-
 import AppShell from "@/components/layout/app-shell";
 import FeedPreview from "@/components/feed/feed-preview";
+import HomeSearchBar from "@/components/search/home-search-bar";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 
 const HomePage = () => {
   return (
@@ -23,7 +20,8 @@ const HomePage = () => {
               statistiques personnelles. Tout est prêt, choisissez votre prochaine action.
             </p>
           </div>
-          <div className="grid gap-4 md:grid-cols-3">
+          <HomeSearchBar />
+          {/* <div className="grid gap-4 md:grid-cols-3">
             <Card className="border-border/60 bg-card/80 backdrop-blur">
               <CardHeader>
                 <CardTitle className="text-xl font-semibold text-foreground">Fil d’actualité</CardTitle>
@@ -69,7 +67,9 @@ const HomePage = () => {
                 </Button>
               </CardContent>
             </Card>
-          </div>
+          </div> */}
+
+
         </section>
 
         <section className="space-y-4">
