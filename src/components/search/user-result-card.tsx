@@ -63,6 +63,7 @@ const UserResultCard = ({ user, initialFollowStatus = "not_following" }: UserRes
                 fill
                 sizes="64px"
                 className="object-cover"
+                unoptimized
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-muted-foreground">

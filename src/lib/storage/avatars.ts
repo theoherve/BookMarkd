@@ -39,7 +39,7 @@ export const getUserAvatarUrl = async (
   const existsInStorage = await avatarExistsInStorage(userId);
   
   if (existsInStorage) {
-    const storageUrl = getAvatarPublicUrl(userId);
+    const storageUrl = await getAvatarPublicUrl(userId);
     if (storageUrl) {
       return storageUrl;
     }

@@ -78,6 +78,7 @@ const ProfilePage = async () => {
                   fill
                   className="object-cover"
                   sizes="96px"
+                  unoptimized
                 />
               ) : (
                 <span className="flex h-full w-full items-center justify-center text-2xl font-semibold text-foreground">

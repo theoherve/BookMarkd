@@ -67,6 +67,7 @@ const BookReadersList = ({ readers }: BookReadersListProps) => {
                           fill
                           sizes="40px"
                           className="object-cover"
+                          unoptimized
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-muted-foreground">
@@ -126,6 +127,7 @@ const BookReadersList = ({ readers }: BookReadersListProps) => {
                           fill
                           sizes="40px"
                           className="object-cover"
+                          unoptimized
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-muted-foreground">
@@ -173,6 +175,7 @@ const BookReadersList = ({ readers }: BookReadersListProps) => {
                           fill
                           sizes="40px"
                           className="object-cover"
+                          unoptimized
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-muted-foreground">

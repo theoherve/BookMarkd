@@ -116,6 +116,7 @@ const ReviewItem = ({
               alt={`Avatar ${review.user.displayName}`}
               fill
               sizes="40px"
+              unoptimized
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
