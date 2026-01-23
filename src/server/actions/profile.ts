@@ -22,7 +22,6 @@ const requireSession = async () => {
 type UpdateProfileInput = {
   displayName?: string;
   bio?: string | null;
-  avatarUrl?: string | null;
 };
 
 export const updateProfile = async (
@@ -34,7 +33,6 @@ export const updateProfile = async (
     const updateData: {
       displayName?: string;
       bio?: string | null;
-      avatarUrl?: string | null;
     } = {};
 
     if (input.displayName !== undefined) {
@@ -52,19 +50,12 @@ export const updateProfile = async (
       updateData.bio = input.bio?.trim() || null;
     }
 
-    if (input.avatarUrl !== undefined) {
-      updateData.avatarUrl = input.avatarUrl?.trim() || null;
-    }
-
     const payload: Record<string, unknown> = {};
     if (updateData.displayName !== undefined) {
       payload["display_name"] = updateData.displayName;
     }
     if (updateData.bio !== undefined) {
       payload["bio"] = updateData.bio;
-    }
-    if (updateData.avatarUrl !== undefined) {
-      payload["avatar_url"] = updateData.avatarUrl;
     }
 
     if (Object.keys(payload).length > 0) {

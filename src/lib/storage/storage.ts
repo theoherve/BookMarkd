@@ -5,7 +5,7 @@ const supabase = createSupabaseServiceClient();
 // Buckets constants
 export const STORAGE_BUCKETS = {
   COVERS: "covers",
-  AVATARS: "avatars",
+  AVATARS: "avatar",
 } as const;
 
 /**
@@ -33,7 +33,7 @@ export const getCoverStoragePath = (bookId: string, extension: string = "jpg"): 
  * Obtient le chemin complet d'un avatar dans Supabase Storage
  */
 export const getAvatarStoragePath = (userId: string, extension: string = "jpg"): string => {
-  return `${STORAGE_BUCKETS.AVATARS}/${generateAvatarFileName(userId, extension)}`;
+  return generateAvatarFileName(userId, extension);
 };
 
 /**
@@ -47,11 +47,37 @@ export const getCoverPublicUrl = (bookId: string): string | null => {
 
 /**
  * Obtient l'URL publique d'un avatar depuis Supabase Storage
+ * Cherche le fichier réel avec n'importe quelle extension
  */
-export const getAvatarPublicUrl = (userId: string): string | null => {
-  const path = getAvatarStoragePath(userId);
-  const { data } = supabase.storage.from(STORAGE_BUCKETS.AVATARS).getPublicUrl(path);
-  return data.publicUrl;
+export const getAvatarPublicUrl = async (userId: string): Promise<string | null> => {
+  try {
+    // Lister les fichiers pour trouver celui qui correspond à l'userId
+    const { data: files, error } = await supabase.storage
+      .from(STORAGE_BUCKETS.AVATARS)
+      .list("", {
+        search: userId,
+      });
+
+    if (error || !files || files.length === 0) {
+      return null;
+    }
+
+    // Trouver le fichier qui commence par userId.
+    const avatarFile = files.find((file) => file.name.startsWith(`${userId}.`));
+    
+    if (!avatarFile) {
+      return null;
+    }
+
+    // Générer l'URL publique avec le nom de fichier réel
+    const { data } = supabase.storage
+      .from(STORAGE_BUCKETS.AVATARS)
+      .getPublicUrl(avatarFile.name);
+    
+    return data.publicUrl;
+  } catch {
+    return null;
+  }
 };
 
 /**
@@ -191,7 +217,7 @@ export const uploadAvatar = async (
       return null;
     }
 
-    const publicUrl = getAvatarPublicUrl(userId);
+    const publicUrl = await getAvatarPublicUrl(userId);
     return publicUrl ? { path: data.path, publicUrl } : null;
   } catch (error) {
     console.error("[storage] Error uploading avatar:", error);

@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, useState, useTransition } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 import { Input } from "@/components/ui/input";
@@ -16,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { updateProfile } from "@/server/actions/profile";
+import AvatarUpload from "@/components/profile/avatar-upload";
 
 type ProfileEditModalProps = {
   initialDisplayName: string;
@@ -37,7 +37,6 @@ const ProfileEditModal = ({
   const router = useRouter();
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [bio, setBio] = useState(initialBio ?? "");
-  const [avatarUrl, setAvatarUrl] = useState(initialAvatarUrl ?? "");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -48,7 +47,6 @@ const ProfileEditModal = ({
       const result = await updateProfile({
         displayName,
         bio: bio.trim() || null,
-        avatarUrl: avatarUrl.trim() || null,
       });
       if (result.success) {
         setFeedback("Profil mis à jour avec succès.");
@@ -75,38 +73,13 @@ const ProfileEditModal = ({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="flex items-center gap-6">
-            <div className="relative h-24 w-24 overflow-hidden rounded-full border-2 border-border bg-muted flex-shrink-0">
-              {avatarUrl ? (
-                <Image
-                  src={avatarUrl}
-                  alt={displayName}
-                  fill
-                  className="object-cover"
-                  sizes="96px"
-                />
-              ) : (
-                <span className="flex h-full w-full items-center justify-center text-2xl font-semibold text-foreground">
-                  {avatarInitials}
-                </span>
-              )}
-            </div>
-            <div className="flex-1 space-y-2">
-              <Label htmlFor="avatarUrl">URL de la photo de profil</Label>
-              <Input
-                id="avatarUrl"
-                name="avatarUrl"
-                type="url"
-                placeholder="https://example.com/avatar.jpg"
-                value={avatarUrl}
-                onChange={(event) => setAvatarUrl(event.target.value)}
-                autoComplete="off"
-              />
-              <p className="text-xs text-muted-foreground">
-                Entrez l&apos;URL d&apos;une image pour votre photo de profil.
-              </p>
-            </div>
-          </div>
+          <AvatarUpload
+            currentAvatarUrl={initialAvatarUrl}
+            avatarInitials={avatarInitials}
+            onUploadSuccess={() => {
+              router.refresh();
+            }}
+          />
 
           <div className="space-y-2">
             <Label htmlFor="displayName">Nom affiché</Label>

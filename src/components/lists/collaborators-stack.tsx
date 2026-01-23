@@ -54,6 +54,7 @@ const CollaboratorsStack = ({ owner, collaborators }: CollaboratorsStackProps) =
                 fill
                 className="object-cover"
                 sizes="40px"
+                unoptimized
               />
             ) : (
               <span className="flex h-full w-full items-center justify-center text-xs font-semibold text-foreground">
