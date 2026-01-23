@@ -34,7 +34,7 @@ const SearchResultCard = ({ book }: SearchResultCardProps) => {
 
   const handleCardClick = () => {
     if (isSupabaseBook) {
-      // Pour les livres déjà dans BookMarkd, rediriger vers la fiche
+      // Pour les livres déjà dans BookMarkd (y compris les livres importés), rediriger vers la fiche
       router.push(`/books/${generateBookSlug(book.title, book.author)}`);
       return;
     }
@@ -73,33 +73,27 @@ const SearchResultCard = ({ book }: SearchResultCardProps) => {
 
   return (
     <Card
-      className={`flex h-full flex-col overflow-hidden border-border/70 bg-card/80 transition hover:shadow-md ${!isSupabaseBook && !isImporting
-        ? "cursor-pointer"
-        : isImporting
-          ? "opacity-60 cursor-wait"
-          : ""
+      className={`flex h-full flex-col overflow-hidden border-border/70 bg-card/80 transition hover:shadow-md ${isImporting
+        ? "opacity-60 cursor-wait"
+        : "cursor-pointer"
         }`}
-      onClick={!isSupabaseBook ? handleCardClick : undefined}
-      role={!isSupabaseBook ? "button" : undefined}
-      tabIndex={!isSupabaseBook ? 0 : undefined}
-      onKeyDown={
-        !isSupabaseBook
-          ? (e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              handleCardClick();
-            }
-          }
-          : undefined
-      }
+      onClick={handleCardClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleCardClick();
+        }
+      }}
       aria-label={
-        !isSupabaseBook
-          ? `Importer ${book.title} par ${book.author} dans BookMarkd`
-          : undefined
+        isSupabaseBook
+          ? `Voir ${book.title} par ${book.author}`
+          : `Importer ${book.title} par ${book.author} dans BookMarkd`
       }
     >
       <CardHeader className="flex flex-row gap-4">
-        <div className="relative h-28 w-20 flex-shrink-0 overflow-hidden rounded-md border border-border/40 bg-muted">
+        <div className="relative h-28 w-20 shrink-0 overflow-hidden rounded-md border border-border/40 bg-muted">
           {book.coverUrl ? (
             <Image
               src={book.coverUrl}
