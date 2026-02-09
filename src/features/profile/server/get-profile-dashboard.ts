@@ -368,7 +368,7 @@ export const getProfileDashboard = async (
         ),
     ]);
 
-    // Étape 8 : Récupérer la read list (sérialisée à la fin)
+    // Étape 8 : Récupérer toute la read list (tous les livres de l'utilisateur)
     const readListData = await db.client
       .from("user_books")
       .select(
@@ -383,7 +383,6 @@ export const getProfileDashboard = async (
       )
       .eq("user_id", userId)
       .order("updated_at", { ascending: false })
-      .limit(20)
       .then((r) =>
         db.toCamel<
           Array<{
