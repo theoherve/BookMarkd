@@ -71,7 +71,7 @@ export const getPublicProfile = async (
     // Résoudre l'URL de l'avatar avec priorité Supabase Storage
     const resolvedAvatarUrl = await getUserAvatarUrl(user.id, user.avatarUrl);
 
-    // 2) Recent user_books with book join
+    // 2) Tous les user_books avec jointure book (pour stats correctes et affichage de tous les livres)
     const { data: userBooksRows, error: userBooksError } = await db.client
       .from("user_books")
       .select(
@@ -88,8 +88,7 @@ export const getPublicProfile = async (
       `,
       )
       .eq("user_id", user.id)
-      .order("updated_at", { ascending: false })
-      .limit(10);
+      .order("updated_at", { ascending: false });
     if (userBooksError) throw userBooksError;
 
     const userBooks = (userBooksRows ?? []).map((row) =>
