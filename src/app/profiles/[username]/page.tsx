@@ -3,15 +3,14 @@ import Image from "next/image";
 import Link from "next/link";
 
 import AppShell from "@/components/layout/app-shell";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getPublicProfile } from "@/features/profile/server/get-public-profile";
 import FollowRequestButton from "@/components/profile/follow-request-button";
+import ProfileRecentBooksSection from "@/components/profile/profile-recent-books-section";
 import { getFollowStatus } from "@/server/actions/follow";
 import { getCurrentSession } from "@/lib/auth/session";
 import { resolveSessionUserId } from "@/lib/auth/user";
 import { generateBookSlug } from "@/lib/slug";
-import { formatRating } from "@/lib/utils";
 
 type ProfilePageProps = {
   params: Promise<{
@@ -193,67 +192,7 @@ const PublicProfilePage = async ({ params }: ProfilePageProps) => {
         ) : null}
 
         {profile.recentBooks.length > 0 ? (
-          <section className="space-y-6">
-            <h2 className="text-2xl font-semibold text-foreground">Lectures récentes</h2>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {profile.recentBooks.map((book) => {
-                const bookSlug = generateBookSlug(book.title, book.author);
-                const statusLabels = {
-                  to_read: "À lire",
-                  reading: "En cours",
-                  finished: "Terminé",
-                };
-
-                return (
-                  <Card
-                    key={book.id}
-                    className="border-border/60 bg-card/80 backdrop-blur transition hover:shadow-sm"
-                  >
-                    <CardHeader className="flex flex-row gap-4">
-                      <div className="relative h-20 w-14 flex-shrink-0 overflow-hidden rounded-md border border-border/40 bg-muted">
-                        {book.coverUrl ? (
-                          <Image
-                            src={book.coverUrl}
-                            alt={book.title}
-                            fill
-                            sizes="56px"
-                            className="object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
-                            Pas de couverture
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0 space-y-1">
-                        <CardTitle className="text-base">
-                          <Link
-                            href={`/books/${bookSlug}`}
-                            className="hover:text-accent-foreground transition-colors line-clamp-2"
-                          >
-                            {book.title}
-                          </Link>
-                        </CardTitle>
-                        <CardDescription className="text-sm line-clamp-1">
-                          {book.author}
-                        </CardDescription>
-                        <div className="flex flex-wrap gap-2">
-                          <Badge variant="outline" className="text-xs">
-                            {statusLabels[book.status]}
-                          </Badge>
-                          {book.rating ? (
-                            <Badge variant="outline" className="text-xs">
-                              {formatRating(book.rating)} / 5
-                            </Badge>
-                          ) : null}
-                        </div>
-                      </div>
-                    </CardHeader>
-                  </Card>
-                );
-              })}
-            </div>
-          </section>
+          <ProfileRecentBooksSection books={profile.recentBooks} />
         ) : null}
 
         {profile.publicLists.length > 0 ? (

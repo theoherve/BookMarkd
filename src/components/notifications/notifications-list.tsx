@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useTransition, useState } from "react";
-import { Check, X } from "lucide-react";
+import { Check, X, UserPlus } from "lucide-react";
 import Link from "next/link";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getNotifications, markAllAsRead, markAsRead } from "@/server/actions/notifications";
-import { acceptFollowRequest, rejectFollowRequest, findFollowRequestByRequester } from "@/server/actions/follow";
+import { acceptFollowRequest, rejectFollowRequest, findFollowRequestByRequester, requestFollow } from "@/server/actions/follow";
 import { generateBookSlug } from "@/lib/slug";
 
 type UiNotification = {
@@ -157,6 +157,8 @@ const NotificationsList = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
   const [errorMessages, setErrorMessages] = useState<Record<string, string>>({});
+  const [followBackSent, setFollowBackSent] = useState<Record<string, boolean>>({});
+  const [followBackPending, setFollowBackPending] = useState<Record<string, boolean>>({});
 
   const load = async () => {
     const result = await getNotifications(50);
@@ -283,6 +285,30 @@ const NotificationsList = () => {
     });
   };
 
+  const handleFollowBack = (requesterId: string, notificationId: string) => {
+    if (!requesterId || followBackSent[requesterId] || followBackPending[requesterId]) return;
+    setFollowBackPending((prev) => ({ ...prev, [requesterId]: true }));
+    setErrorMessages((prev) => {
+      const next = { ...prev };
+      delete next[notificationId];
+      return next;
+    });
+    requestFollow(requesterId)
+      .then((result) => {
+        if (result.success) {
+          setFollowBackSent((prev) => ({ ...prev, [requesterId]: true }));
+        } else {
+          setErrorMessages((prev) => ({
+            ...prev,
+            [notificationId]: result.message ?? "Impossible d'envoyer la demande.",
+          }));
+        }
+      })
+      .finally(() => {
+        setFollowBackPending((prev) => ({ ...prev, [requesterId]: false }));
+      });
+  };
+
   if (isLoading) {
     return (
       <div className="rounded-2xl border border-border/60 bg-card/60 p-6">
@@ -336,7 +362,7 @@ const NotificationsList = () => {
               <CardContent className="pt-0">
                 {n.type === "follow_request" && !n.readAt ? (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Button
                       variant="default"
                       size="sm"
@@ -367,6 +393,24 @@ const NotificationsList = () => {
                       <X className="h-4 w-4" />
                       Refuser
                     </Button>
+                    {(() => {
+                      const requesterId = (n.payload.requesterId as string) || null;
+                      const sent = requesterId ? followBackSent[requesterId] : false;
+                      const pending = requesterId ? followBackPending[requesterId] : false;
+                      return requesterId ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleFollowBack(requesterId, n.id)}
+                          disabled={isPending || pending || sent}
+                          aria-label={sent ? "Demande de suivi envoyée" : "Suivre en retour"}
+                          className="gap-2"
+                        >
+                          <UserPlus className="h-4 w-4" />
+                          {sent ? "Demande envoyée" : "Suivre en retour"}
+                        </Button>
+                      ) : null;
+                    })()}
                     <Button
                       variant="ghost"
                       size="sm"
