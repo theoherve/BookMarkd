@@ -5,6 +5,7 @@ import { ReactNode } from "react";
 import ActivityCard from "@/components/feed/activity-card";
 import BookFeedCard from "@/components/feed/book-feed-card";
 import RecommendationCard from "@/components/feed/recommendation-card";
+import { condenseActivities } from "@/features/feed/utils/condense-activities";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -47,7 +48,8 @@ const FeedPreview = () => {
     );
   }
 
-  const activities = data.activities.slice(0, MAX_ITEMS);
+  const condensedActivities = condenseActivities(data.activities);
+  const activities = condensedActivities.slice(0, MAX_ITEMS);
   const friendsBooks = data.friendsBooks.slice(0, MAX_ITEMS);
   const recommendations = data.recommendations.slice(0, MAX_ITEMS);
 
@@ -129,7 +131,7 @@ const PreviewSection = ({
 
 const PreviewRow = ({ children }: { children: ReactNode }) => {
   return (
-    <div className="flex items-stretch gap-4 overflow-x-auto pb-2">
+    <div className="flex items-stretch gap-4 overflow-x-auto py-2">
       {children}
     </div>
   );
@@ -137,7 +139,9 @@ const PreviewRow = ({ children }: { children: ReactNode }) => {
 
 const PreviewItem = ({ children }: { children: ReactNode }) => {
   return (
-    <div className="flex h-min-[300px] w-[280px] shrink-0">{children}</div>
+    <div className="flex h-min-[300px] w-[280px] shrink-0 *:min-w-full">
+      {children}
+    </div>
   );
 };
 

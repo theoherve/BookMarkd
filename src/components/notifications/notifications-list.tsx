@@ -126,6 +126,21 @@ const renderNotification = (n: UiNotification) => {
     );
   }
 
+  if (n.type === "feedback_resolved") {
+    const feedbackTitle = (n.payload.feedbackTitle as string) ?? "Votre feedback";
+    return (
+      <>
+        <CardTitle className="text-sm font-medium">
+          Feedback traité
+        </CardTitle>
+        <CardDescription className="text-sm">
+          Votre feedback « {feedbackTitle} » a été marqué comme résolu. Merci pour votre contribution.
+        </CardDescription>
+        {common}
+      </>
+    );
+  }
+
   return (
     <>
       <CardTitle className="text-sm font-medium">Notification</CardTitle>

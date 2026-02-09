@@ -5,10 +5,14 @@ import { revalidatePath } from "next/cache";
 import { getCurrentSession } from "@/lib/auth/session";
 import { resolveSessionUserId } from "@/lib/auth/user";
 import db from "@/lib/supabase/db";
+import { isUserAdmin } from "@/lib/auth/admin";
+import { createNotification } from "@/server/actions/notifications";
 import type {
   CreateFeedbackInput,
   Feedback,
+  FeedbackStatus,
   FeedbackType,
+  FeedbackWithUser,
 } from "@/types/feedback";
 
 type ActionResult =
@@ -150,6 +154,172 @@ export const getUserFeedbacks = async (): Promise<{
     return {
       success: false,
       message: "Une erreur est survenue lors de la récupération des feedbacks.",
+    };
+  }
+};
+
+export const getAllSuggestionsForAdmin = async (): Promise<
+  | { success: true; suggestions: FeedbackWithUser[] }
+  | { success: false; message: string }
+> => {
+  try {
+    const userId = await requireSession();
+
+    const isAdmin = await isUserAdmin(userId);
+    if (!isAdmin) {
+      return {
+        success: false,
+        message: "Accès réservé aux administrateurs.",
+      };
+    }
+
+    const { data: feedbacksData, error: feedbacksError } = await db.client
+      .from("feedbacks")
+      .select("id, user_id, type, title, description, browser_info, url, status, created_at, updated_at")
+      .order("created_at", { ascending: false });
+
+    if (feedbacksError) {
+      console.error("Error fetching feedbacks for admin:", feedbacksError);
+      throw feedbacksError;
+    }
+
+    const rows = feedbacksData ?? [];
+    if (rows.length === 0) {
+      return { success: true, suggestions: [] };
+    }
+
+    const userIds = [...new Set(rows.map((r: { user_id: string }) => r.user_id))];
+    const { data: usersData, error: usersError } = await db.client
+      .from("users")
+      .select("id, display_name, email, username")
+      .in("id", userIds);
+
+    if (usersError) {
+      console.error("Error fetching users for admin feedbacks:", usersError);
+      throw usersError;
+    }
+
+    const usersById = new Map<
+      string,
+      { display_name: string | null; email: string | null; username: string | null }
+    >();
+    for (const u of usersData ?? []) {
+      usersById.set(u.id, {
+        display_name: u.display_name ?? null,
+        email: u.email ?? null,
+        username: u.username ?? null,
+      });
+    }
+
+    const suggestions: FeedbackWithUser[] = rows.map((row: Record<string, unknown>) => {
+      const uid = row.user_id as string;
+      const u = usersById.get(uid) ?? { display_name: null, email: null, username: null };
+      return {
+        id: row.id as string,
+        userId: uid,
+        type: row.type as FeedbackType,
+        title: row.title as string,
+        description: row.description as string,
+        browserInfo: row.browser_info as Feedback["browserInfo"],
+        url: row.url as string | null,
+        status: row.status as Feedback["status"],
+        createdAt: new Date(row.created_at as string),
+        updatedAt: new Date(row.updated_at as string),
+        userDisplayName: u.display_name ?? "—",
+        userEmail: u.email ?? "—",
+        username: u.username ?? null,
+      };
+    });
+
+    return { success: true, suggestions };
+  } catch (error) {
+    if ((error as Error).message === "AUTH_REQUIRED") {
+      return {
+        success: false,
+        message: "Vous devez être connecté·e.",
+      };
+    }
+
+    console.error("Error in getAllSuggestionsForAdmin:", error);
+    return {
+      success: false,
+      message: "Une erreur est survenue lors de la récupération des suggestions.",
+    };
+  }
+};
+
+const VALID_STATUSES: FeedbackStatus[] = ["pending", "reviewed", "resolved", "rejected"];
+
+export const updateFeedbackStatus = async (
+  feedbackId: string,
+  status: FeedbackStatus,
+): Promise<ActionResult> => {
+  try {
+    const userId = await requireSession();
+
+    const isAdmin = await isUserAdmin(userId);
+    if (!isAdmin) {
+      return {
+        success: false,
+        message: "Accès réservé aux administrateurs.",
+      };
+    }
+
+    if (!VALID_STATUSES.includes(status)) {
+      return {
+        success: false,
+        message: "Statut invalide.",
+      };
+    }
+
+    const { data: feedbackRow, error: fetchError } = await db.client
+      .from("feedbacks")
+      .select("user_id, title")
+      .eq("id", feedbackId)
+      .maybeSingle();
+
+    if (fetchError || !feedbackRow) {
+      return {
+        success: false,
+        message: "Feedback introuvable.",
+      };
+    }
+
+    const feedbackUserId = feedbackRow.user_id as string;
+    const feedbackTitle = (feedbackRow.title as string) ?? "";
+
+    const { error: updateError } = await db.client
+      .from("feedbacks")
+      .update({ status })
+      .eq("id", feedbackId);
+
+    if (updateError) {
+      console.error("Error updating feedback status:", updateError);
+      throw updateError;
+    }
+
+    if (status === "resolved") {
+      await createNotification(feedbackUserId, "feedback_resolved", {
+        feedbackId,
+        feedbackTitle,
+      });
+    }
+
+    revalidatePath("/profiles/me");
+
+    return { success: true };
+  } catch (error) {
+    if ((error as Error).message === "AUTH_REQUIRED") {
+      return {
+        success: false,
+        message: "Vous devez être connecté·e.",
+      };
+    }
+
+    console.error("Error in updateFeedbackStatus:", error);
+    return {
+      success: false,
+      message: "Une erreur est survenue lors de la mise à jour du statut.",
     };
   }
 };

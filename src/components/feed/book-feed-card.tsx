@@ -10,6 +10,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import AddToReadlistButton from "@/components/search/add-to-readlist-button";
 import RatingForm from "@/components/books/rating-form";
 import {
@@ -29,6 +34,12 @@ type BookFeedCardProps = {
   item: FeedFriendBook;
 };
 
+const TITLE_MAX_LENGTH = 50;
+
+const truncateTitle = (title: string, maxLength = TITLE_MAX_LENGTH): string => {
+  return title.length > maxLength ? `${title.slice(0, maxLength).trim()}...` : title;
+};
+
 const statusLabels: Record<FeedFriendBook["status"], string> = {
   to_read: "Dans la liste à lire",
   reading: "Lecture en cours",
@@ -40,6 +51,17 @@ const BookFeedCard = ({ item }: BookFeedCardProps) => {
   const bookSlug = generateBookSlug(item.title, item.author);
   const detailHref = `/books/${bookSlug}`;
   const commentHref = `${detailHref}#reviews`;
+  const isTitleTruncated = item.title.length > TITLE_MAX_LENGTH;
+
+  const titleContent = (
+    <Link
+      href={detailHref}
+      className="hover:text-accent-foreground transition-colors"
+      aria-label={`Voir les détails de ${item.title}`}
+    >
+      {truncateTitle(item.title)}
+    </Link>
+  );
 
   return (
     <Card
@@ -56,13 +78,20 @@ const BookFeedCard = ({ item }: BookFeedCardProps) => {
         </Badge>
         <div className="space-y-1">
           <CardTitle className="text-lg font-semibold text-foreground">
-            <Link
-              href={detailHref}
-              className="hover:text-accent-foreground transition-colors"
-              aria-label={`Voir les détails de ${item.title}`}
-            >
-              {item.title}
-            </Link>
+            {isTitleTruncated ? (
+              <Tooltip>
+                <TooltipTrigger asChild>{titleContent}</TooltipTrigger>
+                <TooltipContent
+                  side="top"
+                  align="center"
+                  className="max-w-sm border border-border bg-popover text-popover-foreground text-center shadow-md"
+                >
+                  {item.title}
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              titleContent
+            )}
           </CardTitle>
           <CardDescription className="text-sm text-muted-foreground">
             par {item.author}

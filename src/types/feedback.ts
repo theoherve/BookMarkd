@@ -32,3 +32,9 @@ export type Feedback = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+export type FeedbackWithUser = Feedback & {
+  userDisplayName: string;
+  userEmail: string;
+  username: string | null;
+};

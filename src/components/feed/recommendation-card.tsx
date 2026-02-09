@@ -96,7 +96,7 @@ const RecommendationCard = ({ item }: RecommendationCardProps) => {
           </Tooltip>
           <Badge
             variant="secondary"
-            className="w-fit rounded-full bg-accent/20 px-3 py-1 text-xs font-medium text-accent-foreground"
+            className="w-fit rounded-full bg-accent/20 px-3 py-1 text-xs font-medium text-accent-foreground dark:text-foreground"
             aria-label={`Affinité estimée ${item.score} pour cent`}
           >
             Affinité estimée : {item.score}%
