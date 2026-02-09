@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -6,12 +7,25 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { formatRelativeTimeFromNow } from "@/lib/datetime";
 import { formatRating } from "@/lib/utils";
+import { generateBookSlug } from "@/lib/slug";
 import type { FeedActivity } from "@/features/feed/types";
 
 type ActivityCardProps = {
   item: FeedActivity;
+};
+
+const TITLE_MAX_LENGTH = 50;
+
+const truncateTitle = (title: string | null | undefined, maxLength = TITLE_MAX_LENGTH): string => {
+  if (!title) return "Nouvelle activité";
+  return title.length > maxLength ? `${title.slice(0, maxLength).trim()}...` : title;
 };
 
 const actionLabels: Record<FeedActivity["type"], string> = {
@@ -31,14 +45,24 @@ const ActivityCard = ({ item }: ActivityCardProps) => {
       : null;
 
   const occurredAtLabel = formatRelativeTimeFromNow(item.occurredAt);
-  // Pour les activités, on n'a pas toujours l'auteur, donc on ne peut pas générer le slug
-  // On rendra juste le titre cliquable si on a un bookId dans le payload (à implémenter plus tard)
 
-  return (
+  const bookHref =
+    item.bookId
+      ? `/books/${item.bookId}`
+      : item.bookTitle && item.bookAuthor
+        ? `/books/${generateBookSlug(item.bookTitle, item.bookAuthor)}`
+        : null;
+
+  const isTitleTruncated =
+    item.bookTitle != null && item.bookTitle.length > TITLE_MAX_LENGTH;
+
+  const actionLabel = item.combinedAction ?? actionLabels[item.type];
+
+  const card = (
     <Card
       role="article"
-      tabIndex={0}
-      aria-label={`${item.userName} ${actionLabels[item.type]} ${item.bookTitle ?? "contenu"}`}
+      tabIndex={bookHref ? 0 : undefined}
+      aria-label={`${item.userName} ${actionLabel} ${item.bookTitle ?? "contenu"}`}
       className="flex h-full w-full flex-col transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-accent"
     >
       <CardHeader className="flex flex-col gap-3">
@@ -46,7 +70,7 @@ const ActivityCard = ({ item }: ActivityCardProps) => {
           <p className="text-sm font-semibold text-foreground">
             {item.userName}{" "}
             <span className="font-normal text-muted-foreground">
-              {actionLabels[item.type]}
+              {actionLabel}
             </span>
           </p>
           <CardDescription className="text-xs text-muted-foreground">
@@ -54,7 +78,7 @@ const ActivityCard = ({ item }: ActivityCardProps) => {
           </CardDescription>
         </div>
         <CardTitle className="text-base font-semibold text-foreground">
-          {item.bookTitle ?? "Nouvelle activité"}
+          {truncateTitle(item.bookTitle)}
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col space-y-3 overflow-y-auto">
@@ -80,13 +104,42 @@ const ActivityCard = ({ item }: ActivityCardProps) => {
         ) : null}
         {!item.note && typeof item.rating !== "number" ? (
           <p className="text-sm text-muted-foreground">
-            {item.userName} {actionLabels[item.type]}{" "}
-            {item.bookTitle ?? "ce contenu"}.
+            {item.userName} {actionLabel}{" "}
+            {item.bookTitle ? truncateTitle(item.bookTitle) : "ce contenu"}.
           </p>
         ) : null}
       </CardContent>
     </Card>
   );
+
+  const cardContent = isTitleTruncated ? (
+    <Tooltip>
+      <TooltipTrigger asChild>{card}</TooltipTrigger>
+      <TooltipContent
+        side="top"
+        align="center"
+        className="max-w-sm border border-border bg-popover text-popover-foreground text-center shadow-md"
+      >
+        {item.bookTitle}
+      </TooltipContent>
+    </Tooltip>
+  ) : (
+    card
+  );
+
+  if (bookHref) {
+    return (
+      <Link
+        href={bookHref}
+        className="block h-full w-full min-w-0"
+        aria-label={`Voir la fiche du livre ${item.bookTitle ?? ""}`}
+      >
+        {cardContent}
+      </Link>
+    );
+  }
+
+  return cardContent;
 };
 
 export default ActivityCard;

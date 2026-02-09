@@ -3,10 +3,14 @@ export type FeedActivity = {
   type: "rating" | "review" | "status_change" | "list_update" | "follow";
   userName: string;
   userAvatarUrl?: string | null;
+  bookId?: string | null;
   bookTitle?: string | null;
+  bookAuthor?: string | null;
   note?: string | null;
   rating?: number | null;
   occurredAt: string;
+  /** Phrase condensée quand plusieurs activités du même utilisateur sur le même livre sont fusionnées (ex: "a terminé et a mis 5/5") */
+  combinedAction?: string | null;
 };
 
 export type FeedFriendBook = {

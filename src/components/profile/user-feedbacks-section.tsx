@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,16 +12,27 @@ import type { Feedback, FeedbackStatus } from "@/types/feedback";
 
 const statusLabels: Record<FeedbackStatus, string> = {
   pending: "En attente",
-  reviewed: "Examiné",
+  reviewed: "En cours",
   resolved: "Résolu",
   rejected: "Rejeté",
 };
 
-const statusBadgeVariants: Record<FeedbackStatus, "default" | "secondary" | "outline"> = {
-  pending: "secondary",
-  reviewed: "default",
-  resolved: "default",
-  rejected: "outline",
+const statusBadgeStyles: Record<
+  FeedbackStatus,
+  { variant: "default" | "secondary" | "destructive" | "outline"; className?: string }
+> = {
+  pending: { variant: "secondary" },
+  reviewed: {
+    variant: "outline",
+    className:
+      "border-blue-400/60 bg-blue-500/15 text-blue-700 dark:border-blue-400 dark:bg-blue-500/35 dark:text-blue-100",
+  },
+  resolved: {
+    variant: "outline",
+    className:
+      "border-emerald-400/60 bg-emerald-500/15 text-emerald-700 dark:border-emerald-400 dark:bg-emerald-500/35 dark:text-emerald-100",
+  },
+  rejected: { variant: "destructive" },
 };
 
 const typeLabels: Record<Feedback["type"], string> = {
@@ -34,27 +45,43 @@ const UserFeedbacksSection = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchFeedbacks = async () => {
+  const fetchFeedbacks = useCallback(async (showLoading = true) => {
+    if (showLoading) {
       setLoading(true);
       setError(null);
-      try {
-        const result = await getUserFeedbacks();
-        if (result.success) {
-          setFeedbacks(result.feedbacks);
-        } else {
-          setError(result.message);
-        }
-      } catch (err) {
-        console.error("Error fetching feedbacks:", err);
+    }
+    try {
+      const result = await getUserFeedbacks();
+      if (result.success) {
+        setFeedbacks(result.feedbacks);
+      } else if (showLoading) {
+        setError(result.message);
+      }
+    } catch (err) {
+      console.error("Error fetching feedbacks:", err);
+      if (showLoading) {
         setError("Une erreur est survenue lors du chargement des feedbacks.");
-      } finally {
+      }
+    } finally {
+      if (showLoading) {
         setLoading(false);
       }
-    };
-
-    void fetchFeedbacks();
+    }
   }, []);
+
+  useEffect(() => {
+    void fetchFeedbacks(true);
+  }, [fetchFeedbacks]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void fetchFeedbacks(false);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [fetchFeedbacks]);
 
   if (loading) {
     return (
@@ -128,7 +155,7 @@ const UserFeedbacksSection = () => {
       <CardContent className="space-y-4">
         {feedbacks.map((feedback) => {
           const createdAtLabel = formatRelativeTimeFromNow(feedback.createdAt);
-          const statusVariant = statusBadgeVariants[feedback.status];
+          const badgeStyle = statusBadgeStyles[feedback.status];
 
           return (
             <div
@@ -137,7 +164,10 @@ const UserFeedbacksSection = () => {
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant={statusVariant} className="text-xs">
+                  <Badge
+                    variant={badgeStyle.variant}
+                    className={badgeStyle.className ? `text-xs ${badgeStyle.className}` : "text-xs"}
+                  >
                     {statusLabels[feedback.status]}
                   </Badge>
                   <Badge variant="outline" className="text-xs">

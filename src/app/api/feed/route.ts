@@ -185,16 +185,18 @@ export async function GET() {
         }
       });
 
+      const getTagName = (tag: unknown): string | null => {
+        if (!tag || typeof tag !== "object") return null;
+        const t = Array.isArray(tag) ? tag[0] : (tag as { name?: string | null });
+        return (t as { name?: string | null })?.name ?? null;
+      };
+
       (userBookTags ?? []).forEach((relation) => {
         const bookId = (relation as { book_id: string | null }).book_id;
-        const tag = (relation as { tag: Array<{ id: string; name: string | null }> | null }).tag;
+        const tag = (relation as { tag: unknown }).tag;
+        const tagName = getTagName(tag);
         
-        if (!bookId || !tag || !Array.isArray(tag) || tag.length === 0) {
-          return;
-        }
-
-        const tagName = tag[0]?.name;
-        if (!tagName) {
+        if (!bookId || !tagName) {
           return;
         }
 
@@ -249,14 +251,10 @@ export async function GET() {
 
       (candidateBooks ?? []).forEach((relation) => {
         const bookId = (relation as { book_id: string | null }).book_id;
-        const tag = (relation as { tag: Array<{ name: string | null }> | null }).tag;
+        const tag = (relation as { tag: unknown }).tag;
+        const tagName = getTagName(tag);
         
-        if (!bookId || !tag || !Array.isArray(tag) || tag.length === 0) {
-          return;
-        }
-
-        const tagName = tag[0]?.name;
-        if (!tagName) {
+        if (!bookId || !tagName) {
           return;
         }
 
@@ -439,15 +437,19 @@ export async function GET() {
         .in("book_id", recommendationBookIds);
       if (tagsErr) throw tagsErr;
 
+      const getTagNameFromRelation = (tag: unknown): string | undefined => {
+        if (!tag || typeof tag !== "object") return undefined;
+        const t = Array.isArray(tag) ? tag[0] : (tag as { name?: string | null });
+        return (t as { name?: string | null })?.name ?? undefined;
+      };
+
       const tagRelationsTyped = (tagRelations ?? []) as Array<{
         book_id: string | null;
-        tag: Array<{ name: string | null }> | null;
+        tag: unknown;
       }>;
       tagRelationsTyped.forEach((relation) => {
         const bookId = relation.book_id ?? undefined;
-        const tagName = Array.isArray(relation.tag)
-          ? relation.tag[0]?.name ?? undefined
-          : undefined;
+        const tagName = getTagNameFromRelation(relation.tag);
         if (!bookId || !tagName) {
           return;
         }
@@ -462,6 +464,13 @@ export async function GET() {
       });
     }
 
+    // Helper : le payload est transformé en camelCase par db.toCamel
+    const getPayloadValue = (p: Record<string, unknown>, key: string) => {
+      const camel = p[key.replace(/_([a-z])/g, (_m, c) => c.toUpperCase())];
+      const snake = p[key];
+      return camel ?? snake;
+    };
+
     // Récupérer les IDs des livres manquants dans les payloads
     const bookIdsToFetch = new Set<string>();
     activities.forEach((item) => {
@@ -472,27 +481,36 @@ export async function GET() {
         !Array.isArray(payload)
           ? (payload as Record<string, unknown>)
           : {};
-      
-      const bookId = normalizedPayload.book_id as string | null | undefined;
-      const bookTitle = normalizedPayload.book_title as string | null | undefined;
-      
-      // Si on a un book_id mais pas de book_title, on doit récupérer le titre
-      if (bookId && !bookTitle) {
+
+      const bookId = getPayloadValue(normalizedPayload, "book_id") as string | null | undefined;
+      const bookTitle = getPayloadValue(normalizedPayload, "book_title") as string | null | undefined;
+      const bookAuthor = getPayloadValue(normalizedPayload, "book_author") as string | null | undefined;
+
+      // Si on a un book_id mais pas titre ou auteur, on doit récupérer les détails
+      if (bookId && (!bookTitle || !bookAuthor)) {
         bookIdsToFetch.add(bookId);
       }
     });
 
-    // Récupérer les titres des livres manquants
-    const bookTitlesMap = new Map<string, string>();
+    // Récupérer les titres et auteurs des livres manquants
+    const bookDetailsMap = new Map<
+      string,
+      { title: string; author: string }
+    >();
     if (bookIdsToFetch.size > 0) {
       const { data: books, error: booksError } = await db.client
         .from("books")
-        .select("id, title")
+        .select("id, title, author")
         .in("id", Array.from(bookIdsToFetch));
-      
+
       if (!booksError && books) {
-        (books as Array<{ id: string; title: string }>).forEach((book) => {
-          bookTitlesMap.set(book.id, book.title);
+        (
+          books as Array<{ id: string; title: string; author: string }>
+        ).forEach((book) => {
+          bookDetailsMap.set(book.id, {
+            title: book.title,
+            author: book.author,
+          });
         });
       }
     }
@@ -508,8 +526,8 @@ export async function GET() {
           !Array.isArray(payload)
             ? (payload as Record<string, unknown>)
             : {};
-        
-        const visibility = normalizedPayload.visibility as string | null | undefined;
+
+        const visibility = getPayloadValue(normalizedPayload, "visibility") as string | null | undefined;
         // Ne montrer que les reviews "public" ou "friends" (les "private" sont exclues)
         if (visibility === "private") {
           return false;
@@ -527,26 +545,34 @@ export async function GET() {
           ? (payload as Record<string, unknown>)
           : {};
 
-      const bookId = normalizedPayload.book_id as string | null | undefined;
-      const bookTitleFromPayload = normalizedPayload.book_title as string | null | undefined;
-      
-      // Utiliser le titre du payload ou celui récupéré depuis la DB
-      const bookTitle = bookTitleFromPayload ?? 
-        (bookId ? bookTitlesMap.get(bookId) ?? null : null);
+      const bookId = getPayloadValue(normalizedPayload, "book_id") as string | null | undefined;
+      const bookTitleFromPayload = getPayloadValue(normalizedPayload, "book_title") as string | null | undefined;
+      const bookAuthorFromPayload = getPayloadValue(normalizedPayload, "book_author") as string | null | undefined;
+
+      const bookDetails = bookId ? bookDetailsMap.get(bookId) : undefined;
+      const bookTitle =
+        bookTitleFromPayload ?? (bookDetails?.title ?? null) ?? null;
+      const bookAuthor =
+        bookAuthorFromPayload ?? (bookDetails?.author ?? null) ?? null;
+
+      const note =
+        (getPayloadValue(normalizedPayload, "note") as string | null | undefined) ??
+        (getPayloadValue(normalizedPayload, "review_snippet") as string | null | undefined) ??
+        (getPayloadValue(normalizedPayload, "status_note") as string | null | undefined) ??
+        null;
+
+      const rating = getPayloadValue(normalizedPayload, "rating") as number | null | undefined;
 
       return {
         id: item.id,
         type: isActivityType(item.type) ? item.type : "list_update",
         userName: item.user?.displayName ?? "Lectrice anonyme",
         userAvatarUrl: item.user?.avatarUrl ?? null,
+        bookId: bookId ?? null,
         bookTitle,
-        note:
-          (normalizedPayload.note as string | null | undefined) ??
-          (normalizedPayload.review_snippet as string | null | undefined) ??
-          (normalizedPayload.status_note as string | null | undefined) ??
-          null,
-        rating:
-          (normalizedPayload.rating as number | null | undefined) ?? null,
+        bookAuthor,
+        note,
+        rating: rating ?? null,
         occurredAt: item.createdAt,
       };
     });

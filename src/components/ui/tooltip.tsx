@@ -52,7 +52,17 @@ function TooltipContent({
         {...props}
       >
         {children}
-        <TooltipPrimitive.Arrow className="bg-foreground fill-foreground z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px]" />
+        <TooltipPrimitive.Arrow asChild>
+          <svg
+            width="12"
+            height="6"
+            viewBox="0 0 12 6"
+            fill="none"
+            className="relative -top-px z-50 shrink-0 fill-foreground in-[.bg-popover]:fill-popover in-[.bg-foreground]:fill-foreground"
+          >
+            <path d="M0 6L6 0L12 6" fill="currentColor" />
+          </svg>
+        </TooltipPrimitive.Arrow>
       </TooltipPrimitive.Content>
     </TooltipPrimitive.Portal>
   )

@@ -4,6 +4,7 @@ import { useMemo } from "react";
 
 import FeedSection from "@/components/feed/feed-section";
 import ActivityCard from "@/components/feed/activity-card";
+import { condenseActivities } from "@/features/feed/utils/condense-activities";
 import BookFeedCard from "@/components/feed/book-feed-card";
 import RecommendationCard from "@/components/feed/recommendation-card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -105,13 +106,16 @@ const FeedClient = ({ limit }: FeedClientProps = {}) => {
           title="Activités récentes"
           description="Ce que votre cercle lecture a partagé ces derniers jours."
         >
-          {data.activities.length === 0 ? (
-            <EmptyState message="Aucune activité récente de vos amis. Ajoutez des ami·e·s pour suivre leurs activités !" />
-          ) : (
-            applyLimit(data.activities, limit).map((activity) => (
-              <ActivityCard key={activity.id} item={activity} />
-            ))
-          )}
+          {(() => {
+            const condensed = condenseActivities(data.activities);
+            return condensed.length === 0 ? (
+              <EmptyState message="Aucune activité récente de vos amis. Ajoutez des ami·e·s pour suivre leurs activités !" />
+            ) : (
+              applyLimit(condensed, limit).map((activity) => (
+                <ActivityCard key={activity.id} item={activity} />
+              ))
+            );
+          })()}
         </FeedSection>
 
         <FeedSection
