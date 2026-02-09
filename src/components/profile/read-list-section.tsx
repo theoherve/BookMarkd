@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { X, LayoutGrid, List } from "lucide-react";
@@ -46,12 +46,8 @@ type FilterStatus = ReadListBook["status"] | "all";
 
 const ReadListSection = ({ readList }: ReadListSectionProps) => {
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
-  const [viewMode, setViewMode] = useState<ViewMode>("cards");
+  const [viewMode, setViewMode] = useState<ViewMode>(() => getStoredViewMode());
   const [removingBookIds, setRemovingBookIds] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    setViewMode(getStoredViewMode());
-  }, []);
 
   const handleFilterChange = (status: FilterStatus) => {
     setFilterStatus(status);
