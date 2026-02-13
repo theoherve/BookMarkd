@@ -31,23 +31,6 @@ const buildCoverUrl = (imageLinks?: GoogleBooksImageLinks): string | null => {
 };
 
 /**
- * Vérifie si une URL est une URL Supabase Storage
- */
-const isSupabaseStorageUrl = (url: string | null | undefined): boolean => {
-  if (!url) {
-    return false;
-  }
-
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.BOOK_MARKD_SUPABASE_URL;
-  
-  if (!supabaseUrl) {
-    return false;
-  }
-
-  return url.startsWith(`${supabaseUrl}/storage/v1/object/public/`);
-};
-
-/**
  * Obtient l'URL d'une cover de livre avec priorité Supabase Storage puis fallback
  * @param bookId - ID du livre
  * @param dbCoverUrl - URL de la cover depuis la base de données (optionnelle)
@@ -63,27 +46,21 @@ export const getBookCoverUrl = async (
   const normalizedDbUrl = dbCoverUrl ?? null;
   const normalizedGoogleUrl = googleBooksCoverUrl ?? null;
 
-  // 1. Si l'URL de la DB est déjà une URL Supabase Storage, l'utiliser directement
-  if (isSupabaseStorageUrl(normalizedDbUrl)) {
-    return normalizedDbUrl;
-  }
-
-  // 2. Vérifier si une cover existe dans Supabase Storage
+  // 1. Si une cover existe dans Supabase Storage, utiliser l'URL correcte (résout les chemins erronés)
   const existsInStorage = await coverExistsInStorage(bookId);
-  
   if (existsInStorage) {
-    const storageUrl = getCoverPublicUrl(bookId);
+    const storageUrl = await getCoverPublicUrl(bookId);
     if (storageUrl) {
       return storageUrl;
     }
   }
 
-  // 3. Fallback sur l'URL de la DB si disponible (peut être Google Books)
+  // 2. Fallback sur l'URL de la DB (Supabase Storage ou externe type Google Books)
   if (normalizedDbUrl) {
     return normalizedDbUrl;
   }
 
-  // 4. Fallback sur Google Books cover si fournie
+  // 3. Fallback sur Google Books cover si fournie
   if (normalizedGoogleUrl) {
     return normalizedGoogleUrl;
   }

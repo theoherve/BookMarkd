@@ -375,25 +375,26 @@ const SearchClient = () => {
               <p className="text-sm text-muted-foreground">
                 Aucun résultat pour cette recherche. Essayez un autre titre ou élargissez les filtres.
               </p>
-              {booksData.supabaseCount === 0 && booksData.externalCount === 0 ? (
-                <Button asChild className="mt-4" aria-label="Ajouter un livre manuellement">
-                  <Link 
-                    href={(() => {
-                      const params = new URLSearchParams();
-                      if (submittedQuery) {
-                        params.set("title", submittedQuery);
-                      }
-                      if (author.trim()) {
-                        params.set("author", author.trim());
-                      }
-                      const queryString = params.toString();
-                      return `/books/create${queryString ? `?${queryString}` : ""}`;
-                    })()}
-                  >
-                    Ajouter un livre
-                  </Link>
-                </Button>
-              ) : null}
+              <p className="mt-2 text-sm text-muted-foreground">
+                Vous ne trouvez pas le livre recherché ? Ajoutez-le manuellement au catalogue.
+              </p>
+              <Button asChild className="mt-4" aria-label="Ajouter un livre manuellement">
+                <Link
+                  href={(() => {
+                    const params = new URLSearchParams();
+                    if (submittedQuery) {
+                      params.set("title", submittedQuery);
+                    }
+                    if (author.trim()) {
+                      params.set("author", author.trim());
+                    }
+                    const queryString = params.toString();
+                    return `/books/create${queryString ? `?${queryString}` : ""}`;
+                  })()}
+                >
+                  Ajouter un livre
+                </Link>
+              </Button>
             </div>
           )}
         </>

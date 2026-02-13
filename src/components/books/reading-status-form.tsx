@@ -65,6 +65,11 @@ const ReadingStatusForm = ({
             disabled={isPending}
             onClick={() => handleUpdate(option.value)}
             aria-pressed={selectedStatus === option.value}
+            className={
+              selectedStatus !== option.value
+                ? "dark:hover:border-primary dark:hover:text-primary dark:hover:bg-primary/15"
+                : undefined
+            }
           >
             {option.label}
           </Button>
