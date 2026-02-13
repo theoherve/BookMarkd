@@ -2,6 +2,7 @@
 
 import { ReactNode } from "react";
 import Link from "next/link";
+import { Plus } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
@@ -86,6 +87,18 @@ const AppShell = ({ children }: AppShellProps) => {
           <div className="flex items-center gap-2 sm:gap-3">
             {session?.user ? (
               <>
+                <Button
+                  variant="default"
+                  size="sm"
+                  aria-label="Ajouter un livre à la bibliothèque"
+                  className="gap-2"
+                  asChild
+                >
+                  <Link href="/books/create">
+                    <Plus className="size-4" aria-hidden />
+                    <span className="hidden sm:inline">Ajouter un livre</span>
+                  </Link>
+                </Button>
                 <NotificationBell />
                 <p className="hidden text-sm text-muted-foreground sm:block">
                   Bonjour,{" "}

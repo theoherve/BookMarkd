@@ -23,10 +23,10 @@ const generateAvatarFileName = (userId: string, extension: string = "jpg"): stri
 };
 
 /**
- * Obtient le chemin complet d'une cover dans Supabase Storage
+ * Obtient le chemin d'une cover dans Supabase Storage (relatif au bucket)
  */
 export const getCoverStoragePath = (bookId: string, extension: string = "jpg"): string => {
-  return `${STORAGE_BUCKETS.COVERS}/${generateCoverFileName(bookId, extension)}`;
+  return generateCoverFileName(bookId, extension);
 };
 
 /**
@@ -37,12 +37,34 @@ export const getAvatarStoragePath = (userId: string, extension: string = "jpg"):
 };
 
 /**
- * Obtient l'URL publique d'une cover depuis Supabase Storage
+ * Obtient l'URL publique d'une cover depuis Supabase Storage.
+ * Liste les fichiers pour trouver le bon nom (gère jpg, png, webp, etc.)
  */
-export const getCoverPublicUrl = (bookId: string): string | null => {
-  const path = getCoverStoragePath(bookId);
-  const { data } = supabase.storage.from(STORAGE_BUCKETS.COVERS).getPublicUrl(path);
-  return data.publicUrl;
+export const getCoverPublicUrl = async (bookId: string): Promise<string | null> => {
+  try {
+    const { data: files, error } = await supabase.storage
+      .from(STORAGE_BUCKETS.COVERS)
+      .list("", {
+        search: bookId,
+      });
+
+    if (error || !files || files.length === 0) {
+      return null;
+    }
+
+    const coverFile = files.find((file) => file.name.startsWith(`${bookId}.`));
+    if (!coverFile) {
+      return null;
+    }
+
+    const { data } = supabase.storage
+      .from(STORAGE_BUCKETS.COVERS)
+      .getPublicUrl(coverFile.name);
+
+    return data.publicUrl;
+  } catch {
+    return null;
+  }
 };
 
 /**
@@ -168,7 +190,7 @@ export const uploadCover = async (
       return null;
     }
 
-    const publicUrl = getCoverPublicUrl(bookId);
+    const publicUrl = await getCoverPublicUrl(bookId);
     return publicUrl ? { path: data.path, publicUrl } : null;
   } catch (error) {
     console.error("[storage] Error uploading cover:", error);

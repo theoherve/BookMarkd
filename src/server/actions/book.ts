@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { getCurrentSession } from "@/lib/auth/session";
 import db from "@/lib/supabase/db";
+import { uploadCover } from "@/lib/storage/storage";
 import { createNotification } from "@/server/actions/notifications";
 import { createActivity } from "@/lib/activities/create-activity";
 
@@ -410,7 +411,8 @@ export const createBook = async (
 
     const title = formData.get("title")?.toString().trim();
     const author = formData.get("author")?.toString().trim();
-    const coverUrl = formData.get("coverUrl")?.toString().trim() || null;
+    const coverFile = formData.get("coverFile") as File | null;
+    const coverUrlFromInput = formData.get("coverUrl")?.toString().trim() || null;
     const publicationYearStr = formData.get("publicationYear")?.toString().trim();
     const publicationYear = publicationYearStr
       ? parseInt(publicationYearStr, 10)
@@ -431,13 +433,34 @@ export const createBook = async (
       };
     }
 
+    // Priorité : fichier uploadé > URL
+    const hasCoverFile = coverFile && coverFile.size > 0;
+    const allowedCoverTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    if (hasCoverFile) {
+      if (!allowedCoverTypes.includes(coverFile.type)) {
+        return {
+          success: false,
+          message: "Format de fichier non supporté. Utilisez JPEG, PNG ou WebP.",
+        };
+      }
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (coverFile.size > maxSize) {
+        return {
+          success: false,
+          message: "Le fichier est trop volumineux. Taille maximale : 5Mo.",
+        };
+      }
+    }
+
+    const initialCoverUrl = hasCoverFile ? null : coverUrlFromInput;
+
     const { data: inserted, error: insertBookError } = await db.client
       .from("books")
       .insert([
         {
           title,
           author,
-          cover_url: coverUrl,
+          cover_url: initialCoverUrl,
           publication_year: publicationYear,
           summary,
           created_by: userId,
@@ -452,10 +475,28 @@ export const createBook = async (
       throw insertBookError;
     }
 
-    revalidatePath("/search");
-    revalidatePath(`/books/${inserted.id}`);
+    const bookId = inserted.id as string;
 
-    return { success: true, bookId: inserted.id as string };
+    // Si un fichier a été uploadé, l'enregistrer dans le storage
+    if (hasCoverFile && coverFile) {
+      const extension = coverFile.name.split(".").pop()?.toLowerCase() || "jpg";
+      const validExtensions = ["jpg", "jpeg", "png", "webp"];
+      const finalExtension = validExtensions.includes(extension) ? extension : "jpg";
+
+      const uploadResult = await uploadCover(bookId, coverFile, finalExtension);
+
+      if (uploadResult) {
+        await db.client
+          .from("books")
+          .update({ cover_url: uploadResult.publicUrl })
+          .eq("id", bookId);
+      }
+    }
+
+    revalidatePath("/search");
+    revalidatePath(`/books/${bookId}`);
+
+    return { success: true, bookId };
   } catch (error) {
     if ((error as Error).message === "AUTH_REQUIRED") {
       return {
