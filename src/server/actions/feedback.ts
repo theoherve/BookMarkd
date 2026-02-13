@@ -7,6 +7,7 @@ import { resolveSessionUserId } from "@/lib/auth/user";
 import db from "@/lib/supabase/db";
 import { isUserAdmin } from "@/lib/auth/admin";
 import { createNotification } from "@/server/actions/notifications";
+import { sendFeedbackNotificationToAdmins } from "@/lib/email/feedback-notification";
 import type {
   CreateFeedbackInput,
   Feedback,
@@ -92,6 +93,29 @@ export const createFeedback = async (
 
     revalidatePath("/feedback");
     revalidatePath("/profiles/me");
+
+    // Envoie un email aux admins (non bloquant)
+    try {
+      const { data: userRow } = await db.client
+        .from("users")
+        .select("display_name, username")
+        .eq("id", userId)
+        .maybeSingle();
+
+      const submitterDisplayName = (userRow?.display_name as string) ?? "Utilisateur";
+      const submitterUsername = (userRow?.username as string | null) ?? null;
+
+      await sendFeedbackNotificationToAdmins({
+        type: input.type,
+        title: input.title.trim(),
+        description: input.description.trim(),
+        submitterDisplayName,
+        submitterUsername,
+        url: input.url?.trim() ?? null,
+      });
+    } catch (emailError) {
+      console.error("[createFeedback] Email notification failed:", emailError);
+    }
 
     return { success: true };
   } catch (error) {
