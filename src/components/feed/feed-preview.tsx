@@ -14,7 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { BookLoader } from "@/components/ui/book-loader";
 import { useInfiniteFeedQuery } from "@/features/feed/api/use-feed-query";
 
 const MAX_ITEMS = 24;
@@ -97,17 +97,22 @@ const FeedPreview = () => {
             ))}
             {hasMoreActivities && (
               <PreviewItem>
-                <div className="flex min-h-[200px] w-[280px] shrink-0 items-center justify-center rounded-xl border border-dashed border-border/60 bg-card/50">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={loadMore}
-                    disabled={isLoadingMore}
-                    aria-label="Charger plus d'activités"
-                  >
-                    {isLoadingMore ? "Chargement…" : "Charger plus"}
-                  </Button>
-                </div>
+                {isLoadingMore ? (
+                  <div className="flex min-h-[200px] w-[280px] shrink-0 items-center justify-center rounded-xl border border-dashed border-border/60 bg-card/50 p-8">
+                    <BookLoader size="lg" text="Chargement..." />
+                  </div>
+                ) : (
+                  <div className="flex min-h-[200px] w-[280px] shrink-0 items-center justify-center rounded-xl border border-dashed border-border/60 bg-card/50">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={loadMore}
+                      aria-label="Charger plus d'activités"
+                    >
+                      Charger plus
+                    </Button>
+                  </div>
+                )}
               </PreviewItem>
             )}
           </PreviewRow>
@@ -201,25 +206,8 @@ const EmptyPreview = ({ message }: { message: string }) => (
 
 const FeedPreviewSkeleton = () => {
   return (
-    <div className="space-y-6">
-      {[...Array(3)].map((_, sectionIndex) => (
-        <Card key={sectionIndex} className="border-border/60 bg-card/70 backdrop-blur">
-          <CardHeader className="space-y-2">
-            <Skeleton className="h-4 w-48 rounded-full" />
-            <Skeleton className="h-3 w-full max-w-md rounded-full" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-4 overflow-hidden">
-              {[...Array(3)].map((_, index) => (
-                <Skeleton
-                  key={index}
-                  className="h-40 min-w-[280px] rounded-2xl"
-                />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+    <div className="flex min-h-[400px] items-center justify-center py-12">
+      <BookLoader size="lg" text="Chargement des activités..." />
     </div>
   );
 };
