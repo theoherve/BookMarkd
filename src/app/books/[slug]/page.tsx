@@ -18,7 +18,9 @@ import ReviewsList, {
 } from "@/components/books/reviews-list";
 import BookReadersList from "@/components/books/book-readers-list";
 import BookFeelingsSection from "@/components/books/book-feelings-section";
+import SimilarBooksSection from "@/components/books/similar-books-section";
 import { getBookReaders } from "@/features/books/server/get-book-readers";
+import { getSimilarBooks } from "@/features/books/server/get-similar-books";
 import {
   getAllFeelingKeywords,
   getBookFeelings,
@@ -469,7 +471,10 @@ const BookPage = async ({ params }: BookPageProps) => {
   }
   
   const reviews = mapReviews(book.reviews, viewerId, viewerFollowingIds);
-  const readers = await getBookReaders(book.id);
+  const [readers, similarBooks] = await Promise.all([
+    getBookReaders(book.id),
+    getSimilarBooks(book.id, 6),
+  ]);
 
   // Récupérer les feelings avec les followingIds corrects
   const [availableKeywords, allFeelings, viewerFeelingsData] = await Promise.all([
@@ -574,6 +579,12 @@ const BookPage = async ({ params }: BookPageProps) => {
             <ReviewForm bookId={book.id} />
             <ReviewsList bookId={book.id} reviews={reviews} viewerId={viewerId} />
           </section>
+
+          {similarBooks.length > 0 ? (
+            <section className="space-y-6">
+              <SimilarBooksSection books={similarBooks} />
+            </section>
+          ) : null}
         </div>
       </div>
     </AppShell>
