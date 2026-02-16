@@ -16,6 +16,7 @@ type DbBookRow = {
   summary?: string | null;
   average_rating?: number | null;
   publication_year?: number | null;
+  google_books_id?: string | null;
   book_tags?: Array<{
     tags?: {
       id: string;
@@ -54,6 +55,7 @@ export async function GET(request: Request) {
         summary,
         average_rating,
         publication_year,
+        google_books_id,
         book_tags:book_tags(
           tags:tags(
             id,
@@ -169,6 +171,12 @@ export async function GET(request: Request) {
       };
     });
 
+    const dbGoogleBooksIds = new Set(
+      (booksData ?? [])
+        .map((b) => b.google_books_id)
+        .filter((id): id is string => id != null && id !== ""),
+    );
+
     let externalBooks: SearchBook[] = [];
 
     if (
@@ -191,19 +199,21 @@ export async function GET(request: Request) {
               externalLimit,
             );
 
-            // Si Google Books retourne des résultats, les utiliser
+            // Si Google Books retourne des résultats, les utiliser (sans doublon avec le catalogue BookMarkd)
             if (googleBooksResults.length > 0) {
-              externalBooks = googleBooksResults.map((item) => ({
-                id: item.id,
-                title: item.title,
-                author: item.author,
-                coverUrl: item.coverUrl,
-                summary: item.summary ?? null,
-                publicationYear: item.publicationYear,
-                source: "google_books",
-                reason:
-                  "Résultat Google Books – à ajouter à BookMarkd si vous ne le trouvez pas.",
-              }));
+              externalBooks = googleBooksResults
+                .filter((item) => !dbGoogleBooksIds.has(item.id))
+                .map((item) => ({
+                  id: item.id,
+                  title: item.title,
+                  author: item.author,
+                  coverUrl: item.coverUrl,
+                  summary: item.summary ?? null,
+                  publicationYear: item.publicationYear,
+                  source: "google_books",
+                  reason:
+                    "Résultat Google Books – à ajouter à BookMarkd si vous ne le trouvez pas.",
+                }));
             } else {
               // Aucun résultat ou erreur (403, etc.) - le fallback sera utilisé
               console.log(

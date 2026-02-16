@@ -56,8 +56,9 @@ const BookReadersList = ({ readers }: BookReadersListProps) => {
                 return (
                   <Link
                     key={reader.id}
-                    href={`/profiles/${reader.id}`}
+                    href={`/profiles/${reader.username ?? reader.id}`}
                     className="flex items-center gap-3 rounded-lg border border-border/50 bg-card/70 p-3 transition hover:bg-card/90"
+                    aria-label={`Voir le profil de ${reader.displayName}`}
                   >
                     <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-border/50 bg-muted">
                       {reader.avatarUrl ? (
@@ -116,8 +117,9 @@ const BookReadersList = ({ readers }: BookReadersListProps) => {
                 return (
                   <Link
                     key={reader.id}
-                    href={`/profiles/${reader.id}`}
+                    href={`/profiles/${reader.username ?? reader.id}`}
                     className="flex items-center gap-3 rounded-lg border border-border/50 bg-card/70 p-3 transition hover:bg-card/90"
+                    aria-label={`Voir le profil de ${reader.displayName}`}
                   >
                     <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-border/50 bg-muted">
                       {reader.avatarUrl ? (
@@ -164,8 +166,9 @@ const BookReadersList = ({ readers }: BookReadersListProps) => {
                 return (
                   <Link
                     key={reader.id}
-                    href={`/profiles/${reader.id}`}
+                    href={`/profiles/${reader.username ?? reader.id}`}
                     className="flex items-center gap-3 rounded-lg border border-border/50 bg-card/70 p-3 transition hover:bg-card/90"
+                    aria-label={`Voir le profil de ${reader.displayName}`}
                   >
                     <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-border/50 bg-muted">
                       {reader.avatarUrl ? (

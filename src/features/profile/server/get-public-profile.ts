@@ -40,18 +40,25 @@ export type PublicProfile = {
   }>;
 };
 
+const isUuid = (value: string): boolean =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    value.trim(),
+  );
+
 export const getPublicProfile = async (
-  username: string,
+  usernameOrId: string,
 ): Promise<PublicProfile | null> => {
   try {
-    // 1) User by username
-    const { data: userRow, error: userError } = await db.client
+    // 1) User by username or by id (UUID) pour supporter /profiles/:id
+    const query = db.client
       .from("users")
-      .select(
-        "id, username, display_name, avatar_url, bio",
-      )
-      .eq("username", username)
-      .maybeSingle();
+      .select("id, username, display_name, avatar_url, bio");
+
+    const { data: userRow, error: userError } = await (isUuid(usernameOrId)
+      ? query.eq("id", usernameOrId.trim())
+      : query.eq("username", usernameOrId)
+    ).maybeSingle();
+
     if (userError) {
       throw userError;
     }
