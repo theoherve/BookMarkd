@@ -56,8 +56,25 @@ const DropdownMenuTrigger = React.forwardRef<HTMLButtonElement, DropdownMenuTrig
       handleClick(e as React.MouseEvent<HTMLButtonElement>);
     };
     if (asChild && React.isValidElement(children)) {
+      // eslint-disable-next-line react-hooks/rules-of-hooks -- Merging refs with cloneElement is a valid pattern
+      const mergedRef = React.useCallback(
+        (node: unknown) => {
+          if (typeof ref === "function") {
+            ref(node as HTMLButtonElement);
+          } else if (ref) {
+            (ref as React.MutableRefObject<HTMLButtonElement | null>).current = node as HTMLButtonElement;
+          }
+          const childRef = (children as React.ReactElement & { ref?: React.Ref<unknown> }).ref;
+          if (typeof childRef === "function") {
+            childRef(node);
+          } else if (childRef) {
+            (childRef as React.MutableRefObject<unknown>).current = node;
+          }
+        },
+        [ref, children]
+      );
       return React.cloneElement(children, {
-        ref,
+        ref: mergedRef,
         onClick: handleClickGeneric,
         "aria-expanded": open,
         "aria-haspopup": "menu",
@@ -151,8 +168,25 @@ const DropdownMenuItem = React.forwardRef<HTMLDivElement, DropdownMenuItemProps>
     const handleClick = () => setOpen(false);
     if (asChild && React.isValidElement(children)) {
       const child = children as React.ReactElement<{ onClick?: (e: React.MouseEvent) => void }>;
+      // eslint-disable-next-line react-hooks/rules-of-hooks -- Merging refs with cloneElement is a valid pattern
+      const mergedRef = React.useCallback(
+        (node: unknown) => {
+          if (typeof ref === "function") {
+            ref(node as HTMLDivElement);
+          } else if (ref) {
+            (ref as React.MutableRefObject<HTMLDivElement | null>).current = node as HTMLDivElement;
+          }
+          const childRef = (child as React.ReactElement & { ref?: React.Ref<unknown> }).ref;
+          if (typeof childRef === "function") {
+            childRef(node);
+          } else if (childRef) {
+            (childRef as React.MutableRefObject<unknown>).current = node;
+          }
+        },
+        [ref, child]
+      );
       const mergedProps = {
-        ref,
+        ref: mergedRef,
         role: "menuitem",
         onKeyDown: handleKeyDown,
         onClick: (e: React.MouseEvent) => {
