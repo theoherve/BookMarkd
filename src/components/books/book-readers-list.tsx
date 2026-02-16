@@ -44,7 +44,7 @@ const BookReadersList = ({ readers }: BookReadersListProps) => {
             <h3 className="text-sm font-semibold text-foreground">
               Terminé{finishedReaders.length > 1 ? "s" : ""} ({finishedReaders.length})
             </h3>
-            <div className="space-y-2">
+            <div className="flex flex-wrap gap-2 items-start">
               {finishedReaders.map((reader) => {
                 const avatarInitials = reader.displayName
                   .split(" ")
@@ -57,7 +57,7 @@ const BookReadersList = ({ readers }: BookReadersListProps) => {
                   <Link
                     key={reader.id}
                     href={`/profiles/${reader.username ?? reader.id}`}
-                    className="flex items-center gap-3 rounded-lg border border-border/50 bg-card/70 p-3 transition hover:bg-card/90"
+                    className="inline-flex items-center gap-3 rounded-lg border border-border/50 bg-card/70 p-3 transition hover:bg-card/90 w-fit"
                     aria-label={`Voir le profil de ${reader.displayName}`}
                   >
                     <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-border/50 bg-muted">
@@ -76,8 +76,8 @@ const BookReadersList = ({ readers }: BookReadersListProps) => {
                         </div>
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="truncate font-semibold text-foreground">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-foreground">
                         {reader.displayName}
                       </p>
                       <div className="flex flex-wrap gap-2 mt-1">
@@ -105,7 +105,7 @@ const BookReadersList = ({ readers }: BookReadersListProps) => {
             <h3 className="text-sm font-semibold text-foreground">
               En cours ({readingReaders.length})
             </h3>
-            <div className="space-y-2">
+            <div className="flex flex-wrap gap-2 items-start">
               {readingReaders.map((reader) => {
                 const avatarInitials = reader.displayName
                   .split(" ")
@@ -118,7 +118,7 @@ const BookReadersList = ({ readers }: BookReadersListProps) => {
                   <Link
                     key={reader.id}
                     href={`/profiles/${reader.username ?? reader.id}`}
-                    className="flex items-center gap-3 rounded-lg border border-border/50 bg-card/70 p-3 transition hover:bg-card/90"
+                    className="inline-flex items-center gap-3 rounded-lg border border-border/50 bg-card/70 p-3 transition hover:bg-card/90 w-fit"
                     aria-label={`Voir le profil de ${reader.displayName}`}
                   >
                     <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-border/50 bg-muted">
@@ -137,8 +137,8 @@ const BookReadersList = ({ readers }: BookReadersListProps) => {
                         </div>
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="truncate font-semibold text-foreground">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-foreground">
                         {reader.displayName}
                       </p>
                     </div>
@@ -154,7 +154,7 @@ const BookReadersList = ({ readers }: BookReadersListProps) => {
             <h3 className="text-sm font-semibold text-foreground">
               À lire ({toReadReaders.length})
             </h3>
-            <div className="space-y-2">
+            <div className="flex flex-wrap gap-2 items-start">
               {toReadReaders.map((reader) => {
                 const avatarInitials = reader.displayName
                   .split(" ")
@@ -167,7 +167,7 @@ const BookReadersList = ({ readers }: BookReadersListProps) => {
                   <Link
                     key={reader.id}
                     href={`/profiles/${reader.username ?? reader.id}`}
-                    className="flex items-center gap-3 rounded-lg border border-border/50 bg-card/70 p-3 transition hover:bg-card/90"
+                    className="inline-flex items-center gap-3 rounded-lg border border-border/50 bg-card/70 p-3 transition hover:bg-card/90 w-fit"
                     aria-label={`Voir le profil de ${reader.displayName}`}
                   >
                     <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-border/50 bg-muted">
@@ -186,8 +186,8 @@ const BookReadersList = ({ readers }: BookReadersListProps) => {
                         </div>
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="truncate font-semibold text-foreground">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-foreground">
                         {reader.displayName}
                       </p>
                     </div>

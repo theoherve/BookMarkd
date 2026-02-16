@@ -120,7 +120,7 @@ export const rateBook = async (
     }
     const userId = await requireSession();
     
-    // Récupérer l'enregistrement existant pour préserver le status s'il existe
+    // Récupérer l'enregistrement existant pour vérifier le statut précédent
     const { data: existing, error: existingError } = await db.client
       .from("user_books")
       .select("status")
@@ -132,10 +132,10 @@ export const rateBook = async (
       throw existingError;
     }
 
-    // Upsert: met à jour le rating et rated_at, préserve ou fixe le status
-    const newStatus =
-      (existing?.status as "to_read" | "reading" | "finished" | undefined) ??
-      "finished";
+    const previousStatus = existing?.status as "to_read" | "reading" | "finished" | undefined;
+    
+    // Lorsqu'on note un livre, il passe automatiquement en "terminé"
+    const newStatus = "finished";
 
     const { error: upsertError } = await db.client
       .from("user_books")
@@ -200,12 +200,23 @@ export const rateBook = async (
       .maybeSingle();
 
     if (!bookError && book) {
+      const bookTitle = (book as { title: string }).title;
+      
       // Créer une activité de notation
       void createActivity(userId, "rating", {
         book_id: bookId,
-        book_title: (book as { title: string }).title,
+        book_title: bookTitle,
         rating,
       });
+      
+      // Si le statut a changé vers "finished", créer aussi une activité de changement de statut
+      if (previousStatus && previousStatus !== "finished") {
+        void createActivity(userId, "status_change", {
+          book_id: bookId,
+          book_title: bookTitle,
+          status_note: "a terminé",
+        });
+      }
     }
 
     revalidateBook(bookId);

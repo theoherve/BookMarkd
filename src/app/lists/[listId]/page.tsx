@@ -7,7 +7,6 @@ import ShareListButton from "@/components/lists/share-list-button";
 import SortableListItems from "@/components/lists/sortable-list-items";
 
 import { getListDetail } from "@/features/lists/server/get-list-detail";
-import { getAvailableBooks } from "@/features/lists/server/get-available-books";
 
 import { getCurrentSession } from "@/lib/auth/session";
 
@@ -73,9 +72,6 @@ const ListDetailPage = async ({ params }: ListDetailPageProps) => {
   }
 
   const canEdit = detail.viewerRole === "owner" || detail.viewerRole === "editor";
-  const availableBooks = canEdit
-    ? await getAvailableBooks(detail.items.map((item) => item.book.id))
-    : [];
 
   return (
     <section className="space-y-8">
@@ -137,7 +133,7 @@ const ListDetailPage = async ({ params }: ListDetailPageProps) => {
         <aside className="space-y-4">
           <AddListItemForm
             listId={detail.id}
-            availableBooks={availableBooks}
+            availableBooks={[]}
             canEdit={canEdit}
           />
         </aside>
