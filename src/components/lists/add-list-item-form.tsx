@@ -222,7 +222,7 @@ const AddListItemForm = ({
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Aucun résultat trouvé pour "{submittedQuery}".
+              Aucun résultat trouvé pour &quot;{submittedQuery}&quot;.
             </p>
           )}
         </div>
