@@ -7,6 +7,7 @@ import { getWrappedStats } from "@/features/wrapped/server/get-wrapped-stats";
 import { isValidYear } from "@/lib/wrapped/utils";
 import WrappedContainer from "@/components/wrapped/WrappedContainer";
 import AppShell from "@/components/layout/app-shell";
+import BackButton from "@/components/layout/back-button";
 
 type WrappedPageProps = {
   params: Promise<{ year: string }>;
@@ -38,7 +39,8 @@ const WrappedPage = async ({ params }: WrappedPageProps) => {
   if (!stats) {
     return (
       <AppShell>
-        <div className="flex min-h-screen items-center justify-center">
+        <div className="flex min-h-screen flex-col items-center justify-center gap-6">
+          <BackButton ariaLabel="Retour à la page précédente" />
           <div className="text-center">
             <h1 className="text-2xl font-bold">Erreur</h1>
             <p className="mt-2 text-muted-foreground">
