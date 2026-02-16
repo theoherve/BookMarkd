@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
+import type { LottieRefCurrentProps } from "lottie-react";
 
 // Import dynamique de Lottie pour éviter les erreurs SSR
 const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
@@ -21,7 +22,7 @@ const sizeClasses = {
 
 const BookLoader = ({ className, size = "md", text }: BookLoaderProps) => {
   const [animationData, setAnimationData] = useState<Record<string, unknown> | null>(null);
-  const lottieRef = useRef<{ setSpeed?: (speed: number) => void } | null>(null);
+  const lottieRef = useRef<LottieRefCurrentProps | null>(null);
 
   useEffect(() => {
     // Charger l'animation dynamiquement
