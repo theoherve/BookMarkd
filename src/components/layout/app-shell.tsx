@@ -1,12 +1,27 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import Image from "next/image";
+import { Plus, Menu } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenuRoot,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import NotificationBell from "@/components/notifications/notification-bell";
 import OfflineBanner from "@/components/pwa/offline-banner";
 import InstallPwaCta from "@/components/pwa/install-pwa-cta";
@@ -22,30 +37,37 @@ type AppShellProps = {
   children: ReactNode;
 };
 
-const navigationLinks: NavigationLink[] = [
+const headerNavLinks: NavigationLink[] = [
   { href: "/", label: "Accueil", ariaLabel: "Retourner à l'accueil" },
   { href: "/blog", label: "Blog", ariaLabel: "Voir le blog BookMarkd" },
   { href: "/search", label: "Recherche", ariaLabel: "Ouvrir la recherche" },
   { href: "/lists", label: "Listes", ariaLabel: "Consulter vos listes" },
-  { href: "/profiles/me", label: "Profil", ariaLabel: "Voir votre profil" },
-  { href: "/about", label: "À propos", ariaLabel: "À propos de BookMarkd" },
-  { href: "/feedback", label: "Feedback", ariaLabel: "Suggérer une fonctionnalité ou rapporter une erreur" },
+
 ];
 
-const NavigationList = ({ onLinkClick, emphasis = "normal" }: { onLinkClick?: () => void; emphasis?: "normal" | "strong" }) => {
-  const linkClass = emphasis === "strong"
-    ? "block rounded-full px-3 py-2 text-foreground transition hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent"
-    : "block rounded-full px-3 py-2 text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent";
+const footerLinks: NavigationLink[] = [
+  { href: "/feedback", label: "Feedback", ariaLabel: "Suggérer une fonctionnalité ou rapporter une erreur" },
+  { href: "/about", label: "À propos", ariaLabel: "À propos de BookMarkd" },
+  { href: "/faq", label: "FAQ", ariaLabel: "Foire aux questions" },
+];
+
+const mobileMenuLinks: NavigationLink[] = [...headerNavLinks, ...footerLinks];
+
+const getInitials = (name: string | null): string => {
+  if (!name?.trim()) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+};
+
+const HeaderNavList = ({ onLinkClick }: { onLinkClick?: () => void }) => {
+  const linkClass =
+    "block rounded-full px-3 py-2 text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-accent";
   return (
     <ul className="flex flex-col gap-2 text-sm font-medium md:flex-row md:items-center md:gap-4">
-      {navigationLinks.map((item) => (
+      {headerNavLinks.map((item) => (
         <li key={item.href}>
-          <Link
-            href={item.href}
-            aria-label={item.ariaLabel}
-            onClick={onLinkClick}
-            className={linkClass}
-          >
+          <Link href={item.href} aria-label={item.ariaLabel} onClick={onLinkClick} className={linkClass}>
             {item.label}
           </Link>
         </li>
@@ -57,9 +79,7 @@ const NavigationList = ({ onLinkClick, emphasis = "normal" }: { onLinkClick?: ()
 const AppShell = ({ children }: AppShellProps) => {
   const router = useRouter();
   const { data: session } = useSession();
-  const firstName = session?.user?.name
-    ? session.user.name.split(" ")[0]
-    : null;
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleNavigateLogin = () => {
     router.push("/login");
@@ -69,21 +89,56 @@ const AppShell = ({ children }: AppShellProps) => {
     await signOut({ callbackUrl: "/" });
   };
 
+  const handleMobileLinkClick = () => {
+    setMobileMenuOpen(false);
+  };
+
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-background text-foreground">
+    <div className="flex min-h-dvh flex-col bg-background text-foreground">
       <header className="border-b border-border bg-card/60 backdrop-blur">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
-          <Link
-            href="/"
-            aria-label="Retourner à l'accueil BookMarkd"
-            className="rounded-full px-4 py-2 text-sm font-semibold tracking-wide uppercase text-accent-foreground transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          >
-            BookMarkd
-          </Link>
-          
-          {/* Navigation desktop - cachée sur mobile */}
+          <div className="flex items-center gap-2 md:gap-0">
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Ouvrir le menu"
+                  className="md:hidden"
+                >
+                  <Menu className="size-5" aria-hidden />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-[min(20rem,85vw)]">
+                <SheetHeader>
+                  <SheetTitle className="sr-only">Menu</SheetTitle>
+                </SheetHeader>
+                <nav aria-label="Navigation mobile" className="flex flex-col gap-1 pt-4">
+                  {mobileMenuLinks.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      aria-label={item.ariaLabel}
+                      onClick={handleMobileLinkClick}
+                      className="block rounded-lg px-3 py-2.5 text-sm font-medium text-foreground transition hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </nav>
+              </SheetContent>
+            </Sheet>
+            <Link
+              href="/"
+              aria-label="Retourner à l'accueil BookMarkd"
+              className="rounded-full px-4 py-2 text-sm font-semibold tracking-wide uppercase text-accent-foreground transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            >
+              BookMarkd
+            </Link>
+          </div>
+
           <nav aria-label="Navigation principale" className="hidden md:block">
-            <NavigationList />
+            <HeaderNavList />
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
@@ -102,20 +157,48 @@ const AppShell = ({ children }: AppShellProps) => {
                   </Link>
                 </Button>
                 <NotificationBell />
-                <p className="hidden text-sm text-muted-foreground sm:block">
-                  Bonjour,{" "}
-                  <span className="font-semibold text-foreground">
-                    {firstName ?? session.user.name}
-                  </span>
-                </p>
-                <Button
-                  variant="outline"
-                  aria-label="Se déconnecter de BookMarkd"
-                  onClick={handleSignOut}
-                  className="hidden sm:inline-flex"
-                >
-                  Se déconnecter
-                </Button>
+                <div className="hidden md:block">
+                  <DropdownMenuRoot>
+                    <DropdownMenuTrigger
+                      aria-label="Menu compte utilisateur"
+                      className="flex shrink-0 rounded-full ring-2 ring-border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                    >
+                      {session.user.image ? (
+                        <Image
+                          src={session.user.image}
+                          alt=""
+                          width={32}
+                          height={32}
+                          className="size-8 rounded-full object-cover"
+                        />
+                      ) : (
+                        <span
+                          className="flex size-8 items-center justify-center rounded-full bg-accent text-sm font-semibold text-accent-foreground"
+                          aria-hidden
+                        >
+                          {getInitials(session.user.name ?? null)}
+                        </span>
+                      )}
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem>
+                        <Link href="/profiles/me" className="block w-full px-2 py-1.5 text-left text-sm">
+                          Mon profil
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem>
+                        <button
+                          type="button"
+                          onClick={handleSignOut}
+                          className="w-full px-2 py-1.5 text-left text-sm text-foreground"
+                        >
+                          Se déconnecter
+                        </button>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenuRoot>
+                </div>
               </>
             ) : (
               <>
@@ -149,26 +232,18 @@ const AppShell = ({ children }: AppShellProps) => {
           {children}
         </div>
       </main>
-      <footer className="border-t border-border bg-card/40 py-6">
+      <footer className="hidden border-t border-border bg-card/40 py-6 md:block">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-6 gap-y-2 px-6 text-center text-sm text-muted-foreground">
-          <Link href="/" className="hover:text-foreground" aria-label="Accueil">
-            Accueil
-          </Link>
-          <Link href="/blog" className="hover:text-foreground" aria-label="Blog">
-            Blog
-          </Link>
-          <Link href="/search" className="hover:text-foreground" aria-label="Recherche">
-            Recherche
-          </Link>
-          <Link href="/lists" className="hover:text-foreground" aria-label="Listes">
-            Listes
-          </Link>
-          <Link href="/about" className="hover:text-foreground" aria-label="À propos">
-            À propos
-          </Link>
-          <Link href="/faq" className="hover:text-foreground" aria-label="FAQ">
-            FAQ
-          </Link>
+          {footerLinks.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-label={item.ariaLabel}
+              className="hover:text-foreground"
+            >
+              {item.label}
+            </Link>
+          ))}
         </div>
       </footer>
       <MobileBottomNav />
