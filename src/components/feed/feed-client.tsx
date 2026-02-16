@@ -7,7 +7,7 @@ import ActivityCard from "@/components/feed/activity-card";
 import { condenseActivities } from "@/features/feed/utils/condense-activities";
 import BookFeedCard from "@/components/feed/book-feed-card";
 import RecommendationCard from "@/components/feed/recommendation-card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { BookLoader } from "@/components/ui/book-loader";
 import { Button } from "@/components/ui/button";
 import { useFeedQuery } from "@/features/feed/api/use-feed-query";
 import { useFeedFiltersStore } from "@/stores/feed-filters";
@@ -51,10 +51,8 @@ const FeedClient = ({ limit }: FeedClientProps = {}) => {
 
   if (isLoading) {
     return (
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {[...Array(3)].map((_, columnIndex) => (
-          <FeedSectionSkeleton key={columnIndex} />
-        ))}
+      <div className="flex min-h-[400px] items-center justify-center py-12">
+        <BookLoader size="lg" text="Chargement du feed..." />
       </div>
     );
   }
@@ -151,16 +149,6 @@ const FeedClient = ({ limit }: FeedClientProps = {}) => {
         </FeedSection>
       </div>
     </div>
-  );
-};
-
-const FeedSectionSkeleton = () => {
-  return (
-    <FeedSection title="Chargement..." description="">
-      {[...Array(3)].map((_, index) => (
-        <Skeleton key={index} className="h-32 w-full rounded-2xl" />
-      ))}
-    </FeedSection>
   );
 };
 

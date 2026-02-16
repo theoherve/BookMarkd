@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { BookLoader } from "@/components/ui/book-loader";
 import { useBookSearch } from "@/features/search/api/use-book-search";
 import type { SearchBook } from "@/features/search/types";
 import { updateTopBooks } from "@/server/actions/profile";
@@ -201,10 +201,8 @@ const TopBooksSelector = ({ initialTopBooks }: TopBooksSelectorProps) => {
           {submittedQuery && (
             <div className="space-y-2">
               {isSearchLoading ? (
-                <div className="space-y-2">
-                  {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="h-20 w-full" />
-                  ))}
+                <div className="flex items-center justify-center py-8">
+                  <BookLoader size="md" text="Recherche..." />
                 </div>
               ) : searchData?.books && searchData.books.length > 0 ? (
                 <div className="max-h-64 space-y-2 overflow-y-auto rounded-lg border border-border/50 bg-background/60 p-2">

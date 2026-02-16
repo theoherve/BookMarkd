@@ -12,7 +12,7 @@ import { useUserSearch } from "@/features/search/api/use-user-search";
 import SearchResultCard from "@/components/search/search-result-card";
 import UserResultCard from "@/components/search/user-result-card";
 import { useTagsQuery } from "@/features/search/api/use-tags-query";
-import { Skeleton } from "@/components/ui/skeleton";
+import { BookLoader } from "@/components/ui/book-loader";
 import { Badge } from "@/components/ui/badge";
 
 type SearchTab = "books" | "users";
@@ -313,18 +313,14 @@ const SearchClient = () => {
       ) : null}
 
       {activeTab === "books" && (isLoadingBooks || isFetchingBooks) ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(6)].map((_, index) => (
-            <Skeleton key={index} className="h-64 w-full rounded-3xl" />
-          ))}
+        <div className="flex min-h-[400px] items-center justify-center py-12">
+          <BookLoader size="lg" text="Recherche de livres..." />
         </div>
       ) : null}
 
       {activeTab === "users" && (isLoadingUsers || isFetchingUsers) ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(6)].map((_, index) => (
-            <Skeleton key={index} className="h-48 w-full rounded-3xl" />
-          ))}
+        <div className="flex min-h-[400px] items-center justify-center py-12">
+          <BookLoader size="lg" text="Recherche d'utilisateurs..." />
         </div>
       ) : null}
 
