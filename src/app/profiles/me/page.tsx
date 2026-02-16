@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { unstable_noStore as noStore } from "next/cache";
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 
 import AppShell from "@/components/layout/app-shell";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,12 @@ import { resolveSessionUserId } from "@/lib/auth/user";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+export const metadata: Metadata = {
+  title: "Mon profil",
+  description: "Votre profil et vos statistiques de lecture sur BookMarkd.",
+  robots: { index: false, follow: false },
+};
 
 const fallbackAvatarText = (name: string) => {
   const segments = name.trim().split(" ").filter(Boolean);

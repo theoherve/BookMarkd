@@ -1,11 +1,13 @@
 import AppShell from "@/components/layout/app-shell";
 import FeedPreview from "@/components/feed/feed-preview";
 import HomeSearchBar from "@/components/search/home-search-bar";
+import { WebsiteJsonLd } from "@/components/seo/website-json-ld";
 import { Badge } from "@/components/ui/badge";
 
 const HomePage = () => {
   return (
     <AppShell>
+      <WebsiteJsonLd />
       <div className="space-y-12">
         <section className="space-y-6">
           <Badge className="w-fit bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">

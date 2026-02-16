@@ -46,5 +46,7 @@ export type FeedResponse = {
   activities: FeedActivity[];
   friendsBooks: FeedFriendBook[];
   recommendations: FeedRecommendation[];
+  /** Présent quand la pagination des activités est utilisée (query params) */
+  hasMoreActivities?: boolean;
 };
 

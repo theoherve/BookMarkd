@@ -24,9 +24,11 @@ type AppShellProps = {
 
 const navigationLinks: NavigationLink[] = [
   { href: "/", label: "Accueil", ariaLabel: "Retourner à l'accueil" },
+  { href: "/blog", label: "Blog", ariaLabel: "Voir le blog BookMarkd" },
   { href: "/search", label: "Recherche", ariaLabel: "Ouvrir la recherche" },
   { href: "/lists", label: "Listes", ariaLabel: "Consulter vos listes" },
   { href: "/profiles/me", label: "Profil", ariaLabel: "Voir votre profil" },
+  { href: "/about", label: "À propos", ariaLabel: "À propos de BookMarkd" },
   { href: "/feedback", label: "Feedback", ariaLabel: "Suggérer une fonctionnalité ou rapporter une erreur" },
 ];
 
@@ -147,6 +149,28 @@ const AppShell = ({ children }: AppShellProps) => {
           {children}
         </div>
       </main>
+      <footer className="border-t border-border bg-card/40 py-6">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-6 gap-y-2 px-6 text-center text-sm text-muted-foreground">
+          <Link href="/" className="hover:text-foreground" aria-label="Accueil">
+            Accueil
+          </Link>
+          <Link href="/blog" className="hover:text-foreground" aria-label="Blog">
+            Blog
+          </Link>
+          <Link href="/search" className="hover:text-foreground" aria-label="Recherche">
+            Recherche
+          </Link>
+          <Link href="/lists" className="hover:text-foreground" aria-label="Listes">
+            Listes
+          </Link>
+          <Link href="/about" className="hover:text-foreground" aria-label="À propos">
+            À propos
+          </Link>
+          <Link href="/faq" className="hover:text-foreground" aria-label="FAQ">
+            FAQ
+          </Link>
+        </div>
+      </footer>
       <MobileBottomNav />
       <InstallPwaCta />
     </div>

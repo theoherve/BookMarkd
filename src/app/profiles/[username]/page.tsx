@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import type { Metadata } from "next";
 
 import AppShell from "@/components/layout/app-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +31,40 @@ type ProfilePageProps = {
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+export const generateMetadata = async ({
+  params,
+}: ProfilePageProps): Promise<Metadata> => {
+  const { username } = await params;
+  const profile = await getPublicProfile(username);
+  if (!profile) {
+    return {};
+  }
+  const { displayName, stats } = profile;
+  const totalBooks =
+    stats.booksRead + stats.booksReading + stats.booksToRead;
+  const description =
+    profile.bio?.trim() ||
+    `Profil de ${displayName} sur BookMarkd · ${totalBooks} livre${totalBooks !== 1 ? "s" : ""}, ${stats.followers} abonné${stats.followers !== 1 ? "s" : ""}.`;
+  return {
+    title: `${displayName} · BookMarkd`,
+    description,
+    openGraph: {
+      title: `${displayName} · BookMarkd`,
+      description,
+      type: "profile",
+      images: profile.avatarUrl
+        ? [{ url: profile.avatarUrl, width: 96, height: 96, alt: displayName }]
+        : undefined,
+    },
+    twitter: {
+      card: "summary",
+      title: `${displayName} · BookMarkd`,
+      description,
+      images: profile.avatarUrl ? [profile.avatarUrl] : undefined,
+    },
+  };
+};
 
 const fallbackAvatarText = (name: string) => {
   const segments = name.trim().split(" ").filter(Boolean);

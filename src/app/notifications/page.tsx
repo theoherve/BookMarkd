@@ -1,5 +1,13 @@
+import type { Metadata } from "next";
+
 import AppShell from "@/components/layout/app-shell";
 import NotificationsList from "@/components/notifications/notifications-list";
+
+export const metadata: Metadata = {
+  title: "Notifications",
+  description: "Vos demandes de suivi, likes, commentaires et recommandations.",
+  robots: { index: false, follow: false },
+};
 
 const NotificationsPage = async () => {
   return (
