@@ -249,22 +249,22 @@ export const getWrappedStats = async (
     }
 
     // 9. Reviews écrites
-    const { data: reviewsData, error: reviewsError } = await db.client
+    const { count: reviewsCount, error: reviewsError } = await db.client
       .from("reviews")
       .select("id", { count: "exact", head: true })
       .eq("user_id", userId)
       .gte("created_at", yearStart)
       .lte("created_at", yearEnd);
-    const reviewsWritten = reviewsError ? 0 : (reviewsData?.count ?? 0);
+    const reviewsWritten = reviewsError ? 0 : (reviewsCount ?? 0);
 
     // 10. Listes créées
-    const { data: listsData, error: listsError } = await db.client
+    const { count: listsCount, error: listsError } = await db.client
       .from("lists")
       .select("id", { count: "exact", head: true })
       .eq("owner_id", userId)
       .gte("created_at", yearStart)
       .lte("created_at", yearEnd);
-    const listsCreated = listsError ? 0 : (listsData?.count ?? 0);
+    const listsCreated = listsError ? 0 : (listsCount ?? 0);
 
     return {
       year,
