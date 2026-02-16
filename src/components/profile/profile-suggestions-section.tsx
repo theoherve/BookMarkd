@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import AddToReadlistButton from "@/components/search/add-to-readlist-button";
 import { generateBookSlug } from "@/lib/slug";
 import type { ProfileSuggestion } from "@/features/profile/server/get-profile-suggestions";

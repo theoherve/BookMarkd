@@ -66,7 +66,7 @@ const BlogListPage = async () => {
                   className="mt-3 inline-block text-sm font-medium text-primary underline-offset-2 hover:underline"
                   aria-label={`Lire l'article : ${post.title}`}
                 >
-                  Lire l'article →
+                  Lire l&apos;article →
                 </Link>
               </article>
             </li>

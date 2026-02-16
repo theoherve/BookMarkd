@@ -29,7 +29,7 @@ const AddToListButton = ({ bookId, disabled, className }: AddToListButtonProps) 
   const [listsLoading, setListsLoading] = useState(false);
   const [pendingListId, setPendingListId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ listId: string; message: string } | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen);

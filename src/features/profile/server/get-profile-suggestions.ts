@@ -143,12 +143,10 @@ export const getProfileSuggestions = async (
 
     // 3. Calcul compatibilité user (tags en commun + livres partagés)
     const sharedTagNames: string[] = [];
-    let sharedTagsScore = 0;
-    viewerTagWeights.forEach((viewerW, tagName) => {
+    viewerTagWeights.forEach((_viewerW, tagName) => {
       const profileW = profileTagWeights.get(tagName);
       if (profileW) {
         sharedTagNames.push(tagName);
-        sharedTagsScore += Math.min(viewerW, profileW);
       }
     });
 

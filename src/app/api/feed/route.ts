@@ -86,8 +86,9 @@ export async function GET(request: Request) {
         return Promise.resolve({ data: [], hasMoreActivities: false });
       }
 
-      return db.client
-        .from("activities")
+      return Promise.resolve(
+        db.client
+          .from("activities")
         .select(
           `
           id,
@@ -101,7 +102,7 @@ export async function GET(request: Request) {
         .order("created_at", { ascending: false })
         .range(activitiesOffset, activitiesOffset + activitiesLimit)
         .then((r) => {
-          const data = (r.data ?? []) as Array<{
+          const data = (r.data ?? []) as unknown as Array<{
             id: string;
             type: string;
             payload: unknown;
@@ -122,7 +123,8 @@ export async function GET(request: Request) {
             >(slice),
             hasMoreActivities: hasMore,
           };
-        });
+        }),
+      );
     })();
 
     const friendsBooksPromise = (() => {
