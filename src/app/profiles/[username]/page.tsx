@@ -13,7 +13,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getPublicProfile } from "@/features/profile/server/get-public-profile";
+import { getProfileSuggestions } from "@/features/profile/server/get-profile-suggestions";
 import FollowRequestButton from "@/components/profile/follow-request-button";
+import ProfileCompatibilityCard from "@/components/profile/profile-compatibility-card";
+import ProfileSuggestionsSection from "@/components/profile/profile-suggestions-section";
 import { getFollowStatus } from "@/server/actions/follow";
 import { getCurrentSession } from "@/lib/auth/session";
 import { resolveSessionUserId } from "@/lib/auth/user";
@@ -69,6 +72,15 @@ const PublicProfilePage = async ({ params }: ProfilePageProps) => {
     }
   }
 
+  const profileSuggestions =
+    followStatus === "following" && viewerId
+      ? await getProfileSuggestions(
+          viewerId,
+          profile.id,
+          profile.displayName,
+        )
+      : null;
+
   return (
     <AppShell>
       <div className="space-y-10">
@@ -112,7 +124,13 @@ const PublicProfilePage = async ({ params }: ProfilePageProps) => {
           </div>
         </header>
 
-        <section className="grid gap-4 md:grid-cols-3">
+        <section
+          className={
+            profileSuggestions
+              ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+              : "grid gap-4 md:grid-cols-3"
+          }
+        >
           <Link
             href={`/profiles/${username}/books`}
             className="block transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg"
@@ -132,99 +150,123 @@ const PublicProfilePage = async ({ params }: ProfilePageProps) => {
               </CardContent>
             </Card>
           </Link>
-          <Card className="border-border/60 bg-card/80 backdrop-blur">
-            <CardHeader>
-              <CardTitle className="text-sm font-semibold uppercase text-muted-foreground">
-                Abonnés
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <p className="text-4xl font-semibold text-foreground">{profile.stats.followers}</p>
-              <CardDescription className="text-sm text-muted-foreground">
-                Personnes qui suivent ce profil
-              </CardDescription>
-            </CardContent>
-          </Card>
-          <Card className="border-border/60 bg-card/80 backdrop-blur">
-            <CardHeader>
-              <CardTitle className="text-sm font-semibold uppercase text-muted-foreground">
-                Listes publiques
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <p className="text-4xl font-semibold text-foreground">{profile.stats.listsOwned}</p>
-              <CardDescription className="text-sm text-muted-foreground">
-                Collections partagées
-              </CardDescription>
-            </CardContent>
-          </Card>
+          <Link
+            href={`/profiles/${username}/followers`}
+            className="block transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg"
+            aria-label={`Voir les ${profile.stats.followers} abonné${profile.stats.followers > 1 ? "s" : ""}`}
+          >
+            <Card className="border-border/60 bg-card/80 backdrop-blur cursor-pointer h-full transition-shadow hover:shadow-md">
+              <CardHeader>
+                <CardTitle className="text-sm font-semibold uppercase text-muted-foreground">
+                  Abonnés
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-4xl font-semibold text-foreground">{profile.stats.followers}</p>
+                <CardDescription className="text-sm text-muted-foreground">
+                  Personnes qui suivent ce profil
+                </CardDescription>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link
+            href={`/profiles/${username}/lists`}
+            className="block transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg"
+            aria-label={`Voir les ${profile.stats.listsOwned} liste${profile.stats.listsOwned > 1 ? "s" : ""} publiques`}
+          >
+            <Card className="border-border/60 bg-card/80 backdrop-blur cursor-pointer h-full transition-shadow hover:shadow-md">
+              <CardHeader>
+                <CardTitle className="text-sm font-semibold uppercase text-muted-foreground">
+                  Listes publiques
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-4xl font-semibold text-foreground">{profile.stats.listsOwned}</p>
+                <CardDescription className="text-sm text-muted-foreground">
+                  Collections partagées
+                </CardDescription>
+              </CardContent>
+            </Card>
+          </Link>
+          {profileSuggestions ? (
+            <ProfileCompatibilityCard
+              compatibility={profileSuggestions.userCompatibility}
+              profileDisplayName={profile.displayName}
+            />
+          ) : null}
         </section>
 
-        {followStatus === "following" && profile.topBooks.length > 0 ? (
-          <section className="space-y-4">
-            <h2 className="text-2xl font-semibold text-foreground">Top 3 livres</h2>
-            <div className="rounded-md border border-border/50 overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="w-[60px]">Rang</TableHead>
-                    <TableHead className="w-[72px]">Couverture</TableHead>
-                    <TableHead>Titre</TableHead>
-                    <TableHead className="hidden sm:table-cell">Auteur</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {profile.topBooks.map((book) => {
-                    const bookSlug = generateBookSlug(book.title, book.author);
-                    return (
-                      <TableRow key={book.id}>
-                        <TableCell className="p-2 text-sm font-medium text-muted-foreground tabular-nums">
-                          {book.position}
-                        </TableCell>
-                        <TableCell className="p-2">
-                          <Link
-                            href={`/books/${bookSlug}`}
-                            className="block relative w-12 h-16 shrink-0 overflow-hidden rounded bg-muted"
-                            aria-label={`Voir ${book.title}`}
-                          >
-                            {book.coverUrl ? (
-                              <Image
-                                src={book.coverUrl}
-                                alt=""
-                                fill
-                                sizes="48px"
-                                className="object-contain"
-                              />
-                            ) : (
-                              <div className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">
-                                —
-                              </div>
-                            )}
-                          </Link>
-                        </TableCell>
-                        <TableCell>
-                          <Link
-                            href={`/books/${bookSlug}`}
-                            className="font-medium text-foreground hover:text-accent-foreground line-clamp-2"
-                          >
-                            {book.title}
-                          </Link>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
-                          {book.author}
-                        </TableCell>
+        {followStatus === "following" ? (
+          <>
+            {profile.topBooks.length > 0 ? (
+              <section className="space-y-4">
+                <h2 className="text-2xl font-semibold text-foreground">Top 3 livres</h2>
+                <div className="rounded-md border border-border/50 overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-stone-50 hover:bg-stone-50 dark:bg-stone-900/50 dark:hover:bg-stone-900/50">
+                        <TableHead className="w-[60px]">Rang</TableHead>
+                        <TableHead className="w-[72px]">Couverture</TableHead>
+                        <TableHead>Titre</TableHead>
+                        <TableHead className="hidden sm:table-cell">Auteur</TableHead>
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          </section>
+                    </TableHeader>
+                    <TableBody>
+                      {profile.topBooks.map((book) => {
+                        const bookSlug = generateBookSlug(book.title, book.author);
+                        return (
+                          <TableRow key={book.id}>
+                            <TableCell className="p-2 text-sm font-medium text-muted-foreground tabular-nums">
+                              {book.position}
+                            </TableCell>
+                            <TableCell className="p-2">
+                              <Link
+                                href={`/books/${bookSlug}`}
+                                className="block relative w-12 h-16 shrink-0 overflow-hidden rounded bg-muted"
+                                aria-label={`Voir ${book.title}`}
+                              >
+                                {book.coverUrl ? (
+                                  <Image
+                                    src={book.coverUrl}
+                                    alt=""
+                                    fill
+                                    sizes="48px"
+                                    className="object-contain"
+                                  />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">
+                                    —
+                                  </div>
+                                )}
+                              </Link>
+                            </TableCell>
+                            <TableCell>
+                              <Link
+                                href={`/books/${bookSlug}`}
+                                className="font-medium text-foreground hover:text-accent-foreground line-clamp-2"
+                              >
+                                {book.title}
+                              </Link>
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell text-muted-foreground text-sm">
+                              {book.author}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </section>
+            ) : null}
+            {profileSuggestions && profileSuggestions.suggestions.length > 0 ? (
+              <ProfileSuggestionsSection suggestions={profileSuggestions.suggestions} />
+            ) : null}
+          </>
         ) : null}
 
         {profile.publicLists.length > 0 ? (
           <section className="space-y-6">
-            <h2 className="text-2xl font-semibold text-foreground">Listes publiques</h2>
             <div className="grid gap-4 md:grid-cols-2">
               {profile.publicLists.map((list) => (
                 <Card

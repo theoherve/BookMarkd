@@ -378,7 +378,11 @@ const SearchClient = () => {
               <p className="mt-2 text-sm text-muted-foreground">
                 Vous ne trouvez pas le livre recherché ? Ajoutez-le manuellement au catalogue.
               </p>
-              <Button asChild className="mt-4" aria-label="Ajouter un livre manuellement">
+              <Button
+                asChild
+                className="mt-4 bg-accent text-accent-foreground hover:bg-accent/90 dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90"
+                aria-label="Ajouter un livre manuellement"
+              >
                 <Link
                   href={(() => {
                     const params = new URLSearchParams();
