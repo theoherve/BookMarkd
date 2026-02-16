@@ -103,23 +103,38 @@ const renderNotification = (n: UiNotification) => {
     const bookTitle = (n.payload.bookTitle as string) ?? "un livre";
     const bookAuthor = (n.payload.bookAuthor as string) ?? "";
     const bookSlug = (n.payload.bookSlug as string) ?? "";
+    const recommenderName = n.payload.recommenderName as string | undefined;
     const bookHref = bookSlug
       ? `/books/${bookSlug}`
       : bookTitle && bookAuthor
         ? `/books/${generateBookSlug(bookTitle, bookAuthor)}`
         : null;
+    const isFromUser = Boolean(recommenderName);
     return (
       <>
         <CardTitle className="text-sm font-medium">
           Nouvelle recommandation
         </CardTitle>
         <CardDescription className="text-sm">
-          Nous pensons que « {bookTitle} » pourrait vous plaire.{" "}
-          {bookHref ? (
-            <Link className="underline" href={bookHref}>
-              Voir
-            </Link>
-          ) : null}
+          {isFromUser ? (
+            <>
+              {recommenderName} vous recommande « {bookTitle} ».{" "}
+              {bookHref ? (
+                <Link className="underline" href={bookHref}>
+                  Voir le livre
+                </Link>
+              ) : null}
+            </>
+          ) : (
+            <>
+              Nous pensons que « {bookTitle} » pourrait vous plaire.{" "}
+              {bookHref ? (
+                <Link className="underline" href={bookHref}>
+                  Voir
+                </Link>
+              ) : null}
+            </>
+          )}
         </CardDescription>
         {common}
       </>

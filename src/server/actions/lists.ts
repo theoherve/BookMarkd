@@ -6,6 +6,8 @@ import { redirect } from "next/navigation";
 import { getCurrentSession } from "@/lib/auth/session";
 import db from "@/lib/supabase/db";
 import { resolveSessionUserId } from "@/lib/auth/user";
+import { getUserLists } from "@/features/lists/server/get-user-lists";
+import type { ListSummary } from "@/features/lists/types";
 
 type BaseActionResult =
   | { success: true }
@@ -66,6 +68,14 @@ const isEditorRole = (
   membership: "owner" | "editor" | "viewer" | null,
 ): membership is "owner" | "editor" => {
   return membership === "owner" || membership === "editor";
+};
+
+export const getMyLists = async (): Promise<ListSummary[] | null> => {
+  const userId = await assertAuthenticatedUser();
+  if (!userId) {
+    return null;
+  }
+  return getUserLists(userId);
 };
 
 export const createList = async (formData: FormData): Promise<CreateListResult> => {
