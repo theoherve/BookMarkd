@@ -58,7 +58,10 @@ export const getSimilarBooks = async (
       }
     });
 
-    const bookScores = new Map<string, { score: number; matchingTags: string[] }>();
+    const bookScores = new Map<
+      string,
+      { score: number; matchingTags: string[] }
+    >();
 
     // 2. Livres avec au moins un tag en commun (tous dans la table books = bibliothèque Bookmarkd)
     if (currentTagIds.length > 0) {
@@ -68,28 +71,33 @@ export const getSimilarBooks = async (
         .in("tag_id", currentTagIds);
 
       if (!candidateErr && candidateRelations) {
-        candidateRelations.forEach((rel: { book_id?: string | null; tag?: unknown }) => {
-          const otherBookId = rel.book_id;
-          if (!otherBookId || otherBookId === bookId) return;
+        candidateRelations.forEach(
+          (rel: { book_id?: string | null; tag?: unknown }) => {
+            const otherBookId = rel.book_id;
+            if (!otherBookId || otherBookId === bookId) return;
 
-          const tagName = getTagName(rel.tag);
-          if (!tagName) return;
+            const tagName = getTagName(rel.tag);
+            if (!tagName) return;
 
-          const existing = bookScores.get(otherBookId);
-          if (existing) {
-            existing.score += 1;
-            if (!existing.matchingTags.includes(tagName)) {
-              existing.matchingTags.push(tagName);
+            const existing = bookScores.get(otherBookId);
+            if (existing) {
+              existing.score += 1;
+              if (!existing.matchingTags.includes(tagName)) {
+                existing.matchingTags.push(tagName);
+              }
+            } else {
+              bookScores.set(otherBookId, {
+                score: 1,
+                matchingTags: [tagName],
+              });
             }
-          } else {
-            bookScores.set(otherBookId, { score: 1, matchingTags: [tagName] });
-          }
-        });
+          },
+        );
       }
     }
 
     // 3. Trier par score décroissant et prendre les premiers
-    let similarBookIds = Array.from(bookScores.entries())
+    const similarBookIds = Array.from(bookScores.entries())
       .sort((a, b) => b[1].score - a[1].score)
       .slice(0, limit)
       .map(([id]) => id);
@@ -145,7 +153,10 @@ export const getSimilarBooks = async (
     const result: SimilarBook[] = [];
     for (const book of sorted) {
       const id = (book as { id: string }).id;
-      const coverUrl = await getBookCoverUrl(id, (book as { cover_url?: string | null }).cover_url);
+      const coverUrl = await getBookCoverUrl(
+        id,
+        (book as { cover_url?: string | null }).cover_url,
+      );
       const { matchingTags } = scoreMap.get(id) ?? { matchingTags: [] };
       result.push({
         id,
