@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 
 import AddListItemForm from "@/components/lists/add-list-item-form";
 import CollaboratorsStack from "@/components/lists/collaborators-stack";
@@ -10,10 +11,54 @@ import { getAvailableBooks } from "@/features/lists/server/get-available-books";
 
 import { getCurrentSession } from "@/lib/auth/session";
 
+const BASE_URL = "https://bookmarkd.app";
+
 type ListDetailPageProps = {
   params: Promise<{
     listId: string;
   }>;
+};
+
+export const generateMetadata = async ({
+  params,
+}: ListDetailPageProps): Promise<Metadata> => {
+  const resolvedParams = await params;
+  const session = await getCurrentSession();
+  const viewerId = session?.user?.id ?? null;
+  try {
+    const detail = await getListDetail(resolvedParams.listId, viewerId);
+    const title = `${detail.title} · BookMarkd`;
+    const description =
+      detail.description?.trim() ||
+      `Liste de ${detail.items.length} livre${detail.items.length !== 1 ? "s" : ""} sur BookMarkd.`;
+    const url = `${BASE_URL}/lists/${detail.id}`;
+    const metadata: Metadata = {
+      title,
+      description,
+      alternates: { canonical: url },
+      openGraph: {
+        title,
+        description,
+        url,
+        siteName: "BookMarkd",
+        type: "website",
+      },
+      twitter: {
+        card: "summary",
+        title,
+        description,
+      },
+    };
+    if (detail.visibility === "private") {
+      metadata.robots = { index: false, follow: false };
+    }
+    return metadata;
+  } catch {
+    return {
+      title: "Liste · BookMarkd",
+      robots: { index: false, follow: false },
+    };
+  }
 };
 
 const ListDetailPage = async ({ params }: ListDetailPageProps) => {

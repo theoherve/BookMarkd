@@ -25,7 +25,10 @@ const applyLimit = <T,>(items: T[], limit?: number) => {
 };
 
 const FeedClient = ({ limit }: FeedClientProps = {}) => {
-  const { data, isLoading, isError, refetch, isRefetching } = useFeedQuery();
+  const { data, isLoading, isError, refetch, isRefetching } = useFeedQuery({
+    activitiesLimit: 20,
+    activitiesOffset: 0,
+  });
   const { recommendationSource, setRecommendationSource } =
     useFeedFiltersStore();
 

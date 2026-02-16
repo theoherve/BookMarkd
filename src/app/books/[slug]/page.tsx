@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 
 import AppShell from "@/components/layout/app-shell";
 import BackButton from "@/components/layout/back-button";
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 import db from "@/lib/supabase/db";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -21,6 +22,7 @@ import ReviewsList, {
 import BookReadersList from "@/components/books/book-readers-list";
 import BookFeelingsSection from "@/components/books/book-feelings-section";
 import SimilarBooksSection from "@/components/books/similar-books-section";
+import { BookJsonLd } from "@/components/seo/book-json-ld";
 import { getBookReaders } from "@/features/books/server/get-book-readers";
 import { getSimilarBooks } from "@/features/books/server/get-similar-books";
 import {
@@ -413,9 +415,35 @@ export const generateMetadata = async ({
     return {};
   }
 
+  const canonicalSlug = generateBookSlug(book.title, book.author);
+  const canonicalUrl = `https://bookmarkd.app/books/${canonicalSlug}`;
+  const title = `${book.title} – BookMarkd`;
+  const description =
+    book.summary ?? `Découvrez ${book.title} de ${book.author}.`;
+
+  const openGraphImages = book.cover_url
+    ? [{ url: book.cover_url, width: 400, height: 600, alt: `Couverture de ${book.title}` }]
+    : undefined;
+
   return {
-    title: `${book.title} – BookMarkd`,
-    description: book.summary ?? `Découvrez ${book.title} de ${book.author}.`,
+    title,
+    description,
+    alternates: { canonical: canonicalUrl },
+    openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+      siteName: "BookMarkd",
+      locale: "fr_FR",
+      type: "website",
+      images: openGraphImages,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: book.cover_url ? [book.cover_url] : undefined,
+    },
   };
 };
 
@@ -490,10 +518,39 @@ const BookPage = async ({ params }: BookPageProps) => {
   const viewerFeelings = viewerFeelingsData.keywordIds;
   const viewerFeelingsVisibility = viewerFeelingsData.visibility;
 
+  const canonicalSlug = generateBookSlug(book.title, book.author);
+  const canonicalUrl = `https://bookmarkd.app/books/${canonicalSlug}`;
+
   return (
     <AppShell>
+      <BookJsonLd
+        name={book.title}
+        author={book.author}
+        image={book.cover_url}
+        description={book.summary}
+        url={canonicalUrl}
+        aggregateRating={
+          typeof book.average_rating === "number" && (book.ratings_count ?? 0) > 0
+            ? {
+                ratingValue: book.average_rating,
+                ratingCount: book.ratings_count ?? 0,
+                bestRating: 5,
+              }
+            : undefined
+        }
+        datePublished={book.publication_year}
+      />
       <div className="space-y-10">
-        <BackButton ariaLabel="Retour à la page précédente" />
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <Breadcrumb
+            items={[
+              { label: "Accueil", href: "/" },
+              { label: "Livre", href: "/search" },
+              { label: book.title, href: canonicalUrl },
+            ]}
+          />
+          <BackButton ariaLabel="Retour à la page précédente" />
+        </div>
         <header className="flex flex-col gap-8 lg:flex-row lg:items-start">
           <div className="flex-1 space-y-3">
             <h1 className="text-4xl font-semibold text-foreground">

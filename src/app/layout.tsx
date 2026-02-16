@@ -5,6 +5,7 @@ import "./globals.css";
 
 import AuthSessionProvider from "@/components/layout/session-provider";
 import ServiceWorkerProvider from "@/components/layout/service-worker-provider";
+import { OrganizationJsonLd } from "@/components/seo/organization-json-ld";
 import { getCurrentSession } from "@/lib/auth/session";
 import QueryProvider from "@/components/providers/query-provider";
 
@@ -22,14 +23,17 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const defaultTitle = "BookMarkd · Suivez, notez et partagez vos lectures";
+const defaultDescription =
+  "BookMarkd est votre hub lecture social : suivez vos livres, découvrez ceux de vos amis et recevez des recommandations personnalisées.";
+
 export const metadata: Metadata = {
   metadataBase: new URL("https://bookmarkd.app"),
   title: {
-    default: "BookMarkd · Suivez, notez et partagez vos lectures",
+    default: defaultTitle,
     template: "%s · BookMarkd",
   },
-  description:
-    "BookMarkd est votre hub lecture social : suivez vos livres, découvrez ceux de vos amis et recevez des recommandations personnalisées.",
+  description: defaultDescription,
   manifest: "/manifest.webmanifest",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#fdfaf5" },
@@ -51,14 +55,36 @@ export const metadata: Metadata = {
     viewportFit: "cover",
   },
   keywords: [
-    "books",
-    "reading tracker",
-    "social reading",
+    "livres",
+    "suivi de lecture",
+    "recommandations lecture",
+    "réseau social lecture",
+    "liste de livres",
+    "PAL",
     "BookMarkd",
-    "Next.js",
-    "TailwindCSS 4",
   ],
   authors: [{ name: "BookMarkd" }],
+  openGraph: {
+    type: "website",
+    locale: "fr_FR",
+    siteName: "BookMarkd",
+    title: defaultTitle,
+    description: defaultDescription,
+    images: [
+      {
+        url: "/pwa/icon-192.png",
+        width: 192,
+        height: 192,
+        alt: "BookMarkd",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: defaultTitle,
+    description: defaultDescription,
+    images: ["/pwa/icon-192.png"],
+  },
 };
 
 type RootLayoutProps = {
@@ -82,6 +108,7 @@ const RootLayout = async ({ children }: RootLayoutProps) => {
       >
         <AuthSessionProvider session={session}>
           <QueryProvider>
+            <OrganizationJsonLd />
             <ServiceWorkerProvider>{children}</ServiceWorkerProvider>
           </QueryProvider>
         </AuthSessionProvider>

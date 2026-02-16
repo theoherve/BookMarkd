@@ -35,14 +35,25 @@ const isRecommendationSource = (
   );
 };
 
-const ACTIVITY_LIMIT = 6;
+const DEFAULT_ACTIVITY_LIMIT = 8;
+const MAX_ACTIVITY_LIMIT = 50;
 const FRIENDS_BOOKS_LIMIT = 6;
 const RECOMMENDATIONS_LIMIT = 6;
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const activitiesLimit = Math.min(
+      Math.max(1, parseInt(searchParams.get("activitiesLimit") ?? String(DEFAULT_ACTIVITY_LIMIT), 10) || DEFAULT_ACTIVITY_LIMIT),
+      MAX_ACTIVITY_LIMIT,
+    );
+    const activitiesOffset = Math.max(
+      0,
+      parseInt(searchParams.get("activitiesOffset") ?? "0", 10) || 0,
+    );
+
     const session = await getCurrentSession();
     const viewerId = session?.user?.id ?? null;
 
@@ -60,14 +71,24 @@ export async function GET() {
       );
     }
 
-    const activitiesPromise = (() => {
+    const activitiesPromise = ((): Promise<
+      { data: Array<{
+        id: string;
+        type: string;
+        payload: unknown;
+        createdAt: string;
+        user?: { id: string; displayName: string | null; avatarUrl: string | null };
+      }>;
+      hasMoreActivities: boolean;
+    }> => {
       // Ne récupérer que les activités des amis, pas celles de l'utilisateur connecté
       if (followingIds.length === 0) {
-        return Promise.resolve([]);
+        return Promise.resolve({ data: [], hasMoreActivities: false });
       }
 
-      return db.client
-        .from("activities")
+      return Promise.resolve(
+        db.client
+          .from("activities")
         .select(
           `
           id,
@@ -79,18 +100,31 @@ export async function GET() {
         )
         .in("user_id", followingIds)
         .order("created_at", { ascending: false })
-        .limit(ACTIVITY_LIMIT)
-        .then((r) =>
-          db.toCamel<
-            Array<{
-              id: string;
-              type: string;
-              payload: unknown;
-              createdAt: string;
-              user?: { id: string; displayName: string | null; avatarUrl: string | null };
-            }>
-          >(r.data ?? []),
-        );
+        .range(activitiesOffset, activitiesOffset + activitiesLimit)
+        .then((r) => {
+          const data = (r.data ?? []) as unknown as Array<{
+            id: string;
+            type: string;
+            payload: unknown;
+            created_at: string;
+            user?: { id: string; display_name: string | null; avatar_url: string | null };
+          }>;
+          const hasMore = data.length > activitiesLimit;
+          const slice = data.slice(0, activitiesLimit);
+          return {
+            data: db.toCamel<
+              Array<{
+                id: string;
+                type: string;
+                payload: unknown;
+                createdAt: string;
+                user?: { id: string; displayName: string | null; avatarUrl: string | null };
+              }>
+            >(slice),
+            hasMoreActivities: hasMore,
+          };
+        }),
+      );
     })();
 
     const friendsBooksPromise = (() => {
@@ -335,11 +369,14 @@ export async function GET() {
       });
     })();
 
-    const [activities, friendsBooks, recommendationsRaw] = await Promise.all([
+    const [activitiesResult, friendsBooks, recommendationsRaw] = await Promise.all([
       activitiesPromise,
       friendsBooksPromise,
       recommendationsPromise,
     ]);
+
+    const activities = activitiesResult.data;
+    const hasMoreActivities = activitiesResult.hasMoreActivities;
 
     const recommendations = (recommendationsRaw ?? []) as Array<{
       id: string;
@@ -638,6 +675,7 @@ export async function GET() {
       activities: formattedActivities,
       friendsBooks: formattedFriendsBooks,
       recommendations: formattedRecommendations,
+      hasMoreActivities,
     });
   } catch (error) {
     console.error("[feed] GET error:", error);

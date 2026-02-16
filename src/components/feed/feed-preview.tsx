@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useCallback, useRef, useEffect, forwardRef } from "react";
 
 import ActivityCard from "@/components/feed/activity-card";
 import BookFeedCard from "@/components/feed/book-feed-card";
@@ -15,12 +15,39 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useFeedQuery } from "@/features/feed/api/use-feed-query";
+import { useInfiniteFeedQuery } from "@/features/feed/api/use-feed-query";
 
-const MAX_ITEMS = 6;
+const MAX_ITEMS = 24;
 
 const FeedPreview = () => {
-  const { data, isLoading, isError, refetch, isRefetching } = useFeedQuery();
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    isRefetching,
+    hasMoreActivities,
+    loadMore,
+    isLoadingMore,
+  } = useInfiniteFeedQuery();
+  const activitiesScrollRef = useRef<HTMLDivElement>(null);
+
+  const handleActivitiesScroll = useCallback(() => {
+    const el = activitiesScrollRef.current;
+    if (!el || !hasMoreActivities || isLoadingMore) return;
+    const { scrollLeft, clientWidth, scrollWidth } = el;
+    const threshold = 200;
+    if (scrollLeft + clientWidth >= scrollWidth - threshold) {
+      loadMore();
+    }
+  }, [hasMoreActivities, isLoadingMore, loadMore]);
+
+  useEffect(() => {
+    const el = activitiesScrollRef.current;
+    if (!el) return;
+    el.addEventListener("scroll", handleActivitiesScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleActivitiesScroll);
+  }, [handleActivitiesScroll]);
 
   if (isLoading) {
     return <FeedPreviewSkeleton />;
@@ -62,12 +89,27 @@ const FeedPreview = () => {
         {activities.length === 0 ? (
           <EmptyPreview message="Aucune activité récente de vos amis. Ajoutez des ami·e·s pour suivre leurs activités !" />
         ) : (
-          <PreviewRow>
+          <PreviewRow ref={activitiesScrollRef}>
             {activities.map((activity) => (
               <PreviewItem key={activity.id}>
                 <ActivityCard item={activity} />
               </PreviewItem>
             ))}
+            {hasMoreActivities && (
+              <PreviewItem>
+                <div className="flex min-h-[200px] w-[280px] shrink-0 items-center justify-center rounded-xl border border-dashed border-border/60 bg-card/50">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={loadMore}
+                    disabled={isLoadingMore}
+                    aria-label="Charger plus d'activités"
+                  >
+                    {isLoadingMore ? "Chargement…" : "Charger plus"}
+                  </Button>
+                </div>
+              </PreviewItem>
+            )}
           </PreviewRow>
         )}
       </PreviewSection>
@@ -129,13 +171,19 @@ const PreviewSection = ({
   );
 };
 
-const PreviewRow = ({ children }: { children: ReactNode }) => {
+const PreviewRow = forwardRef<
+  HTMLDivElement,
+  { children: ReactNode }
+>(function PreviewRow({ children }, ref) {
   return (
-    <div className="flex items-stretch gap-4 overflow-x-auto py-2">
+    <div
+      ref={ref}
+      className="flex items-stretch gap-4 overflow-x-auto py-2"
+    >
       {children}
     </div>
   );
-};
+});
 
 const PreviewItem = ({ children }: { children: ReactNode }) => {
   return (
