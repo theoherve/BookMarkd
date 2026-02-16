@@ -1,4 +1,5 @@
 import type { FeedActivity } from "@/features/feed/types";
+import { formatRating } from "@/lib/utils";
 
 const getBookKey = (a: FeedActivity): string | null => {
   if (a.bookId) return a.bookId;
@@ -12,7 +13,7 @@ const getActivityPhrase = (a: FeedActivity): string | null => {
       return a.note ?? null;
     case "rating":
       return typeof a.rating === "number"
-        ? `a mis ${a.rating}/5`
+        ? `a mis ${formatRating(a.rating)}/5`
         : null;
     case "review":
       return "a mis un commentaire";

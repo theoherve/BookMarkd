@@ -5,6 +5,7 @@ import { useTransition } from "react";
 
 import type { ListItem } from "@/features/lists/types";
 
+import { formatRating } from "@/lib/utils";
 import { removeListItem } from "@/server/actions/lists";
 
 import { Button } from "@/components/ui/button";
@@ -52,7 +53,7 @@ const ListItemCard = ({ listId, item, canEdit, positionLabel }: ListItemCardProp
         </CardDescription>
         <CardContent className="p-0 text-sm text-muted-foreground">
           {hasAverageRating && averageRating !== null
-            ? `Note moyenne : ${averageRating.toFixed(1)}/5`
+            ? `Note moyenne : ${formatRating(averageRating)}/5`
             : "Pas encore de note collective."}
         </CardContent>
         {item.note ? (

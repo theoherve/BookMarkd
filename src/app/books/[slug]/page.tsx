@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/tooltip";
 import ReadingStatusForm from "@/components/books/reading-status-form";
 import RatingForm from "@/components/books/rating-form";
+import AddToListButton from "@/components/books/add-to-list-button";
+import SuggestBookToFriendButton from "@/components/profile/suggest-book-to-friend-button";
 import ReviewForm from "@/components/books/review-form";
 import ReviewsList, {
   BookReview,
@@ -26,6 +28,7 @@ import {
   getBookFeelings,
   getViewerFeelings,
 } from "@/features/books/server/get-book-feelings";
+import { getFollowing } from "@/server/actions/follow";
 import { getCurrentSession } from "@/lib/auth/session";
 import { formatRating } from "@/lib/utils";
 import { generateBookSlug, extractBookIdFromSlug } from "@/lib/slug";
@@ -477,12 +480,13 @@ const BookPage = async ({ params }: BookPageProps) => {
   ]);
 
   // Récupérer les feelings avec les followingIds corrects
-  const [availableKeywords, allFeelings, viewerFeelingsData] = await Promise.all([
+  const [availableKeywords, allFeelings, viewerFeelingsData, followingForRecommend] = await Promise.all([
     getAllFeelingKeywords(),
     getBookFeelings(book.id, viewerId, viewerFollowingIds),
     viewerId ? getViewerFeelings(book.id, viewerId) : Promise.resolve({ keywordIds: [], visibility: "public" as const }),
+    viewerId ? getFollowing(viewerId) : Promise.resolve([]),
   ]);
-  
+
   const viewerFeelings = viewerFeelingsData.keywordIds;
   const viewerFeelingsVisibility = viewerFeelingsData.visibility;
 
@@ -524,12 +528,25 @@ const BookPage = async ({ params }: BookPageProps) => {
                   ),
               )}
             </div>
-            <div className="flex flex-wrap gap-4 pt-2">
-              <ReadingStatusForm
-                bookId={book.id}
-                currentStatus={viewer.status ?? undefined}
-              />
-              <RatingForm bookId={book.id} currentRating={viewer.rating ?? undefined} />
+            <div className="flex w-fit flex-col gap-4 pt-2">
+              <div className="flex flex-wrap gap-4">
+                <ReadingStatusForm
+                  bookId={book.id}
+                  currentStatus={viewer.status ?? undefined}
+                />
+                <RatingForm bookId={book.id} currentRating={viewer.rating ?? undefined} />
+              </div>
+              {viewerId ? (
+                <div className="flex w-full min-w-0 gap-2">
+                  <AddToListButton bookId={book.id} className="min-w-0 flex-1" />
+                  <SuggestBookToFriendButton
+                    book={{ id: book.id, title: book.title, author: book.author }}
+                    followingList={followingForRecommend}
+                    showLabel
+                    className="min-w-0 flex-1"
+                  />
+                </div>
+              ) : null}
             </div>
           </div>
 
