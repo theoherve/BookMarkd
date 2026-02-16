@@ -233,17 +233,28 @@ const AppShell = ({ children }: AppShellProps) => {
         </div>
       </main>
       <footer className="hidden border-t border-border bg-card/40 py-6 md:block">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-6 gap-y-2 px-6 text-center text-sm text-muted-foreground">
-          {footerLinks.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-label={item.ariaLabel}
-              className="hover:text-foreground"
-            >
-              {item.label}
-            </Link>
-          ))}
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-center gap-3 px-6 text-center text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+            {footerLinks.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-label={item.ariaLabel}
+                className="hover:text-foreground"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+          <Link
+            href="https://github.com/theoherve"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Profil GitHub de Théo HERVÉ"
+            className="hover:text-foreground"
+          >
+            signé Théo HERVÉ
+          </Link>
         </div>
       </footer>
       <MobileBottomNav />

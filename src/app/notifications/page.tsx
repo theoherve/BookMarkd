@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 
 import AppShell from "@/components/layout/app-shell";
 import NotificationsList from "@/components/notifications/notifications-list";
+import WrappedAdminBanner from "@/components/wrapped/WrappedAdminBanner";
+import { getCurrentUserAdminStatus } from "@/lib/auth/admin";
 
 export const metadata: Metadata = {
   title: "Notifications",
@@ -10,6 +12,8 @@ export const metadata: Metadata = {
 };
 
 const NotificationsPage = async () => {
+  const isAdmin = await getCurrentUserAdminStatus();
+
   return (
     <AppShell>
       <div className="space-y-8">
@@ -19,6 +23,11 @@ const NotificationsPage = async () => {
             Retrouvez ici vos demandes de suivi, likes, commentaires et recommandations.
           </p>
         </header>
+        {isAdmin && (
+          <div>
+            <WrappedAdminBanner />
+          </div>
+        )}
         <NotificationsList />
       </div>
     </AppShell>
