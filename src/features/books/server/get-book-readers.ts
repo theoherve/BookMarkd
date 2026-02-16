@@ -2,6 +2,7 @@ import db from "@/lib/supabase/db";
 
 export type BookReader = {
   id: string;
+  username: string | null;
   displayName: string;
   avatarUrl: string | null;
   status: "to_read" | "reading" | "finished";
@@ -19,7 +20,7 @@ export const getBookReaders = async (bookId: string): Promise<BookReader[]> => {
         status,
         rating,
         updated_at,
-        user:user_id ( id, display_name, avatar_url )
+        user:user_id ( id, username, display_name, avatar_url )
       `,
       )
       .eq("book_id", bookId)
@@ -42,7 +43,12 @@ export const getBookReaders = async (bookId: string): Promise<BookReader[]> => {
         userId: string;
         status: "to_read" | "reading" | "finished";
         rating: number | null;
-        user?: { id: string; displayName: string; avatarUrl: string | null };
+        user?: {
+          id: string;
+          username: string | null;
+          displayName: string;
+          avatarUrl: string | null;
+        };
       }>
     >(userBooksRows ?? []);
 
@@ -51,6 +57,7 @@ export const getBookReaders = async (bookId: string): Promise<BookReader[]> => {
 
     return userBooks.map((ub) => ({
       id: ub.user?.id ?? ub.userId,
+      username: ub.user?.username ?? null,
       displayName: ub.user?.displayName ?? "Utilisateur·rice",
       avatarUrl: ub.user?.avatarUrl ?? null,
       status: ub.status as "to_read" | "reading" | "finished",

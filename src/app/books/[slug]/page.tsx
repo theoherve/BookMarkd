@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 
 import AppShell from "@/components/layout/app-shell";
+import BackButton from "@/components/layout/back-button";
 import db from "@/lib/supabase/db";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -483,6 +484,7 @@ const BookPage = async ({ params }: BookPageProps) => {
   return (
     <AppShell>
       <div className="space-y-10">
+        <BackButton ariaLabel="Retour à la page précédente" />
         <header className="flex flex-col gap-8 lg:flex-row lg:items-start">
           <div className="flex-1 space-y-3">
             <h1 className="text-4xl font-semibold text-foreground">
