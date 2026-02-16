@@ -20,8 +20,8 @@ const sizeClasses = {
 };
 
 const BookLoader = ({ className, size = "md", text }: BookLoaderProps) => {
-  const [animationData, setAnimationData] = useState<any>(null);
-  const lottieRef = useRef<any>(null);
+  const [animationData, setAnimationData] = useState<Record<string, unknown> | null>(null);
+  const lottieRef = useRef<{ setSpeed?: (speed: number) => void } | null>(null);
 
   useEffect(() => {
     // Charger l'animation dynamiquement
@@ -30,9 +30,9 @@ const BookLoader = ({ className, size = "md", text }: BookLoaderProps) => {
         const response = await fetch("/animations/book-loader.json");
         if (response.ok) {
           const data = await response.json();
-          setAnimationData(data);
+          setAnimationData(data as Record<string, unknown>);
         }
-      } catch (error) {
+      } catch {
         console.warn("Animation Lottie non trouvée, utilisation du fallback");
       }
     };
