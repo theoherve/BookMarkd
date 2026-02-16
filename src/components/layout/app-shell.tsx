@@ -161,7 +161,7 @@ const AppShell = ({ children }: AppShellProps) => {
                   <DropdownMenuRoot>
                     <DropdownMenuTrigger
                       aria-label="Menu compte utilisateur"
-                      className="flex shrink-0 rounded-full ring-2 ring-border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                      className="flex shrink-0 cursor-pointer rounded-full ring-2 ring-border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
                     >
                       {session.user.image ? (
                         <Image
@@ -235,6 +235,16 @@ const AppShell = ({ children }: AppShellProps) => {
       <footer className="hidden border-t border-border bg-card/40 py-6 md:block">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-center gap-3 px-6 text-center text-sm text-muted-foreground">
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+        <Link
+            href="https://github.com/theoherve"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Profil GitHub de Théo HERVÉ"
+            className="hover:text-foreground"
+          >
+            © BookMarkd by Théo HERVÉ - Tous droits réservés
+          </Link>
+          |
             {footerLinks.map((item) => (
               <Link
                 key={item.href}
@@ -246,15 +256,6 @@ const AppShell = ({ children }: AppShellProps) => {
               </Link>
             ))}
           </div>
-          <Link
-            href="https://github.com/theoherve"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Profil GitHub de Théo HERVÉ"
-            className="hover:text-foreground"
-          >
-            signé Théo HERVÉ
-          </Link>
         </div>
       </footer>
       <MobileBottomNav />
