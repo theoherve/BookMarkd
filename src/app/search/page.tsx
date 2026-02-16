@@ -1,10 +1,12 @@
 import AppShell from "@/components/layout/app-shell";
+import BackButton from "@/components/layout/back-button";
 import SearchClient from "@/components/search/search-client";
 
 const SearchPage = () => {
   return (
     <AppShell>
       <div className="space-y-8">
+        <BackButton ariaLabel="Retour à la page précédente" />
         <section className="space-y-3">
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
             Recherche

@@ -1,4 +1,5 @@
 import AppShell from "@/components/layout/app-shell";
+import BackButton from "@/components/layout/back-button";
 import { FaqJsonLd } from "@/components/seo/faq-json-ld";
 
 const FAQ_ITEMS = [
@@ -48,6 +49,7 @@ const FaqPage = () => {
         }))}
       />
       <div className="space-y-10">
+        <BackButton ariaLabel="Retour à la page précédente" />
         <header className="space-y-2">
           <h1 className="text-3xl font-semibold text-foreground">
             Questions fréquentes

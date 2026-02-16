@@ -2,6 +2,7 @@ import { unstable_noStore as noStore } from "next/cache";
 import { redirect } from "next/navigation";
 
 import AppShell from "@/components/layout/app-shell";
+import BackButton from "@/components/layout/back-button";
 import FeedbackForm from "@/components/feedback/feedback-form";
 import { Badge } from "@/components/ui/badge";
 
@@ -29,6 +30,7 @@ const FeedbackPage = async () => {
   return (
     <AppShell>
       <div className="space-y-6">
+        <BackButton ariaLabel="Retour à la page précédente" />
         <header className="space-y-2">
           <Badge className="w-fit bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
             Feedback

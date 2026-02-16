@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import AppShell from "@/components/layout/app-shell";
+import BackButton from "@/components/layout/back-button";
 import ListSummaryCard from "@/components/lists/list-summary-card";
 
 import { getUserLists } from "@/features/lists/server/get-user-lists";
@@ -26,6 +27,7 @@ const ListsPage = async () => {
   return (
     <AppShell>
       <div className="space-y-8">
+        <BackButton ariaLabel="Retour à la page précédente" />
         <header className="flex flex-col gap-3">
           <h1 className="text-3xl font-semibold text-foreground">Vos listes</h1>
           <p className="text-sm text-muted-foreground">

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import AppShell from "@/components/layout/app-shell";
+import BackButton from "@/components/layout/back-button";
 import BookCreateForm from "@/components/books/book-create-form";
 
 import { getCurrentSession } from "@/lib/auth/session";
@@ -25,6 +26,7 @@ const CreateBookPage = async () => {
   return (
     <AppShell>
       <div className="space-y-8">
+        <BackButton ariaLabel="Retour à la page précédente" />
         <header className="space-y-3">
           <h1 className="text-3xl font-semibold text-foreground">Ajouter un livre</h1>
           <p className="max-w-2xl text-sm text-muted-foreground">

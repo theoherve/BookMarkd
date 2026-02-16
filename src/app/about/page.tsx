@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import AppShell from "@/components/layout/app-shell";
+import BackButton from "@/components/layout/back-button";
 
 export const metadata = {
   title: "À propos",
@@ -20,6 +21,7 @@ const AboutPage = () => {
   return (
     <AppShell>
       <div className="space-y-10">
+        <BackButton ariaLabel="Retour à la page précédente" />
         <header className="space-y-2">
           <h1 className="text-3xl font-semibold text-foreground">
             À propos de BookMarkd

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 
 import AppShell from "@/components/layout/app-shell";
 import { BlogBody } from "@/components/blog/blog-body";
+import BackLink from "@/components/layout/back-link";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { ArticleJsonLd } from "@/components/seo/article-json-ld";
 import { getPostBySlug, getAllPosts } from "@/lib/blog";
@@ -72,6 +73,7 @@ const BlogPostPage = async ({ params }: BlogPostPageProps) => {
         image={post.image}
       />
       <article className="space-y-8">
+        <BackLink href="/blog" label="Retour au blog" ariaLabel="Retour à la liste des articles du blog" />
         <Breadcrumb
           items={[
             { label: "Accueil", href: "/" },
