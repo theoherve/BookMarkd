@@ -1,4 +1,6 @@
+import Link from "next/link";
 import AppShell from "@/components/layout/app-shell";
+import BlogPreview from "@/components/blog/blog-preview";
 import FeedPreview from "@/components/feed/feed-preview";
 import HomeSearchBar from "@/components/search/home-search-bar";
 import { WebsiteJsonLd } from "@/components/seo/website-json-ld";
@@ -82,6 +84,25 @@ const HomePage = () => {
             </p>
           </header>
           <FeedPreview />
+        </section>
+
+        <section className="space-y-4">
+          <header className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            <div>
+              <h2 className="text-2xl font-semibold text-foreground">Derniers articles du blog</h2>
+              <p className="text-sm text-muted-foreground">
+                Découvrez nos conseils lecture, tops de la communauté et actualités BookMarkd.
+              </p>
+            </div>
+            <Link
+              href="/blog"
+              className="text-sm font-medium text-primary underline-offset-2 hover:underline"
+              aria-label="Voir tous les articles du blog"
+            >
+              Voir tout →
+            </Link>
+          </header>
+          <BlogPreview />
         </section>
       </div>
     </AppShell>

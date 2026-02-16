@@ -52,7 +52,7 @@ const RecommendationCard = ({ item }: RecommendationCardProps) => {
       aria-label={`Recommandation ${item.title}`}
       className="flex h-full w-full flex-col space-y-0 border border-dashed border-border/70 bg-card/60 transition hover:border-accent hover:shadow-sm"
     >
-      <CardHeader className="flex-shrink-0 space-y-1.5">
+      <CardHeader className="shrink-0 space-y-1.5">
         <Badge
           variant="outline"
           className="w-fit rounded-full border-dashed px-3 py-1 text-[11px] uppercase tracking-[0.35em] text-muted-foreground"
@@ -81,7 +81,8 @@ const RecommendationCard = ({ item }: RecommendationCardProps) => {
             <TooltipTrigger asChild>
               <Badge
                 variant="outline"
-                className="w-fit cursor-help rounded-full border-dashed px-3 py-1 text-[11px] uppercase tracking-[0.35em] text-muted-foreground"
+                className="w-full max-w-full cursor-help rounded-full border-dashed px-3 py-1 text-center text-[11px] uppercase tracking-[0.35em] text-muted-foreground break-words whitespace-normal"
+                title={sourceLabel}
               >
                 {sourceLabel}
               </Badge>
@@ -96,7 +97,7 @@ const RecommendationCard = ({ item }: RecommendationCardProps) => {
           </Tooltip>
           <Badge
             variant="secondary"
-            className="w-fit rounded-full bg-accent/20 px-3 py-1 text-xs font-medium text-accent-foreground dark:text-foreground"
+            className="w-full max-w-full rounded-full bg-accent/20 px-3 py-1 text-center text-xs font-medium text-accent-foreground dark:text-foreground break-words whitespace-normal"
             aria-label={`Affinité estimée ${item.score} pour cent`}
           >
             Affinité estimée : {item.score}%
@@ -137,7 +138,7 @@ const RecommendationCard = ({ item }: RecommendationCardProps) => {
           </div>
         ) : null}
       </CardContent>
-      <CardFooter className="flex flex-shrink-0 flex-wrap items-center gap-3 border-t border-border/60 bg-card/40 p-4">
+      <CardFooter className="flex shrink-0 flex-wrap items-center gap-3 border-t border-border/60 bg-card/40 p-4">
         <AddToReadlistButton bookId={item.bookId} disabled={item.viewerHasInReadlist} />
         <Dialog>
           <DialogTrigger asChild>
