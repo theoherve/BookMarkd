@@ -6,7 +6,6 @@ import AppShell from "@/components/layout/app-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getPublicProfile } from "@/features/profile/server/get-public-profile";
 import FollowRequestButton from "@/components/profile/follow-request-button";
-import ProfileRecentBooksSection from "@/components/profile/profile-recent-books-section";
 import { getFollowStatus } from "@/server/actions/follow";
 import { getCurrentSession } from "@/lib/auth/session";
 import { resolveSessionUserId } from "@/lib/auth/user";
@@ -106,19 +105,25 @@ const PublicProfilePage = async ({ params }: ProfilePageProps) => {
         </header>
 
         <section className="grid gap-4 md:grid-cols-3">
-          <Card className="border-border/60 bg-card/80 backdrop-blur">
-            <CardHeader>
-              <CardTitle className="text-sm font-semibold uppercase text-muted-foreground">
-                Livres lus
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <p className="text-4xl font-semibold text-foreground">{profile.stats.booksRead}</p>
-              <CardDescription className="text-sm text-muted-foreground">
-                Lectures terminées
-              </CardDescription>
-            </CardContent>
-          </Card>
+          <Link
+            href={`/profiles/${username}/books`}
+            className="block transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg"
+            aria-label={`Voir les ${profile.stats.booksRead} livre${profile.stats.booksRead > 1 ? "s" : ""} lus`}
+          >
+            <Card className="border-border/60 bg-card/80 backdrop-blur cursor-pointer h-full transition-shadow hover:shadow-md">
+              <CardHeader>
+                <CardTitle className="text-sm font-semibold uppercase text-muted-foreground">
+                  Livres lus
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <p className="text-4xl font-semibold text-foreground">{profile.stats.booksRead}</p>
+                <CardDescription className="text-sm text-muted-foreground">
+                  Lectures terminées
+                </CardDescription>
+              </CardContent>
+            </Card>
+          </Link>
           <Card className="border-border/60 bg-card/80 backdrop-blur">
             <CardHeader>
               <CardTitle className="text-sm font-semibold uppercase text-muted-foreground">
@@ -147,7 +152,7 @@ const PublicProfilePage = async ({ params }: ProfilePageProps) => {
           </Card>
         </section>
 
-        {profile.topBooks.length > 0 ? (
+        {followStatus === "following" && profile.topBooks.length > 0 ? (
           <section className="space-y-6">
             <h2 className="text-2xl font-semibold text-foreground">Top 3 livres</h2>
             <div className="grid gap-4 md:grid-cols-3">
@@ -189,10 +194,6 @@ const PublicProfilePage = async ({ params }: ProfilePageProps) => {
               })}
             </div>
           </section>
-        ) : null}
-
-        {profile.recentBooks.length > 0 ? (
-          <ProfileRecentBooksSection books={profile.recentBooks} />
         ) : null}
 
         {profile.publicLists.length > 0 ? (

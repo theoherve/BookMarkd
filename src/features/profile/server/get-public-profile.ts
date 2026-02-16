@@ -223,3 +223,69 @@ export const getPublicProfile = async (
   }
 };
 
+export type PublicProfileBookRead = {
+  bookId: string;
+  title: string;
+  author: string;
+  coverUrl: string | null;
+  rating: number | null;
+  updatedAt: string;
+};
+
+export const getPublicProfileBooksRead = async (
+  username: string,
+): Promise<{ displayName: string; books: PublicProfileBookRead[] } | null> => {
+  try {
+    const { data: userRow, error: userError } = await db.client
+      .from("users")
+      .select("id, display_name")
+      .eq("username", username)
+      .maybeSingle();
+    if (userError || !userRow) return null;
+
+    const user = db.toCamel<{ id: string; displayName: string }>(userRow);
+
+    const { data: rows, error } = await db.client
+      .from("user_books")
+      .select(
+        `
+        rating,
+        updated_at,
+        book:book_id (
+          id,
+          title,
+          author,
+          cover_url
+        )
+      `,
+      )
+      .eq("user_id", user.id)
+      .eq("status", "finished")
+      .order("updated_at", { ascending: false });
+    if (error) throw error;
+
+    const books = (rows ?? [])
+      .map((row) =>
+        db.toCamel<{
+          rating: number | null;
+          updatedAt: string;
+          book?: { id: string; title: string; author: string; coverUrl: string | null };
+        }>(row),
+      )
+      .filter((r) => r.book)
+      .map((r) => ({
+        bookId: r.book!.id,
+        title: r.book!.title,
+        author: r.book!.author,
+        coverUrl: r.book!.coverUrl,
+        rating: r.rating,
+        updatedAt: r.updatedAt,
+      }));
+
+    return { displayName: user.displayName, books };
+  } catch (err) {
+    console.error("[profile] getPublicProfileBooksRead error:", err);
+    return null;
+  }
+};
+
