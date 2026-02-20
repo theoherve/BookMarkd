@@ -501,6 +501,67 @@ export async function GET(request: Request) {
       });
     }
 
+    // Récupérer tous les utilisateurs ayant lu chaque livre recommandé
+    const readersByBook = new Map<string, Array<{
+      id: string;
+      username: string | null;
+      displayName: string;
+      avatarUrl: string | null;
+      status: "to_read" | "reading" | "finished";
+    }>>();
+    if (recommendationBookIds.length > 0) {
+      const { data: bookReadersData, error: readersErr } = await db.client
+        .from("user_books")
+        .select(
+          `
+          book_id,
+          status,
+          user_id,
+          user:user_id ( id, username, display_name, avatar_url )
+        `,
+        )
+        .in("book_id", recommendationBookIds)
+        .order("updated_at", { ascending: false });
+
+      if (readersErr) {
+        console.error("[feed] Error fetching book readers:", readersErr);
+      }
+
+      if (bookReadersData && bookReadersData.length > 0) {
+        const userBooks = db.toCamel<
+          Array<{
+            bookId: string;
+            status: "to_read" | "reading" | "finished";
+            userId: string;
+            user?: {
+              id: string;
+              username: string | null;
+              displayName: string;
+              avatarUrl: string | null;
+            };
+          }>
+        >(bookReadersData ?? []);
+
+        userBooks.forEach((ub) => {
+          const bookId = ub.bookId;
+          if (!bookId || !ub.user) return;
+
+          const existing = readersByBook.get(bookId) ?? [];
+          // Limiter à 5 utilisateurs par livre
+          if (existing.length < 5) {
+            existing.push({
+              id: ub.user.id,
+              username: ub.user.username,
+              displayName: ub.user.displayName,
+              avatarUrl: ub.user.avatarUrl,
+              status: ub.status,
+            });
+            readersByBook.set(bookId, existing);
+          }
+        });
+      }
+    }
+
     // Helper : le payload est transformé en camelCase par db.toCamel
     const getPayloadValue = (p: Record<string, unknown>, key: string) => {
       const camel = p[key.replace(/_([a-z])/g, (_m, c) => c.toUpperCase())];
@@ -644,6 +705,7 @@ export async function GET(request: Request) {
 
         // Utiliser tous les tags du livre depuis la base de données pour l'affichage
         const tags = tagsByBook.get(bookId) ?? [];
+        const readers = readersByBook.get(bookId) ?? [];
 
         return {
           id: item.id,
@@ -667,6 +729,7 @@ export async function GET(request: Request) {
           viewerHasInReadlist: viewerReadlistBooks.has(bookId),
           friendHighlights: friendContext?.highlights ?? [],
           tags: tags.slice(0, 5),
+          readers: readers,
         };
       },
     );

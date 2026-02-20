@@ -26,6 +26,14 @@ export type FeedFriendBook = {
   readerAvatarUrl?: string | null;
 };
 
+export type BookReaderPreview = {
+  id: string;
+  username: string | null;
+  displayName: string;
+  avatarUrl: string | null;
+  status: "to_read" | "reading" | "finished";
+};
+
 export type FeedRecommendation = {
   id: string;
   bookId: string;
@@ -40,6 +48,7 @@ export type FeedRecommendation = {
   viewerHasInReadlist?: boolean;
   friendHighlights?: string[];
   tags?: string[];
+  readers?: BookReaderPreview[];
 };
 
 export type FeedResponse = {
