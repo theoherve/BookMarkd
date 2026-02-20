@@ -8,6 +8,14 @@ export type UserCompatibility = {
   sharedBooksCount: number;
 };
 
+export type BookReaderPreview = {
+  id: string;
+  username: string | null;
+  displayName: string;
+  avatarUrl: string | null;
+  status: "to_read" | "reading" | "finished";
+};
+
 export type ProfileSuggestion = {
   id: string;
   bookId: string;
@@ -18,6 +26,7 @@ export type ProfileSuggestion = {
   reason: string;
   matchingTags: string[];
   viewerHasInReadlist: boolean;
+  readers: BookReaderPreview[];
 };
 
 export type ProfileSuggestionsResult = {
@@ -260,12 +269,16 @@ export const getProfileSuggestions = async (
 
     const topBookIds = sorted.map((s) => s.bookId);
 
+    console.log("[profile] Top book IDs for suggestions:", topBookIds);
+    console.log("[profile] Viewer ID:", viewerId);
+
     const { data: booksData, error: booksErr } = await db.client
       .from("books")
       .select("id, title, author, cover_url")
       .in("id", topBookIds);
 
     if (booksErr || !booksData || booksData.length === 0) {
+      console.log("[profile] No books found or error:", booksErr);
       return { userCompatibility, suggestions: [] };
     }
 
@@ -287,6 +300,99 @@ export const getProfileSuggestions = async (
       (viewerHasBooks ?? []).map((r) => (r as { book_id: string }).book_id),
     );
 
+    // Récupérer les utilisateurs ayant lu chaque livre suggéré
+    console.log("[profile] Fetching book readers for books:", topBookIds);
+    const { data: bookReadersData, error: readersErr } = await db.client
+      .from("user_books")
+      .select(
+        `
+        book_id,
+        status,
+        user_id,
+        user:user_id ( id, username, display_name, avatar_url )
+      `,
+      )
+      .in("book_id", topBookIds)
+      .neq("user_id", viewerId) // Exclure le viewer lui-même
+      .order("updated_at", { ascending: false });
+
+    console.log("[profile] Raw bookReadersData:", JSON.stringify(bookReadersData, null, 2));
+    console.log("[profile] bookReadersData length:", bookReadersData?.length ?? 0);
+    console.log("[profile] readersErr:", readersErr);
+
+    if (readersErr) {
+      console.error("[profile] Error fetching book readers:", readersErr);
+    }
+
+    // Organiser les lecteurs par livre
+    const readersByBook = new Map<string, BookReaderPreview[]>();
+    if (bookReadersData && bookReadersData.length > 0) {
+      console.log("[profile] Processing bookReadersData, count:", bookReadersData.length);
+      
+      // Utiliser db.toCamel comme dans get-book-readers.ts
+      const userBooks = db.toCamel<
+        Array<{
+          bookId: string;
+          status: "to_read" | "reading" | "finished";
+          userId: string;
+          user?: {
+            id: string;
+            username: string | null;
+            displayName: string;
+            avatarUrl: string | null;
+          };
+        }>
+      >(bookReadersData ?? []);
+
+      console.log("[profile] After db.toCamel, userBooks:", JSON.stringify(userBooks, null, 2));
+      console.log("[profile] userBooks length:", userBooks.length);
+
+      userBooks.forEach((ub, index) => {
+        console.log(`[profile] Processing userBook ${index}:`, {
+          bookId: ub.bookId,
+          userId: ub.userId,
+          status: ub.status,
+          hasUser: !!ub.user,
+          user: ub.user,
+        });
+
+        const bookId = ub.bookId;
+        if (!bookId) {
+          console.log(`[profile] Skipping userBook ${index}: no bookId`);
+          return;
+        }
+        if (!ub.user) {
+          console.log(`[profile] Skipping userBook ${index}: no user data`);
+          return;
+        }
+
+        const existing = readersByBook.get(bookId) ?? [];
+        // Limiter à 5 utilisateurs par livre
+        if (existing.length < 5) {
+          const reader: BookReaderPreview = {
+            id: ub.user.id,
+            username: ub.user.username,
+            displayName: ub.user.displayName,
+            avatarUrl: ub.user.avatarUrl,
+            status: ub.status,
+          };
+          existing.push(reader);
+          readersByBook.set(bookId, existing);
+          console.log(`[profile] Added reader to book ${bookId}:`, reader);
+        } else {
+          console.log(`[profile] Skipping reader for book ${bookId}: already has 5 readers`);
+        }
+      });
+
+      console.log("[profile] Final readersByBook Map:", Array.from(readersByBook.entries()).map(([bookId, readers]) => ({
+        bookId,
+        readersCount: readers.length,
+        readers: readers.map(r => ({ id: r.id, displayName: r.displayName })),
+      })));
+    } else {
+      console.log("[profile] No bookReadersData or empty array");
+    }
+
     const suggestions: ProfileSuggestion[] = [];
     for (const book of sortedBooks) {
       const id = (book as { id: string }).id;
@@ -307,6 +413,9 @@ export const getProfileSuggestions = async (
       reasonParts.push(`Affinité avec ${profileDisplayName} : ${userCompatibilityScore}%`);
       const reason = reasonParts.join(" • ");
 
+      const readersForBook = readersByBook.get(id) ?? [];
+      console.log(`[profile] Book ${id} (${(book as { title: string }).title}) has ${readersForBook.length} readers:`, readersForBook.map(r => r.displayName));
+
       suggestions.push({
         id: `profile-suggestion-${id}`,
         bookId: id,
@@ -317,8 +426,16 @@ export const getProfileSuggestions = async (
         reason,
         matchingTags,
         viewerHasInReadlist: viewerHasBookIds.has(id),
+        readers: readersForBook,
       });
     }
+
+    console.log("[profile] Final suggestions with readers:", suggestions.map(s => ({
+      bookId: s.bookId,
+      title: s.title,
+      readersCount: s.readers.length,
+      readers: s.readers.map(r => r.displayName),
+    })));
 
     return { userCompatibility, suggestions };
   } catch (error) {
