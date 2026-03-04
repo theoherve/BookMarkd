@@ -41,36 +41,33 @@ const BlogListPage = async () => {
         <ul className="space-y-6">
           {posts.map((post) => (
             <li key={post.slug}>
-              <article className="rounded-xl border border-border/60 bg-card/80 p-6">
-                <time
-                  dateTime={post.publishedAt.toISOString()}
-                  className="text-muted-foreground text-xs"
-                >
-                  {post.publishedAt.toLocaleDateString("fr-FR", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </time>
-                <h2 className="mt-1 text-xl font-semibold text-foreground">
-                  <Link
-                    href={`/blog/${post.slug}`}
-                    className="hover:text-primary underline-offset-2 hover:underline"
+              <Link
+                href={`/blog/${post.slug}`}
+                aria-label={`Lire l'article : ${post.title}`}
+                className="group block rounded-xl border border-border/60 bg-card/80 p-6 transition hover:border-border hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                <article className="space-y-2">
+                  <time
+                    dateTime={post.publishedAt.toISOString()}
+                    className="text-muted-foreground text-xs"
                   >
+                    {post.publishedAt.toLocaleDateString("fr-FR", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </time>
+                  <h2 className="mt-1 text-xl font-semibold text-foreground group-hover:text-primary">
                     {post.title}
-                  </Link>
-                </h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {post.description}
-                </p>
-                <Link
-                  href={`/blog/${post.slug}`}
-                  className="mt-3 inline-block text-sm font-medium text-primary underline-offset-2 hover:underline"
-                  aria-label={`Lire l'article : ${post.title}`}
-                >
-                  Lire l&apos;article →
-                </Link>
-              </article>
+                  </h2>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {post.description}
+                  </p>
+                  <span className="mt-3 inline-flex items-center text-sm font-medium text-primary underline-offset-2 group-hover:underline">
+                    Lire l&apos;article →
+                  </span>
+                </article>
+              </Link>
             </li>
           ))}
         </ul>
