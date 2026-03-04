@@ -17,7 +17,7 @@ export const BlogBody = ({ body }: BlogBodyProps) => {
     .filter(Boolean);
 
   return (
-    <div className="prose prose-neutral dark:prose-invert max-w-none space-y-4">
+    <div className="prose prose-neutral dark:prose-invert max-w-none space-y-5">
       {paragraphs.map((paragraph, index) => {
         const parts: Array<{ type: "text" | "link" | "bold"; content: string; href?: string }> = [];
         let remaining = paragraph;
@@ -71,7 +71,10 @@ export const BlogBody = ({ body }: BlogBodyProps) => {
         }
 
         return (
-          <p key={index} className="text-foreground text-sm leading-6">
+          <p
+            key={index}
+            className="text-foreground text-[0.925rem] leading-relaxed sm:text-[0.975rem] sm:leading-[1.9] md:text-base md:leading-7"
+          >
             {parts.map((part, i) => {
               if (part.type === "text") {
                 return <span key={i}>{part.content}</span>;
