@@ -7,6 +7,7 @@ import AuthSessionProvider from "@/components/layout/session-provider";
 import ServiceWorkerProvider from "@/components/layout/service-worker-provider";
 import { OrganizationJsonLd } from "@/components/seo/organization-json-ld";
 import QueryProvider from "@/components/providers/query-provider";
+import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -88,6 +89,7 @@ const RootLayout = ({ children }: RootLayoutProps) => {
             <ServiceWorkerProvider>{children}</ServiceWorkerProvider>
           </QueryProvider>
         </AuthSessionProvider>
+        <Analytics />
       </body>
     </html>
   );
