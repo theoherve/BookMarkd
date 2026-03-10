@@ -30,8 +30,14 @@ const slugify = (value: string) => {
     .replace(/\s+/g, "-");
 };
 
+type ImportOptions = {
+  /** When true, the book is counted as "added via barcode scan" for admin stats. */
+  addedViaScan?: boolean;
+};
+
 export const importGoogleBooksBook = async (
   payload: ImportPayload,
+  options?: ImportOptions,
 ): Promise<ImportResult> => {
   try {
     // Vérifier si le quota est disponible avant de faire la requête
@@ -91,6 +97,8 @@ export const importGoogleBooksBook = async (
     const publisher = payload.publisher ?? volumeDetails.publisher ?? null;
     const language = payload.language ?? volumeDetails.language ?? null;
 
+    const source = options?.addedViaScan ? "scan" : "search";
+
     // Créer le livre
     const { data: newBook, error: insertError } = await db.client
       .from("books")
@@ -107,6 +115,7 @@ export const importGoogleBooksBook = async (
           language,
           ratings_count: 0,
           average_rating: 0,
+          source,
         },
       ])
       .select("id")

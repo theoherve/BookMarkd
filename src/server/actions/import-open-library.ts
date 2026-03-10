@@ -18,6 +18,11 @@ type ImportResult =
   | { success: true; bookId: string }
   | { success: false; message: string };
 
+type ImportOptions = {
+  /** When true, the book is counted as "added via barcode scan" for admin stats. */
+  addedViaScan?: boolean;
+};
+
 const slugify = (value: string) => {
   return value
     .toLowerCase()
@@ -28,6 +33,7 @@ const slugify = (value: string) => {
 
 export const importOpenLibraryBook = async (
   payload: ImportPayload,
+  options?: ImportOptions,
 ): Promise<ImportResult> => {
   try {
     // Vérifier si le livre existe déjà
@@ -46,6 +52,8 @@ export const importOpenLibraryBook = async (
     const summary = payload.summary ?? (workDetails.description ?? null);
     const coverUrl = payload.coverUrl ?? workDetails.coverUrl ?? payload.coverUrl;
 
+    const source = options?.addedViaScan ? "scan" : "search";
+
     // Créer le livre
     const { data: newBook, error: insertError } = await db.client
       .from("books")
@@ -59,6 +67,7 @@ export const importOpenLibraryBook = async (
           summary,
           ratings_count: 0,
           average_rating: 0,
+          source,
         },
       ])
       .select("id")

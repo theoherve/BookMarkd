@@ -1,4 +1,4 @@
-import { Users, BookOpen, MessageSquare, List, TrendingUp, Clock } from "lucide-react";
+import { Users, BookOpen, MessageSquare, List, TrendingUp, Clock, ScanBarcode } from "lucide-react";
 import { StatCard } from "@/components/admin/shared/stat-card";
 import type { DashboardStats } from "@/types/admin";
 
@@ -18,6 +18,11 @@ export const DashboardKpiCards = ({ stats }: KpiCardsProps) => {
         title="Livres"
         value={stats.totalBooks.toLocaleString("fr-FR")}
         icon={BookOpen}
+      />
+      <StatCard
+        title="Livres scannés"
+        value={stats.totalScannedBooks.toLocaleString("fr-FR")}
+        icon={ScanBarcode}
       />
       <StatCard
         title="Avis"
