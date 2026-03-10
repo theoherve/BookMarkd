@@ -26,6 +26,7 @@ import NotificationBell from "@/components/notifications/notification-bell";
 import OfflineBanner from "@/components/pwa/offline-banner";
 import InstallPwaCta from "@/components/pwa/install-pwa-cta";
 import MobileBottomNav from "@/components/layout/mobile-bottom-nav";
+import ScanFab from "@/components/scan/scan-fab";
 
 type NavigationLink = {
   href: string;
@@ -281,6 +282,7 @@ const AppShell = ({ children }: AppShellProps) => {
         </div>
       </footer>
       <MobileBottomNav />
+      <ScanFab />
       <InstallPwaCta />
     </div>
   );

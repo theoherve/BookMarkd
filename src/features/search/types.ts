@@ -39,3 +39,15 @@ export type UserSearchResponse = {
   count: number;
 };
 
+export type BlogSuggestion = {
+  slug: string;
+  title: string;
+  description: string;
+};
+
+export type SuggestionsResponse = {
+  books: SearchBook[];
+  users: SearchUser[];
+  blog: BlogSuggestion[];
+};
+
