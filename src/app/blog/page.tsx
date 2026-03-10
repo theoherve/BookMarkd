@@ -20,7 +20,7 @@ export const metadata = {
 };
 
 const BlogListPage = async () => {
-  const posts = getAllPosts();
+  const posts = await getAllPosts();
 
   return (
     <AppShell>

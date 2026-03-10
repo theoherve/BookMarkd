@@ -24,6 +24,7 @@ import BookReadersList from "@/components/books/book-readers-list";
 import BookFeelingsSection from "@/components/books/book-feelings-section";
 import SimilarBooksSection from "@/components/books/similar-books-section";
 import { BookJsonLd } from "@/components/seo/book-json-ld";
+import { trackBookView } from "@/lib/analytics/track-book-view";
 import { getBookReaders } from "@/features/books/server/get-book-readers";
 import { getSimilarBooks } from "@/features/books/server/get-similar-books";
 import {
@@ -465,6 +466,8 @@ const BookPage = async ({ params }: BookPageProps) => {
     const correctSlug = generateBookSlug(book.title, book.author);
     redirect(`/books/${correctSlug}`);
   }
+
+  void trackBookView({ bookId: book.id, userId: viewerId });
 
   const tags =
     book.book_tags?.map((relation) => relation.tag).filter(Boolean) ?? [];

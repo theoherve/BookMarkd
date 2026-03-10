@@ -135,7 +135,7 @@ async function getBlogSlugs(): Promise<
 > {
   try {
     const { getAllPosts } = await import("@/lib/blog");
-    const posts = getAllPosts();
+    const posts = await getAllPosts();
     return posts.map((p) => ({
       slug: p.slug,
       lastModified: p.updatedAt ?? p.publishedAt,
