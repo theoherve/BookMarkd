@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { getAllPosts } from "@/lib/blog";
 
-const BlogPreview = () => {
-  const posts = getAllPosts().slice(0, 3);
+const BlogPreview = async () => {
+  const posts = (await getAllPosts()).slice(0, 3);
 
   if (posts.length === 0) {
     return null;

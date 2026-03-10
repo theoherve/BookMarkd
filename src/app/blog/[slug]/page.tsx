@@ -7,6 +7,7 @@ import BackLink from "@/components/layout/back-link";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { ArticleJsonLd } from "@/components/seo/article-json-ld";
 import { getPostBySlug, getAllPosts } from "@/lib/blog";
+import { trackBlogView } from "@/lib/analytics/track-blog-view";
 
 const BASE_URL = "https://bookmarkd.app";
 
@@ -15,7 +16,7 @@ type BlogPostPageProps = {
 };
 
 export const generateStaticParams = async () => {
-  const posts = getAllPosts();
+  const posts = await getAllPosts();
   return posts.map((post) => ({ slug: post.slug }));
 };
 
@@ -23,7 +24,7 @@ export const generateMetadata = async ({
   params,
 }: BlogPostPageProps): Promise<Metadata> => {
   const { slug } = await params;
-  const post = getPostBySlug(slug);
+  const post = await getPostBySlug(slug);
   if (!post) {
     return {};
   }
@@ -54,11 +55,13 @@ export const generateMetadata = async ({
 
 const BlogPostPage = async ({ params }: BlogPostPageProps) => {
   const { slug } = await params;
-  const post = getPostBySlug(slug);
+  const post = await getPostBySlug(slug);
 
   if (!post) {
     notFound();
   }
+
+  void trackBlogView({ slug });
 
   const url = `${BASE_URL}/blog/${post.slug}`;
 

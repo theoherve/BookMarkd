@@ -1,0 +1,11 @@
+-- ============================================================================
+-- BookMarkd - Migration: Seed blog posts from hardcoded data
+-- ----------------------------------------------------------------------------
+-- Ce fichier sert de reference. Le seeding reel se fait via le script
+-- scripts/seed-blog-posts.ts qui lit les articles depuis content/blog/posts.ts
+-- et les insere dans la table blog_posts.
+--
+-- Usage: pnpm tsx scripts/seed-blog-posts.ts
+-- ============================================================================
+-- Les 18 articles existants seront inseres avec status = 'published'
+-- et published_at = leur date de publication originale.

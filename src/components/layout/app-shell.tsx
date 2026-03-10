@@ -3,7 +3,7 @@
 import { ReactNode, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Plus, Menu } from "lucide-react";
+import { Plus, Menu, LayoutDashboard } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
@@ -197,6 +197,17 @@ const AppShell = ({ children }: AppShellProps) => {
                           Mon profil
                         </Link>
                       </DropdownMenuItem>
+                      {session.user.isAdmin && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem>
+                            <Link href="/admin" className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm">
+                              <LayoutDashboard className="size-4" />
+                              Dashboard
+                            </Link>
+                          </DropdownMenuItem>
+                        </>
+                      )}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem>
                         <button

@@ -1,12 +1,8 @@
 "use server";
 
-import { Resend } from "resend";
-
 import db from "@/lib/supabase/db";
+import { sendEmail } from "@/lib/email/send-email";
 import type { FeedbackType } from "@/types/feedback";
-
-const RESEND_API_KEY = process.env.RESEND_API_KEY ?? process.env.BOOK_MARKD_RESEND_API_KEY;
-const FROM_EMAIL = "BookMarkd <onboarding@resend.dev>";
 
 const getAdminEmails = async (): Promise<string[]> => {
   const { data, error } = await db.client
@@ -15,7 +11,10 @@ const getAdminEmails = async (): Promise<string[]> => {
     .eq("is_admin", true);
 
   if (error) {
-    console.error("[feedback-notification] Error fetching admin emails:", error);
+    console.error(
+      "[feedback-notification] Error fetching admin emails:",
+      error,
+    );
     return [];
   }
 
@@ -38,18 +37,14 @@ export type FeedbackNotificationPayload = {
 const sendFeedbackNotificationToAdmins = async (
   payload: FeedbackNotificationPayload,
 ): Promise<void> => {
-  if (!RESEND_API_KEY) {
-    console.warn("[feedback-notification] RESEND_API_KEY not set, skipping email.");
-    return;
-  }
-
   const adminEmails = await getAdminEmails();
   if (adminEmails.length === 0) {
     console.warn("[feedback-notification] No admin emails found, skipping.");
     return;
   }
 
-  const typeLabel = payload.type === "bug" ? "Bug signalé" : "Nouvelle suggestion";
+  const typeLabel =
+    payload.type === "bug" ? "Bug signalé" : "Nouvelle suggestion";
   const submitterInfo = payload.submitterUsername
     ? `${payload.submitterDisplayName} (@${payload.submitterUsername})`
     : payload.submitterDisplayName;
@@ -82,17 +77,17 @@ const sendFeedbackNotificationToAdmins = async (
   `.trim();
 
   try {
-    const resend = new Resend(RESEND_API_KEY);
-    const { error } = await resend.emails.send({
-      from: FROM_EMAIL,
+    await sendEmail({
       to: adminEmails,
       subject: `[BookMarkd] ${typeLabel} : ${payload.title}`,
       html,
+      emailType: "feedback_notification",
+      metadata: {
+        feedbackType: payload.type,
+        feedbackTitle: payload.title,
+        submitter: payload.submitterDisplayName,
+      },
     });
-
-    if (error) {
-      console.error("[feedback-notification] Resend error:", error);
-    }
   } catch (err) {
     console.error("[feedback-notification] Failed to send email:", err);
   }
