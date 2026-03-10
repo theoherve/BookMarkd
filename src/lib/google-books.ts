@@ -259,6 +259,70 @@ export const fetchGoogleBooksDetails = async (googleBooksId: string) => {
   }
 };
 
+/**
+ * Look up a book by ISBN via Google Books API.
+ * Uses the `isbn:` query prefix for precise matching.
+ * Does NOT apply langRestrict since ISBN is language-agnostic.
+ */
+export const lookupGoogleBooksByISBN = async (
+  isbn: string
+): Promise<GoogleBooksResult | null> => {
+  try {
+    const apiKey = getApiKey();
+
+    if (!apiKey) {
+      console.warn("[google-books] API key not configured");
+      return null;
+    }
+
+    const url = new URL(GOOGLE_BOOKS_API_ENDPOINT);
+    url.searchParams.set("q", `isbn:${isbn}`);
+    url.searchParams.set("maxResults", "1");
+    url.searchParams.set("key", apiKey);
+    // No langRestrict — ISBN is universal
+
+    const response = await fetch(url.toString(), {
+      headers: {
+        "User-Agent": "BookMarkd/1.0 (https://bookmarkd.app)",
+      },
+      next: { revalidate: 60 * 60 * 24 }, // Cache 24h
+    });
+
+    if (!response.ok) {
+      console.error(
+        `[google-books] ISBN lookup error: ${response.status} ${response.statusText}`
+      );
+      return null;
+    }
+
+    const data = (await response.json()) as GoogleBooksSearchResponse;
+
+    if (!data?.items || data.items.length === 0) {
+      return null;
+    }
+
+    const item = data.items[0];
+    const volumeInfo = item.volumeInfo || {};
+    const authors = volumeInfo.authors || [];
+
+    return {
+      id: `googlebooks:${item.id}`,
+      title: volumeInfo.title || "Titre inconnu",
+      author: authors[0] || "Auteur inconnu",
+      publicationYear: extractYear(volumeInfo.publishedDate),
+      coverUrl: buildCoverUrl(volumeInfo.imageLinks),
+      summary: volumeInfo.description || null,
+      isbn: extractISBN(volumeInfo.industryIdentifiers),
+      publisher: volumeInfo.publisher || null,
+      language: volumeInfo.language || null,
+      categories: volumeInfo.categories || [],
+    };
+  } catch (error) {
+    console.error("[google-books] ISBN lookup error:", error);
+    return null;
+  }
+};
+
 // Fonction pour vérifier si on peut utiliser Google Books (quota)
 export const canUseGoogleBooks = async (): Promise<boolean> => {
   try {

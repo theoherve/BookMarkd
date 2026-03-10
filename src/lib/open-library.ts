@@ -67,6 +67,104 @@ export const searchOpenLibrary = async (
   }
 };
 
+type OpenLibraryEditionResponse = {
+  title?: string;
+  authors?: Array<{ key: string }>;
+  publishers?: string[];
+  publish_date?: string;
+  covers?: number[];
+  works?: Array<{ key: string }>;
+  isbn_13?: string[];
+  isbn_10?: string[];
+  number_of_pages?: number;
+  languages?: Array<{ key: string }>;
+};
+
+type OpenLibraryAuthorResponse = {
+  name?: string;
+};
+
+/**
+ * Look up a book by ISBN via OpenLibrary's dedicated ISBN endpoint.
+ * Returns edition data with resolved author name.
+ */
+export const lookupOpenLibraryByISBN = async (
+  isbn: string
+): Promise<OpenLibraryResult | null> => {
+  try {
+    const response = await fetch(
+      `https://openlibrary.org/isbn/${isbn}.json`,
+      {
+        headers: {
+          "User-Agent": "BookMarkd/1.0 (https://bookmarkd.app)",
+        },
+        next: { revalidate: 60 * 60 * 24 }, // Cache 24h
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      console.error(
+        `[open-library] ISBN lookup error: ${response.status} ${response.statusText}`
+      );
+      return null;
+    }
+
+    const data = (await response.json()) as OpenLibraryEditionResponse;
+
+    // Resolve author name from author key
+    let authorName = "Autrice inconnue";
+    if (data.authors && data.authors.length > 0) {
+      try {
+        const authorResponse = await fetch(
+          `https://openlibrary.org${data.authors[0].key}.json`,
+          {
+            headers: {
+              "User-Agent": "BookMarkd/1.0 (https://bookmarkd.app)",
+            },
+            next: { revalidate: 60 * 60 * 24 },
+          }
+        );
+        if (authorResponse.ok) {
+          const authorData =
+            (await authorResponse.json()) as OpenLibraryAuthorResponse;
+          if (authorData.name) {
+            authorName = authorData.name;
+          }
+        }
+      } catch {
+        // Keep default author name
+      }
+    }
+
+    // Extract year from publish_date (formats: "2024", "January 2024", "Jan 15, 2024")
+    let publicationYear: number | null = null;
+    if (data.publish_date) {
+      const yearMatch = data.publish_date.match(/\b(\d{4})\b/);
+      if (yearMatch) {
+        publicationYear = parseInt(yearMatch[1], 10);
+      }
+    }
+
+    // Build a work-based ID if available, otherwise use ISBN
+    const workKey = data.works?.[0]?.key?.replace("/works/", "");
+    const id = workKey ? `openlib:${workKey}` : `openlib:isbn:${isbn}`;
+
+    return {
+      id,
+      title: data.title ?? "Titre inconnu",
+      author: authorName,
+      publicationYear,
+      coverUrl: buildCoverUrl(data.covers?.[0]),
+    };
+  } catch (error) {
+    console.error("[open-library] ISBN lookup error:", error);
+    return null;
+  }
+};
+
 type OpenLibraryWorkResponse = {
   description?:
     | string

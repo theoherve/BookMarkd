@@ -1,7 +1,8 @@
 "use client";
 
 import { FormEvent, useMemo, useState, useEffect, useRef } from "react";
-import { Search, X, Filter } from "lucide-react";
+import { Search, X, Filter, ScanBarcode } from "lucide-react";
+import ScanFlow from "@/components/scan/scan-flow";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -48,6 +49,7 @@ const SearchClient = () => {
   const [author, setAuthor] = useState<string>("");
   const [includeExternal, setIncludeExternal] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [isScanActive, setIsScanActive] = useState(false);
 
   const { data: tagsData } = useTagsQuery();
 
@@ -285,15 +287,27 @@ const SearchClient = () => {
               </Button>
             ) : null}
             {activeTab === "books" ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label={showFilters ? "Masquer les filtres" : "Afficher les filtres"}
-                onClick={() => setShowFilters((v) => !v)}
-              >
-                <Filter className="h-5 w-5" />
-              </Button>
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Scanner le code-barres d'un livre"
+                  onClick={() => setIsScanActive(true)}
+                  className="md:hidden"
+                >
+                  <ScanBarcode className="h-5 w-5" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={showFilters ? "Masquer les filtres" : "Afficher les filtres"}
+                  onClick={() => setShowFilters((v) => !v)}
+                >
+                  <Filter className="h-5 w-5" />
+                </Button>
+              </>
             ) : null}
           </div>
           <Button type="submit" aria-label="Lancer la recherche" className="w-full md:w-auto md:ml-auto">
@@ -426,6 +440,11 @@ const SearchClient = () => {
           )}
         </>
       ) : null}
+      {/* Barcode scan flow (mobile only) */}
+      <ScanFlow
+        isActive={isScanActive}
+        onClose={() => setIsScanActive(false)}
+      />
     </div>
   );
 };

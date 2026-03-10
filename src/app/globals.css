@@ -319,6 +319,20 @@ button {
     }
   }
 
+  /* Barcode scanner scan line animation */
+  @keyframes scanLine {
+    0%, 100% {
+      top: 0;
+    }
+    50% {
+      top: calc(100% - 2px);
+    }
+  }
+
+  .animate-scan-line {
+    animation: scanLine 2s ease-in-out infinite;
+  }
+
   /* Masquer l'outline carré au début de l'animation Lottie */
   .book-loader-wrapper svg,
   .book-loader-wrapper canvas,
