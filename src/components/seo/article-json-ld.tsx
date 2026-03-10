@@ -28,6 +28,14 @@ export const ArticleJsonLd = ({
       "@type": "Organization",
       name: author,
     },
+    publisher: {
+      "@type": "Organization",
+      name: "BookMarkd",
+      logo: {
+        "@type": "ImageObject",
+        url: "https://bookmarkd.app/logo.png",
+      },
+    },
   };
 
   if (dateModified) {

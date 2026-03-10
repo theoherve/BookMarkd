@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 
 import AppShell from "@/components/layout/app-shell";
 import BackLink from "@/components/layout/back-link";
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 import AddListItemForm from "@/components/lists/add-list-item-form";
 import CollaboratorsStack from "@/components/lists/collaborators-stack";
 import ShareListButton from "@/components/lists/share-list-button";
@@ -77,6 +78,11 @@ const ListDetailPage = async ({ params }: ListDetailPageProps) => {
 
   return (
     <AppShell>
+      <Breadcrumb items={[
+        { label: "Accueil", href: "/" },
+        { label: "Listes", href: "/lists" },
+        { label: detail.title, href: `/lists/${detail.id}` },
+      ]} />
       <div className="space-y-8">
         <BackLink href="/lists" label="Retour aux listes" ariaLabel="Retour à la page des listes" />
         <section className="space-y-8">

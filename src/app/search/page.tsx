@@ -1,10 +1,28 @@
+import type { Metadata } from "next";
+import { Suspense } from "react";
 import AppShell from "@/components/layout/app-shell";
 import BackButton from "@/components/layout/back-button";
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 import SearchClient from "@/components/search/search-client";
+
+export const metadata: Metadata = {
+  title: "Recherche",
+  description:
+    "Trouvez votre prochaine lecture dans le catalogue BookMarkd ou importez depuis Open Library.",
+  openGraph: {
+    title: "Recherche · BookMarkd",
+    description:
+      "Trouvez votre prochaine lecture dans le catalogue BookMarkd ou importez depuis Open Library.",
+    url: "https://bookmarkd.app/search",
+    siteName: "BookMarkd",
+    type: "website",
+  },
+};
 
 const SearchPage = () => {
   return (
     <AppShell>
+      <Breadcrumb items={[{ label: "Accueil", href: "/" }, { label: "Recherche", href: "/search" }]} />
       <div className="space-y-8">
         <BackButton ariaLabel="Retour à la page précédente" />
         <section className="space-y-3">
@@ -19,7 +37,9 @@ const SearchPage = () => {
             d’Open Library pour compléter vos étagères.
           </p>
         </section>
-        <SearchClient />
+        <Suspense>
+          <SearchClient />
+        </Suspense>
       </div>
     </AppShell>
   );

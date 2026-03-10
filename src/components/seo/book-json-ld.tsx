@@ -10,6 +10,10 @@ type BookJsonLdProps = {
     bestRating: number;
   };
   datePublished?: number | null;
+  isbn?: string | null;
+  publisher?: string | null;
+  inLanguage?: string | null;
+  numberOfPages?: number | null;
 };
 
 export const BookJsonLd = ({
@@ -20,6 +24,10 @@ export const BookJsonLd = ({
   url,
   aggregateRating,
   datePublished,
+  isbn,
+  publisher,
+  inLanguage,
+  numberOfPages,
 }: BookJsonLdProps) => {
   const schema: Record<string, unknown> = {
     "@context": "https://schema.org",
@@ -52,6 +60,11 @@ export const BookJsonLd = ({
   if (datePublished) {
     schema.datePublished = String(datePublished);
   }
+
+  if (isbn) schema.isbn = isbn;
+  if (publisher) schema.publisher = { "@type": "Organization", name: publisher };
+  if (inLanguage) schema.inLanguage = inLanguage;
+  if (numberOfPages) schema.numberOfPages = numberOfPages;
 
   return (
     <script

@@ -43,7 +43,7 @@ const ProfileSuggestionCard = ({ item }: { item: ProfileSuggestion }) => {
           {item.coverUrl ? (
             <Image
               src={item.coverUrl}
-              alt=""
+              alt={`Couverture de ${item.title}`}
               fill
               sizes="48px"
               className="object-cover"
@@ -106,7 +106,7 @@ const ProfileSuggestionCard = ({ item }: { item: ProfileSuggestion }) => {
                     {reader.avatarUrl ? (
                       <Image
                         src={reader.avatarUrl}
-                        alt=""
+                        alt={`Photo de profil de ${reader.displayName}`}
                         fill
                         sizes="20px"
                         className="object-cover"

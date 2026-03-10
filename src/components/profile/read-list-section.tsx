@@ -194,7 +194,7 @@ const ReadListSection = ({ readList }: ReadListSectionProps) => {
                           {item.book.coverUrl ? (
                             <Image
                               src={item.book.coverUrl}
-                              alt=""
+                              alt={`Couverture de ${item.book.title}`}
                               fill
                               sizes="48px"
                               className="object-contain"

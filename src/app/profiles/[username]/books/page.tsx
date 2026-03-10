@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import type { Metadata } from "next";
 
 import AppShell from "@/components/layout/app-shell";
 import {
@@ -22,6 +23,23 @@ type ProfileBooksPageProps = {
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+export const generateMetadata = async ({
+  params,
+}: ProfileBooksPageProps): Promise<Metadata> => {
+  const { username } = await params;
+  const data = await getPublicProfileBooksRead(username);
+  if (!data) return {};
+  return {
+    title: `Livres lus par ${data.displayName}`,
+    description: `Découvrez les lectures de ${data.displayName} sur BookMarkd.`,
+    openGraph: {
+      title: `Livres lus par ${data.displayName} · BookMarkd`,
+      description: `Découvrez les lectures de ${data.displayName} sur BookMarkd.`,
+      type: "profile",
+    },
+  };
+};
 
 const ProfileBooksPage = async ({ params }: ProfileBooksPageProps) => {
   const { username } = await params;
@@ -79,7 +97,7 @@ const ProfileBooksPage = async ({ params }: ProfileBooksPageProps) => {
                           {book.coverUrl ? (
                             <Image
                               src={book.coverUrl}
-                              alt=""
+                              alt={`Couverture de ${book.title}`}
                               fill
                               sizes="48px"
                               className="object-contain"

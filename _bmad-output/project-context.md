@@ -1,9 +1,18 @@
 ---
-project_name: 'book-markd'
-user_name: 'Theo.herve'
-date: '2026-02-18'
-sections_completed: ['technology_stack', 'language_rules', 'framework_rules', 'testing_rules', 'quality_rules', 'workflow_rules', 'anti_patterns']
-status: 'complete'
+project_name: "book-markd"
+user_name: "theoherve"
+date: "2026-02-18"
+sections_completed:
+  [
+    "technology_stack",
+    "language_rules",
+    "framework_rules",
+    "testing_rules",
+    "quality_rules",
+    "workflow_rules",
+    "anti_patterns",
+  ]
+status: "complete"
 rule_count: 52
 optimized_for_llm: true
 ---
@@ -44,7 +53,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - **Async/await** preferred over raw Promise chains
 - **Discriminated union result pattern** for Server Actions:
   ```ts
-  type Result = { success: true } | { success: false; message: string }
+  type Result = { success: true } | { success: false; message: string };
   ```
 - **Domain types** live in `src/features/{domain}/types.ts` — never inline complex types in components
 - **`isolatedModules: true`** — every file must be a module (add `export {}` if needed)
@@ -55,6 +64,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 ### Framework-Specific Rules
 
 #### Next.js App Router
+
 - **Pages are async Server Components by default** — only add `"use client"` when strictly needed (event handlers, hooks, browser APIs, Zustand, TanStack Query)
 - **Auth guard pattern** in every protected page:
   ```ts
@@ -70,6 +80,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - **Image domains** must be declared in `next.config.ts` `remotePatterns` before use
 
 #### React & Components
+
 - **React Compiler is enabled** — do NOT add `useMemo`/`useCallback` manually; the compiler handles it
 - **Component files**: one default export per file, named same as the file (PascalCase)
 - **`"use client"`** required for: Zustand stores, TanStack Query hooks, `useState`/`useEffect`, event listeners
@@ -77,6 +88,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - **`cn()` utility** (clsx + tailwind-merge) for conditional class names
 
 #### Supabase / Database
+
 - **Always use service client**: `import db from "@/lib/supabase/db"` → `db.client`
 - **ALWAYS call `db.toCamel<Type>()`** on Supabase query results — critical, DB is snake_case
 - **`maybeSingle()`** for nullable single-row queries; **`single()`** only when row is guaranteed
@@ -85,6 +97,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - **Error code `"23505"`** = unique constraint violation (handle explicitly)
 
 #### State Management
+
 - **Zustand** for UI state (filters, modals, wizard) — store files in `src/stores/{name}.ts`
 - **TanStack Query** for all server/async data — hooks in `src/features/{domain}/api/use-{name}.ts`
 - **Query keys** are arrays: `["resource", params]`
@@ -93,6 +106,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 ### Testing Rules
 
 #### Test Framework
+
 - **Unit/integration tests**: Vitest ^4.0.8 — run with `pnpm test`
 - **E2E tests**: Playwright — run with `pnpm test:ui` (files in `tests/e2e/`)
 - **Test environment**: `node` (vitest.config.mts) — use `jsdom` only for React component tests
@@ -100,11 +114,13 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - **Coverage**: `pnpm test:coverage` — provider is v8
 
 #### Test File Organization
+
 - Unit/integration test files: co-locate with source as `{filename}.test.ts(x)` or in `__tests__/` beside the file
 - E2E test files: `tests/e2e/{feature}-*.spec.ts`
 - No test files exist yet — follow Vitest conventions when creating them
 
 #### Writing Tests
+
 - **Mock Supabase** — never call real DB in unit tests
 - **Mock NextAuth `getServerSession`** when testing Server Components or actions that require auth
 - **React Testing Library**: use `render`, `screen`, `userEvent` — avoid `fireEvent`
@@ -113,16 +129,19 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - **`globals: true`** in vitest config — `describe`, `it`, `expect` available without import
 
 #### Coverage
+
 - No enforced threshold currently — prioritize tests for Server Actions and critical `src/lib/` functions
 
 ### Code Quality & Style Rules
 
 #### Linting & Formatting
+
 - **ESLint 9** with `eslint-config-next/core-web-vitals` + `eslint-config-next/typescript` — run with `pnpm lint`
 - No Prettier config — ESLint handles style; match existing code formatting
 - Generated files ignored by ESLint: `public/sw.js`, `public/workbox-*.js` (next-pwa output)
 
 #### File & Folder Structure
+
 ```
 src/
   app/                    ← Next.js App Router (pages, layouts, API routes)
@@ -143,6 +162,7 @@ src/
 ```
 
 #### Naming Conventions
+
 - **Files**: kebab-case everywhere (`feed-section.tsx`, `use-book-search.ts`, `get-user-lists.ts`)
 - **React components**: PascalCase export matching filename (`FeedSection`, `AppShell`)
 - **Functions/hooks**: camelCase (`getUserLists`, `useBookSearch`)
@@ -151,6 +171,7 @@ src/
 - **Types**: PascalCase (`ListSummary`, `ViewerRole`, `SearchParams`)
 
 #### Code Style
+
 - **Tailwind classes** directly in JSX — no CSS modules or styled-components
 - **TailwindCSS v4**: use CSS variable-based tokens (`text-foreground`, `bg-muted`, `text-muted-foreground`) — not v3 arbitrary value patterns
 - **No comments** on obvious code — only comment non-evident business logic
@@ -158,11 +179,13 @@ src/
 ### Development Workflow Rules
 
 #### Git & Branches
+
 - **Branch naming**: `features/{feature-name}` or `fix/{fix-name}`
 - **Commit message format**: `[Type] Description` — e.g., `[Feature] Add BackButton Component`, `[Enhancement] Update AppShell Footer`, `[Fix] Correct reading status query`
 - **PRs target `main`** branch
 
 #### Dev Scripts
+
 - `pnpm dev` — dev server (Turbopack disabled: `TURBOPACK=0 next dev`)
 - `pnpm build` — production build (`next build --webpack`)
 - `pnpm lint` — ESLint
@@ -172,13 +195,16 @@ src/
 - `pnpm db:test` — test DB connection
 
 #### PWA & Service Worker
+
 - **SW registration is manual** via `ServiceWorkerProvider` — NOT next-pwa auto-register (`register: false`)
 - **PWA disabled in development** (`disable: process.env.NODE_ENV === 'development'`)
 - **Offline fallback**: `/offline` route
 - **Never modify** `public/sw.js` or `public/workbox-*.js` — generated at build time
 
 #### Environment Variables
+
 Required in `.env.local`:
+
 - `BOOK_MARKD_POSTGRES_URL_NON_POOLING`
 - `NEXTAUTH_SECRET`, `NEXTAUTH_URL`
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
@@ -186,11 +212,13 @@ Required in `.env.local`:
 - `RESEND_API_KEY`
 
 #### Deployment
+
 - Target: **Vercel** (Next.js) + **Supabase** (Postgres, Storage, Auth)
 
 ### Critical Don't-Miss Rules
 
 #### Absolute Anti-Patterns
+
 - **Never use `npm` or `yarn`** — this project uses `pnpm` exclusively
 - **Never modify `src/components/ui/`** manually — managed by shadcn/ui
 - **Never create a Supabase client client-side** — always go through Server Actions or API routes
@@ -201,17 +229,20 @@ Required in `.env.local`:
 - **Never write user-facing error messages in English** — always in French
 
 #### Security Gotchas
+
 - **Passwords**: always hash with `bcryptjs` (salt rounds: 10) — never store plain text
 - **Server Actions**: validate inputs server-side even if already validated client-side
 - **Session**: use `getCurrentSession()` + `resolveSessionUserId()` — never trust URL params to identify the current user
 - **Supabase service client** bypasses RLS — only use in secured server-side contexts
 
 #### Performance Gotchas
+
 - **`export const dynamic = "force-dynamic"`** disables static cache — use only when necessary
 - **TanStack Query** already handles caching — do not duplicate cache logic
 - **Use `{ count: "exact", head: true }`** for count queries — never fetch all rows to count them
 
 #### PWA Gotchas
+
 - **Service Worker is disabled in development** — test PWA features in production/preview builds only
 - **SW registration is manual** in `ServiceWorkerProvider` — do not set `register: true` in next-pwa config
 - **Offline queue** (`src/lib/pwa/offline-queue.ts`) uses IndexedDB via `idb` — never use localStorage for offline actions
@@ -221,12 +252,14 @@ Required in `.env.local`:
 ## Usage Guidelines
 
 **For AI Agents:**
+
 - Read this file before implementing any code in this project
 - Follow ALL rules exactly as documented
 - When in doubt, prefer the more restrictive option
 - Update this file if new patterns emerge during implementation
 
 **For Humans:**
+
 - Keep this file lean and focused on agent needs
 - Update when technology stack changes
 - Review periodically for outdated rules

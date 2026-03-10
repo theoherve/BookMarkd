@@ -1,10 +1,17 @@
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 
 import AppShell from "@/components/layout/app-shell";
 import BackLink from "@/components/layout/back-link";
 import ListCreateForm from "@/components/lists/list-create-form";
 
 import { getCurrentSession } from "@/lib/auth/session";
+
+export const metadata: Metadata = {
+  title: "Créer une liste",
+  description: "Créez une nouvelle liste de lecture personnelle ou collaborative sur BookMarkd.",
+  robots: { index: false, follow: false },
+};
 
 const CreateListPage = async () => {
   const session = await getCurrentSession();

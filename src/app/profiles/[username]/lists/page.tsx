@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import type { Metadata } from "next";
 
 import AppShell from "@/components/layout/app-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +13,18 @@ type ProfileListsPageProps = {
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+export const generateMetadata = async ({
+  params,
+}: ProfileListsPageProps): Promise<Metadata> => {
+  const { username } = await params;
+  const profile = await getPublicProfile(username);
+  if (!profile) return {};
+  return {
+    title: `Listes publiques de ${profile.displayName}`,
+    description: `Explorez les listes de lecture partagées par ${profile.displayName} sur BookMarkd.`,
+  };
+};
 
 const ProfileListsPage = async ({ params }: ProfileListsPageProps) => {
   const { username } = await params;

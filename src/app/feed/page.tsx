@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 
 import AppShell from "@/components/layout/app-shell";
 import BackButton from "@/components/layout/back-button";
@@ -10,6 +11,12 @@ import { resolveSessionUserId } from "@/lib/auth/user";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+export const metadata: Metadata = {
+  title: "Fil d'actualité",
+  description: "Parcourez les notes, activités et recommandations de votre réseau lecture.",
+  robots: { index: false, follow: false },
+};
 
 const FeedPage = async () => {
   const session = await getCurrentSession();

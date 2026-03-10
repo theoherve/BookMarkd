@@ -171,7 +171,7 @@ const RecommendationCard = ({ item }: RecommendationCardProps) => {
                       {reader.avatarUrl ? (
                         <Image
                           src={reader.avatarUrl}
-                          alt=""
+                          alt={`Photo de profil de ${reader.displayName}`}
                           fill
                           sizes="20px"
                           className="object-cover"

@@ -19,17 +19,32 @@ export default function robots(): MetadataRoute.Robots {
 
   return {
     rules: [
+      { userAgent: "*", ...defaultRules },
       { userAgent: "Googlebot", ...defaultRules },
       { userAgent: "Bingbot", ...defaultRules },
       {
         userAgent: "OAI-SearchBot",
         allow: "/",
-        disallow: ["/api/", "/profiles/me", "/profiles/me/", "/notifications", "/notifications/", "/offline"],
+        disallow: [
+          "/api/",
+          "/profiles/me",
+          "/profiles/me/",
+          "/notifications",
+          "/notifications/",
+          "/offline",
+        ],
       },
       {
         userAgent: "GPTBot",
         allow: "/",
-        disallow: ["/api/", "/profiles/me", "/profiles/me/", "/notifications", "/notifications/", "/offline"],
+        disallow: [
+          "/api/",
+          "/profiles/me",
+          "/profiles/me/",
+          "/notifications",
+          "/notifications/",
+          "/offline",
+        ],
       },
     ],
     sitemap: `${BASE_URL}/sitemap.xml`,

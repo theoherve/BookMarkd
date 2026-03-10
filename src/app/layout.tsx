@@ -6,11 +6,7 @@ import "./globals.css";
 import AuthSessionProvider from "@/components/layout/session-provider";
 import ServiceWorkerProvider from "@/components/layout/service-worker-provider";
 import { OrganizationJsonLd } from "@/components/seo/organization-json-ld";
-import { getCurrentSession } from "@/lib/auth/session";
 import QueryProvider from "@/components/providers/query-provider";
-
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -54,15 +50,6 @@ export const metadata: Metadata = {
     initialScale: 1,
     viewportFit: "cover",
   },
-  keywords: [
-    "livres",
-    "suivi de lecture",
-    "recommandations lecture",
-    "réseau social lecture",
-    "liste de livres",
-    "PAL",
-    "BookMarkd",
-  ],
   authors: [{ name: "BookMarkd" }],
   openGraph: {
     type: "website",
@@ -70,20 +57,11 @@ export const metadata: Metadata = {
     siteName: "BookMarkd",
     title: defaultTitle,
     description: defaultDescription,
-    images: [
-      {
-        url: "/pwa/icon-192.png",
-        width: 192,
-        height: 192,
-        alt: "BookMarkd",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
     title: defaultTitle,
     description: defaultDescription,
-    images: ["/pwa/icon-192.png"],
   },
 };
 
@@ -91,9 +69,7 @@ type RootLayoutProps = {
   children: ReactNode;
 };
 
-const RootLayout = async ({ children }: RootLayoutProps) => {
-  const session = await getCurrentSession();
-
+const RootLayout = ({ children }: RootLayoutProps) => {
   return (
     <html lang="fr" suppressHydrationWarning>
       <body
@@ -106,7 +82,7 @@ const RootLayout = async ({ children }: RootLayoutProps) => {
           "antialiased",
         ].join(" ")}
       >
-        <AuthSessionProvider session={session}>
+        <AuthSessionProvider>
           <QueryProvider>
             <OrganizationJsonLd />
             <ServiceWorkerProvider>{children}</ServiceWorkerProvider>

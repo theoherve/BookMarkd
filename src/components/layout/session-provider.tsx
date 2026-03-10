@@ -6,7 +6,7 @@ import { ReactNode } from "react";
 
 type SessionProviderProps = {
   children: ReactNode;
-  session: Session | null;
+  session?: Session | null;
 };
 
 const AuthSessionProvider = ({ children, session }: SessionProviderProps) => {
