@@ -83,3 +83,55 @@ export const getPostBySlug = async (slug: string) => {
     return getHardcodedPostBySlug(slug) ?? null;
   }
 };
+
+export type BlogSearchResult = {
+  slug: string;
+  title: string;
+  description: string;
+};
+
+/**
+ * Recherche des articles publiés par titre et description,
+ * avec fallback sur les articles hardcodés.
+ */
+export const searchBlogPosts = async (
+  q: string,
+  limit = 3,
+): Promise<BlogSearchResult[]> => {
+  const term = q.trim();
+  try {
+    const { data, error } = await db.client
+      .from("blog_posts")
+      .select("slug, title, description")
+      .eq("status", "published")
+      .or(`title.ilike.%${term}%,description.ilike.%${term}%`)
+      .order("published_at", { ascending: false })
+      .limit(limit);
+
+    if (error || !data || data.length === 0) {
+      const hardcoded = await getHardcodedPosts();
+      const lower = term.toLowerCase();
+      return hardcoded
+        .filter(
+          (p) =>
+            p.title.toLowerCase().includes(lower) ||
+            p.description.toLowerCase().includes(lower),
+        )
+        .slice(0, limit)
+        .map(({ slug, title, description }) => ({ slug, title, description }));
+    }
+
+    return (data as BlogSearchResult[]).slice(0, limit);
+  } catch {
+    const hardcoded = await getHardcodedPosts();
+    const lower = term.toLowerCase();
+    return hardcoded
+      .filter(
+        (p) =>
+          p.title.toLowerCase().includes(lower) ||
+          p.description.toLowerCase().includes(lower),
+      )
+      .slice(0, limit)
+      .map(({ slug, title, description }) => ({ slug, title, description }));
+  }
+};

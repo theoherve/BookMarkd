@@ -10,12 +10,14 @@ type BarcodeScannerProps = {
   onClose: () => void;
 };
 
+const SCANNER_ELEMENT_ID = "bookmarkd-barcode-scanner";
+
 const BarcodeScanner = ({ onScanSuccess, onClose }: BarcodeScannerProps) => {
-  const scannerRef = useRef<HTMLDivElement>(null);
   const html5QrCodeRef = useRef<import("html5-qrcode").Html5Qrcode | null>(
     null
   );
   const [error, setError] = useState<string | null>(null);
+  const [isReady, setIsReady] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
   const [torchSupported, setTorchSupported] = useState(false);
   const hasScannedRef = useRef(false);
@@ -44,19 +46,13 @@ const BarcodeScanner = ({ onScanSuccess, onClose }: BarcodeScannerProps) => {
           "html5-qrcode"
         );
 
-        if (!mounted || !scannerRef.current) return;
+        if (!mounted) return;
 
-        const scannerId = "bookmarkd-barcode-scanner";
+        // Wait for the DOM element to be available
+        const container = document.getElementById(SCANNER_ELEMENT_ID);
+        if (!container) return;
 
-        // Create a container div for the scanner
-        let container = document.getElementById(scannerId);
-        if (!container) {
-          container = document.createElement("div");
-          container.id = scannerId;
-          scannerRef.current.appendChild(container);
-        }
-
-        const html5QrCode = new Html5Qrcode(scannerId, {
+        const html5QrCode = new Html5Qrcode(SCANNER_ELEMENT_ID, {
           formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13],
           verbose: false,
         });
@@ -66,8 +62,7 @@ const BarcodeScanner = ({ onScanSuccess, onClose }: BarcodeScannerProps) => {
           { facingMode: "environment" },
           {
             fps: 10,
-            qrbox: { width: 280, height: 100 },
-            aspectRatio: 1.0,
+            qrbox: { width: 250, height: 80 },
           },
           (decodedText) => {
             if (hasScannedRef.current) return;
@@ -94,13 +89,16 @@ const BarcodeScanner = ({ onScanSuccess, onClose }: BarcodeScannerProps) => {
             }
           },
           () => {
-            // Scan failure (no barcode found in frame) — ignore
+            // Scan failure (no barcode found in frame) — ignore silently
           }
         );
 
+        if (mounted) setIsReady(true);
+
         // Check torch support
         try {
-          const capabilities = html5QrCode.getRunningTrackCameraCapabilities();
+          const capabilities =
+            html5QrCode.getRunningTrackCameraCapabilities();
           if (capabilities.torchFeature().isSupported()) {
             if (mounted) setTorchSupported(true);
           }
@@ -147,7 +145,6 @@ const BarcodeScanner = ({ onScanSuccess, onClose }: BarcodeScannerProps) => {
       const capabilities = scanner.getRunningTrackCameraCapabilities();
       const torch = capabilities.torchFeature();
 
-      // BooleanCameraCapability uses apply(value) method
       await torch.apply(!torchOn);
       setTorchOn(!torchOn);
     } catch {
@@ -156,9 +153,9 @@ const BarcodeScanner = ({ onScanSuccess, onClose }: BarcodeScannerProps) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black">
+    <div className="fixed inset-0 z-[60] flex flex-col bg-black">
       {/* Top bar */}
-      <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between bg-black/70 px-4 py-3 safe-area-inset-top">
+      <div className="relative z-20 flex shrink-0 items-center justify-between bg-black/80 px-4 py-3 safe-area-inset-top">
         <h2 className="text-base font-semibold text-white">
           Scanner un code-barres
         </h2>
@@ -170,7 +167,9 @@ const BarcodeScanner = ({ onScanSuccess, onClose }: BarcodeScannerProps) => {
               onClick={toggleTorch}
               className="text-white hover:bg-white/20"
               aria-label={
-                torchOn ? "Éteindre la lampe torche" : "Allumer la lampe torche"
+                torchOn
+                  ? "Éteindre la lampe torche"
+                  : "Allumer la lampe torche"
               }
             >
               {torchOn ? (
@@ -195,30 +194,33 @@ const BarcodeScanner = ({ onScanSuccess, onClose }: BarcodeScannerProps) => {
         </div>
       </div>
 
-      {/* Scanner viewport */}
-      <div
-        ref={scannerRef}
-        className="flex h-full w-full items-center justify-center [&_video]:h-full [&_video]:w-full [&_video]:object-cover"
-      />
+      {/* Scanner video container — html5-qrcode injects <video> here */}
+      <div className="relative min-h-0 flex-1">
+        <div
+          id={SCANNER_ELEMENT_ID}
+          className="h-full w-full"
+          style={{ minHeight: "300px" }}
+        />
 
-      {/* Viewfinder overlay */}
-      {!error && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="relative h-[100px] w-[280px]">
-            {/* Corner markers */}
-            <div className="absolute -left-1 -top-1 h-5 w-5 border-l-2 border-t-2 border-white rounded-tl-sm" />
-            <div className="absolute -right-1 -top-1 h-5 w-5 border-r-2 border-t-2 border-white rounded-tr-sm" />
-            <div className="absolute -bottom-1 -left-1 h-5 w-5 border-b-2 border-l-2 border-white rounded-bl-sm" />
-            <div className="absolute -bottom-1 -right-1 h-5 w-5 border-b-2 border-r-2 border-white rounded-br-sm" />
+        {/* Viewfinder overlay (only when camera is ready) */}
+        {isReady && !error && (
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+            <div className="relative h-[80px] w-[250px]">
+              {/* Corner markers */}
+              <div className="absolute -left-1 -top-1 h-5 w-5 rounded-tl-sm border-l-2 border-t-2 border-white" />
+              <div className="absolute -right-1 -top-1 h-5 w-5 rounded-tr-sm border-r-2 border-t-2 border-white" />
+              <div className="absolute -bottom-1 -left-1 h-5 w-5 rounded-bl-sm border-b-2 border-l-2 border-white" />
+              <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-br-sm border-b-2 border-r-2 border-white" />
 
-            {/* Animated scan line */}
-            <div className="absolute inset-x-0 h-0.5 animate-scan-line bg-accent" />
+              {/* Animated scan line */}
+              <div className="absolute inset-x-0 h-0.5 animate-scan-line bg-accent" />
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Bottom instructions */}
-      <div className="absolute inset-x-0 bottom-0 z-10 bg-black/70 px-4 py-6 text-center safe-area-inset-bottom">
+      <div className="relative z-20 shrink-0 bg-black/80 px-4 py-6 text-center safe-area-inset-bottom">
         {error ? (
           <p className="text-sm font-medium text-red-400">{error}</p>
         ) : (
