@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 
-import { getCurrentUserAdminStatus } from "@/lib/auth/admin";
+import { getCurrentSession } from "@/lib/auth/session";
 import { AdminLayoutShell } from "@/components/admin/admin-layout-shell";
 
 export const metadata: Metadata = {
@@ -13,8 +13,8 @@ export const metadata: Metadata = {
 };
 
 const AdminLayout = async ({ children }: { children: React.ReactNode }) => {
-  const isAdmin = await getCurrentUserAdminStatus();
-  if (!isAdmin) redirect("/");
+  const session = await getCurrentSession();
+  if (!session?.user?.isAdmin) redirect("/");
 
   return <AdminLayoutShell>{children}</AdminLayoutShell>;
 };
