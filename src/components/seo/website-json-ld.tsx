@@ -8,6 +8,7 @@ export const WebsiteJsonLd = () => {
     description:
       "BookMarkd est votre hub lecture social : suivez vos livres, découvrez ceux de vos amis et recevez des recommandations personnalisées.",
     url: BASE_URL,
+    inLanguage: "fr",
     potentialAction: {
       "@type": "SearchAction",
       target: {

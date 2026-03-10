@@ -123,7 +123,7 @@ const SuggestBookToFriendButton = ({
                       {user.avatarUrl ? (
                         <Image
                           src={user.avatarUrl}
-                          alt=""
+                          alt={`Photo de profil de ${user.displayName}`}
                           fill
                           className="object-cover"
                           sizes="36px"

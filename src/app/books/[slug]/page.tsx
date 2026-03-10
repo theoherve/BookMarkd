@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
+import Image from "next/image";
 
 import AppShell from "@/components/layout/app-shell";
 import BackButton from "@/components/layout/back-button";
@@ -608,20 +609,19 @@ const BookPage = async ({ params }: BookPageProps) => {
           </div>
 
           <div className="relative mx-auto w-full max-w-[200px] shrink-0 overflow-hidden border border-border/60 bg-muted shadow-sm lg:mx-0">
-            <div>
               {book.cover_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <Image
                   src={book.cover_url}
                   alt={`Couverture de ${book.title}`}
-                  className="h-full w-full object-cover"
+                  fill
+                  sizes="200px"
+                  className="object-cover"
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
                   Pas de couverture
                 </div>
               )}
-            </div>
           </div>
         </header>
 

@@ -78,8 +78,9 @@ const HeaderNavList = ({ onLinkClick }: { onLinkClick?: () => void }) => {
 
 const AppShell = ({ children }: AppShellProps) => {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isSessionLoading = status === "loading";
 
   const handleNavigateLogin = () => {
     router.push("/login");
@@ -95,6 +96,12 @@ const AppShell = ({ children }: AppShellProps) => {
 
   return (
     <div className="flex min-h-dvh flex-col bg-background text-foreground">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
+      >
+        Aller au contenu principal
+      </a>
       <header className="border-b border-border bg-card/60 backdrop-blur">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
           <div className="flex items-center gap-2 md:gap-0">
@@ -142,7 +149,11 @@ const AppShell = ({ children }: AppShellProps) => {
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            {session?.user ? (
+            {isSessionLoading ? (
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
+              </div>
+            ) : session?.user ? (
               <>
                 <Button
                   variant="default"
@@ -166,7 +177,7 @@ const AppShell = ({ children }: AppShellProps) => {
                       {session.user.image ? (
                         <Image
                           src={session.user.image}
-                          alt=""
+                          alt="Photo de profil"
                           width={32}
                           height={32}
                           className="size-8 rounded-full object-cover"
@@ -227,7 +238,7 @@ const AppShell = ({ children }: AppShellProps) => {
         </div>
       </header>
       <OfflineBanner />
-      <main className="flex-1 pb-24 safe-area-bottom-offset md:pb-0">
+      <main id="main-content" className="flex-1 pb-24 safe-area-bottom-offset md:pb-0">
         <div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 md:py-10">
           {children}
         </div>

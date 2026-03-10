@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 
 import AppShell from "@/components/layout/app-shell";
 import BackButton from "@/components/layout/back-button";
@@ -9,6 +10,12 @@ import { resolveSessionUserId } from "@/lib/auth/user";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+export const metadata: Metadata = {
+  title: "Ajouter un livre",
+  description: "Ajoutez un nouveau livre au catalogue BookMarkd.",
+  robots: { index: false, follow: false },
+};
 
 const CreateBookPage = async () => {
   const session = await getCurrentSession();

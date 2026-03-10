@@ -1,5 +1,6 @@
 import { unstable_noStore as noStore } from "next/cache";
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 
 import AppShell from "@/components/layout/app-shell";
 import BackButton from "@/components/layout/back-button";
@@ -11,6 +12,12 @@ import { resolveSessionUserId } from "@/lib/auth/user";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+export const metadata: Metadata = {
+  title: "Feedback",
+  description: "Suggérez une fonctionnalité ou signalez un problème sur BookMarkd.",
+  robots: { index: false, follow: false },
+};
 
 const FeedbackPage = async () => {
   noStore();

@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 import AppShell from "@/components/layout/app-shell";
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -22,6 +23,7 @@ import { getFollowStatus } from "@/server/actions/follow";
 import { getCurrentSession } from "@/lib/auth/session";
 import { resolveSessionUserId } from "@/lib/auth/user";
 import { generateBookSlug } from "@/lib/slug";
+import { ProfileJsonLd } from "@/components/seo/profile-json-ld";
 
 type ProfilePageProps = {
   params: Promise<{
@@ -49,6 +51,9 @@ export const generateMetadata = async ({
   return {
     title: `${displayName} · BookMarkd`,
     description,
+    alternates: {
+      canonical: `https://bookmarkd.app/profiles/${username}`,
+    },
     openGraph: {
       title: `${displayName} · BookMarkd`,
       description,
@@ -118,6 +123,16 @@ const PublicProfilePage = async ({ params }: ProfilePageProps) => {
 
   return (
     <AppShell>
+      <Breadcrumb items={[
+        { label: "Accueil", href: "/" },
+        { label: profile.displayName, href: `/profiles/${username}` },
+      ]} />
+      <ProfileJsonLd
+        name={profile.displayName}
+        url={`https://bookmarkd.app/profiles/${username}`}
+        description={profile.bio}
+        image={profile.avatarUrl}
+      />
       <div className="space-y-10">
         <header className="flex flex-col gap-6 rounded-2xl border border-border/60 bg-card/80 p-8 shadow-sm">
           <div className="flex flex-col gap-6 md:flex-row md:items-center">
@@ -263,7 +278,7 @@ const PublicProfilePage = async ({ params }: ProfilePageProps) => {
                                 {book.coverUrl ? (
                                   <Image
                                     src={book.coverUrl}
-                                    alt=""
+                                    alt={`Couverture de ${book.title}`}
                                     fill
                                     sizes="48px"
                                     className="object-contain"

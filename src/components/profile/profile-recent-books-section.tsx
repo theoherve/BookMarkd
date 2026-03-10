@@ -105,7 +105,7 @@ const ProfileRecentBooksSection = ({ books }: ProfileRecentBooksSectionProps) =>
                         {book.coverUrl ? (
                           <Image
                             src={book.coverUrl}
-                            alt=""
+                            alt={`Couverture de ${book.title}`}
                             fill
                             sizes="48px"
                             className="object-contain"

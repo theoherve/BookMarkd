@@ -6,8 +6,10 @@ export const OrganizationJsonLd = () => {
     "@type": "Organization",
     name: "BookMarkd",
     url: BASE_URL,
+    logo: "https://bookmarkd.app/logo.png",
     description:
       "BookMarkd est votre hub lecture social : suivez vos livres, découvrez ceux de vos amis et recevez des recommandations personnalisées.",
+    sameAs: [],
   };
 
   return (

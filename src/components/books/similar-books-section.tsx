@@ -50,7 +50,7 @@ const SimilarBooksSection = ({ books }: SimilarBooksSectionProps) => {
                   {book.coverUrl ? (
                     <Image
                       src={book.coverUrl}
-                      alt=""
+                      alt={`Couverture de ${book.title}`}
                       fill
                       sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
                       className="object-cover transition group-hover:scale-[1.02]"

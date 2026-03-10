@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import type { Metadata } from "next";
 
 import AppShell from "@/components/layout/app-shell";
 import { getPublicProfile } from "@/features/profile/server/get-public-profile";
@@ -13,6 +14,19 @@ type ProfileFollowersPageProps = {
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+export const generateMetadata = async ({
+  params,
+}: ProfileFollowersPageProps): Promise<Metadata> => {
+  const { username } = await params;
+  const profile = await getPublicProfile(username);
+  if (!profile) return {};
+  return {
+    title: `Abonnés de ${profile.displayName}`,
+    description: `Les personnes qui suivent ${profile.displayName} sur BookMarkd.`,
+    robots: { index: false, follow: true },
+  };
+};
 
 const fallbackAvatarText = (name: string) => {
   const segments = name.trim().split(" ").filter(Boolean);
@@ -74,7 +88,7 @@ const ProfileFollowersPage = async ({ params }: ProfileFollowersPageProps) => {
                       {follower.avatarUrl ? (
                         <Image
                           src={follower.avatarUrl}
-                          alt=""
+                          alt={`Photo de profil de ${follower.displayName}`}
                           fill
                           sizes="48px"
                           className="object-cover"

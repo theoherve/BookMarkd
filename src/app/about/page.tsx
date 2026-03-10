@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import AppShell from "@/components/layout/app-shell";
 import BackButton from "@/components/layout/back-button";
+import { Breadcrumb } from "@/components/layout/breadcrumb";
 
 export const metadata = {
   title: "À propos",
@@ -20,6 +21,7 @@ export const metadata = {
 const AboutPage = () => {
   return (
     <AppShell>
+      <Breadcrumb items={[{ label: "Accueil", href: "/" }, { label: "À propos", href: "/about" }]} />
       <div className="space-y-10">
         <BackButton ariaLabel="Retour à la page précédente" />
         <header className="space-y-2">
