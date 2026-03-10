@@ -43,7 +43,7 @@ const SimilarBooksSection = ({ books }: SimilarBooksSectionProps) => {
             <li key={book.id}>
               <Link
                 href={bookHref}
-                className="group flex flex-col gap-2 rounded-lg border border-border/60 bg-card/80 p-3 transition hover:border-accent hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
+                className="group flex h-full flex-col gap-2 rounded-lg border border-border/60 bg-card/80 p-3 transition hover:border-accent hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
                 aria-label={`Voir ${book.title} de ${book.author}`}
               >
                 <div className="relative aspect-2/3 w-full overflow-hidden rounded border border-border/40 bg-muted">
@@ -68,25 +68,23 @@ const SimilarBooksSection = ({ books }: SimilarBooksSectionProps) => {
                   <p className="line-clamp-1 text-xs text-muted-foreground">
                     {book.author}
                   </p>
-                  {book.matchingTags.length > 0 ? (
-                    <div className="flex min-w-0 flex-wrap gap-1 overflow-hidden pt-1">
-                      {book.matchingTags.slice(0, 3).map((tag) => (
-                        <Tooltip key={`${book.id}-${tag}`}>
-                          <TooltipTrigger asChild>
-                            <Badge
-                              variant="secondary"
-                              className="max-w-full truncate text-[10px] font-normal"
-                            >
-                              <span className="truncate">{tag}</span>
-                            </Badge>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="max-w-xs">
-                            <p className="wrap-break-word">{tag}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      ))}
-                    </div>
-                  ) : null}
+                  <div className="flex min-w-0 flex-wrap gap-1 overflow-hidden pt-1">
+                    {book.matchingTags.slice(0, 3).map((tag) => (
+                      <Tooltip key={`${book.id}-${tag}`}>
+                        <TooltipTrigger asChild>
+                          <Badge
+                            variant="secondary"
+                            className="max-w-full truncate text-[10px] font-normal"
+                          >
+                            <span className="truncate">{tag}</span>
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <p className="wrap-break-word">{tag}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    ))}
+                  </div>
                 </div>
               </Link>
             </li>
