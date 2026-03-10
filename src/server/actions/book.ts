@@ -477,6 +477,7 @@ export const createBook = async (
           created_by: userId,
           ratings_count: 0,
           average_rating: 0,
+          source: "manual",
         },
       ])
       .select("id")

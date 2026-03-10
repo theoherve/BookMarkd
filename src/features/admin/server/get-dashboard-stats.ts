@@ -15,6 +15,7 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
   const [
     usersResult,
     booksResult,
+    scannedBooksResult,
     reviewsResult,
     listsResult,
     activeResult,
@@ -24,6 +25,7 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
   ] = await Promise.all([
     db.client.from("users").select("*", { count: "exact", head: true }),
     db.client.from("books").select("*", { count: "exact", head: true }),
+    db.client.from("books").select("*", { count: "exact", head: true }).eq("source", "scan"),
     db.client.from("reviews").select("*", { count: "exact", head: true }),
     db.client.from("lists").select("*", { count: "exact", head: true }),
     db.client.from("activities").select("user_id").gte("created_at", thirtyDaysAgo),
@@ -40,6 +42,7 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
   return {
     totalUsers: usersResult.count ?? 0,
     totalBooks: booksResult.count ?? 0,
+    totalScannedBooks: scannedBooksResult.count ?? 0,
     totalReviews: reviewsResult.count ?? 0,
     totalLists: listsResult.count ?? 0,
     activeUsers30d: activeUserIds.size,

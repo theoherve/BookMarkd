@@ -56,22 +56,28 @@ const ScanResultSheet = ({
       try {
         const importResult =
           book.source === "google_books"
-            ? await importGoogleBooksBook({
-                googleBooksId: book.id,
-                title: book.title,
-                author: book.author,
-                coverUrl: book.coverUrl ?? undefined,
-                publicationYear: book.publicationYear ?? undefined,
-                summary: book.summary ?? undefined,
-              })
-            : await importOpenLibraryBook({
-                openLibraryId: book.id,
-                title: book.title,
-                author: book.author,
-                coverUrl: book.coverUrl ?? undefined,
-                publicationYear: book.publicationYear ?? undefined,
-                summary: book.summary ?? undefined,
-              });
+            ? await importGoogleBooksBook(
+                {
+                  googleBooksId: book.id,
+                  title: book.title,
+                  author: book.author,
+                  coverUrl: book.coverUrl ?? undefined,
+                  publicationYear: book.publicationYear ?? undefined,
+                  summary: book.summary ?? undefined,
+                },
+                { addedViaScan: true },
+              )
+            : await importOpenLibraryBook(
+                {
+                  openLibraryId: book.id,
+                  title: book.title,
+                  author: book.author,
+                  coverUrl: book.coverUrl ?? undefined,
+                  publicationYear: book.publicationYear ?? undefined,
+                  summary: book.summary ?? undefined,
+                },
+                { addedViaScan: true },
+              );
 
         if (importResult.success) {
           onOpenChange(false);

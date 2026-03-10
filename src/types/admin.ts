@@ -38,6 +38,7 @@ export type ExportFormat = "csv" | "json";
 export type DashboardStats = {
   totalUsers: number;
   totalBooks: number;
+  totalScannedBooks: number;
   totalReviews: number;
   totalLists: number;
   activeUsers30d: number;
