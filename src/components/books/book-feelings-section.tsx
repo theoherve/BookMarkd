@@ -139,7 +139,7 @@ const KeywordPicker = ({
         <label className="text-sm font-medium text-muted-foreground">
           Sélectionnez les mots-clés qui décrivent votre ressenti
         </label>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 mt-2">
           {displayedKeywords.map((keyword) => {
             const isSelected = selectedIds.has(keyword.id);
             return (
