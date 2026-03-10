@@ -51,7 +51,7 @@ const ListSummaryCard = ({ list }: ListSummaryCardProps) => {
         <Button
           asChild
           aria-label={ariaLabel}
-          className="w-full min-h-[48px] sm:min-h-0"
+          className="w-full min-h-[48px] sm:min-h-0 text-primary-foreground!"
           size="sm"
         >
           <Link href={`/lists/${list.id}`} tabIndex={0}>

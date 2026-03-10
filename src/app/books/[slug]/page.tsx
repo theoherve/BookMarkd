@@ -23,6 +23,7 @@ import ReviewsList, {
 import BookReadersList from "@/components/books/book-readers-list";
 import BookFeelingsSection from "@/components/books/book-feelings-section";
 import SimilarBooksSection from "@/components/books/similar-books-section";
+import AddBookCoverButton from "@/components/books/add-book-cover-button";
 import { BookJsonLd } from "@/components/seo/book-json-ld";
 import { trackBookView } from "@/lib/analytics/track-book-view";
 import { getBookReaders } from "@/features/books/server/get-book-readers";
@@ -620,8 +621,13 @@ const BookPage = async ({ params }: BookPageProps) => {
                   sizes="200px"
                   className="object-cover"
                 />
+              ) : viewerId ? (
+                <AddBookCoverButton
+                  bookId={book.id}
+                  className="h-full min-h-[300px] w-full"
+                />
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
+                <div className="flex h-full w-full min-h-[300px] items-center justify-center text-sm text-muted-foreground">
                   Pas de couverture
                 </div>
               )}
