@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Star, StarHalf } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -37,11 +38,29 @@ const actionLabels: Record<FeedActivity["type"], string> = {
 };
 
 const ActivityCard = ({ item }: ActivityCardProps) => {
-  const ratingStars =
+  const ratingStarsEl =
     typeof item.rating === "number" && item.rating > 0
-      ? `${"★".repeat(Math.round(item.rating))}${"☆".repeat(
-          5 - Math.round(item.rating),
-        )}`
+      ? (() => {
+          const full = Math.floor(item.rating);
+          const hasHalf = item.rating % 1 >= 0.5;
+          const empty = 5 - full - (hasHalf ? 1 : 0);
+          return (
+            <span className="inline-flex items-center gap-0.5">
+              {Array.from({ length: full }, (_, i) => (
+                <Star key={`full-${i}`} className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+              ))}
+              {hasHalf && (
+                <span className="relative h-4 w-4">
+                  <Star className="absolute h-4 w-4 text-yellow-500" />
+                  <StarHalf className="absolute h-4 w-4 fill-yellow-500 text-yellow-500" />
+                </span>
+              )}
+              {Array.from({ length: empty }, (_, i) => (
+                <Star key={`empty-${i}`} className="h-4 w-4 text-yellow-500" />
+              ))}
+            </span>
+          );
+        })()
       : null;
 
   const occurredAtLabel = formatRelativeTimeFromNow(item.occurredAt);
@@ -91,11 +110,8 @@ const ActivityCard = ({ item }: ActivityCardProps) => {
             >
               {formatRating(item.rating)}/5
             </Badge>
-            <span
-              aria-hidden="true"
-              className="font-medium tracking-widest text-accent-foreground"
-            >
-              {ratingStars}
+            <span aria-hidden="true">
+              {ratingStarsEl}
             </span>
           </div>
         ) : null}

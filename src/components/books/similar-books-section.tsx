@@ -62,7 +62,7 @@ const SimilarBooksSection = ({ books }: SimilarBooksSectionProps) => {
                   )}
                 </div>
                 <div className="min-w-0 flex-1 space-y-1">
-                  <p className="line-clamp-2 text-sm font-medium text-foreground group-hover:text-accent-foreground">
+                  <p className="line-clamp-2 text-sm font-medium text-muted-foreground group-hover:text-foreground">
                     {book.title}
                   </p>
                   <p className="line-clamp-1 text-xs text-muted-foreground">

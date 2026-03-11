@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Star, StarHalf } from "lucide-react";
 import { formatRelativeTimeFromNow } from "@/lib/datetime";
 import { formatRating } from "@/lib/utils";
 import type { RecentActivity } from "@/features/profile/types";
@@ -76,11 +77,29 @@ const RecentActivitiesSection = ({ activities }: RecentActivitiesSectionProps) =
       <CardContent className="space-y-4">
         {displayedActivities.map((activity) => {
           const occurredAtLabel = formatRelativeTimeFromNow(activity.occurredAt);
-          const ratingStars =
+          const ratingStarsEl =
             typeof activity.rating === "number" && activity.rating > 0
-              ? `${"★".repeat(Math.round(activity.rating))}${"☆".repeat(
-                  5 - Math.round(activity.rating),
-                )}`
+              ? (() => {
+                  const full = Math.floor(activity.rating);
+                  const hasHalf = activity.rating % 1 >= 0.5;
+                  const empty = 5 - full - (hasHalf ? 1 : 0);
+                  return (
+                    <span className="inline-flex items-center gap-0.5">
+                      {Array.from({ length: full }, (_, i) => (
+                        <Star key={`full-${i}`} className="h-3.5 w-3.5 fill-yellow-500 text-yellow-500" />
+                      ))}
+                      {hasHalf && (
+                        <span className="relative h-3.5 w-3.5">
+                          <Star className="absolute h-3.5 w-3.5 text-yellow-500" />
+                          <StarHalf className="absolute h-3.5 w-3.5 fill-yellow-500 text-yellow-500" />
+                        </span>
+                      )}
+                      {Array.from({ length: empty }, (_, i) => (
+                        <Star key={`empty-${i}`} className="h-3.5 w-3.5 text-yellow-500" />
+                      ))}
+                    </span>
+                  );
+                })()
               : null;
 
           const actionTargets: string[] = [];
@@ -145,11 +164,8 @@ const RecentActivitiesSection = ({ activities }: RecentActivitiesSectionProps) =
                   >
                     {formatRating(activity.rating)}/5
                   </Badge>
-                  <span
-                    aria-hidden="true"
-                    className="text-xs font-medium tracking-widest text-accent-foreground"
-                  >
-                    {ratingStars}
+                  <span aria-hidden="true">
+                    {ratingStarsEl}
                   </span>
                 </div>
               ) : null}

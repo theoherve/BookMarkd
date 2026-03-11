@@ -67,8 +67,8 @@ const ReadingStatusForm = ({
             aria-pressed={selectedStatus === option.value}
             className={
               selectedStatus !== option.value
-                ? "dark:hover:border-primary dark:hover:text-primary dark:hover:bg-primary/15"
-                : undefined
+                ? "cursor-pointer dark:hover:border-primary dark:hover:text-primary dark:hover:bg-primary/15"
+                : "cursor-pointer"
             }
           >
             {option.label}

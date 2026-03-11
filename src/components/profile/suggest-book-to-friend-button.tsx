@@ -88,7 +88,7 @@ const SuggestBookToFriendButton = ({
           size={showLabel ? "default" : "icon"}
           disabled={disabled || isEmpty}
           aria-label={`Recommander « ${book.title} » à une personne que vous suivez`}
-          className={cn("shrink-0 gap-2", className)}
+          className={cn("shrink-0 gap-2 cursor-pointer hover:text-foreground", className)}
         >
           <Share2 className="h-4 w-4 shrink-0" aria-hidden />
           {showLabel ? "Recommander à…" : null}
