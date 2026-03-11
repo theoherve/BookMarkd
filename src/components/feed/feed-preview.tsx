@@ -57,7 +57,7 @@ const FeedPreview = () => {
     return (
       <Card className="border-destructive/30 bg-destructive/10">
         <CardHeader>
-          <CardTitle className="text-destructive">Impossible de charger l'aperçu</CardTitle>
+          <CardTitle className="text-destructive">Impossible de charger l&apos;aperçu</CardTitle>
           <CardDescription className="text-destructive/80">
             Vérifiez votre connexion et réessayez dans quelques instants.
           </CardDescription>

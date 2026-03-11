@@ -196,7 +196,7 @@ export async function GET(request: Request) {
       }
       // Si pas connecté : toute la communauté sans filtre
 
-      return q.then((r) => {
+      return Promise.resolve(q).then((r) => {
         const data = (r.data ?? []) as unknown as Array<{
           id: string;
           type: string;
