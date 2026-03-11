@@ -12,6 +12,7 @@ import {
   FileText,
   Activity,
   ArrowLeft,
+  TrendingUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -22,22 +23,24 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-const NAV_ITEMS = [
-  { label: "Tableau de bord", href: "/admin", icon: LayoutDashboard },
-  { label: "Utilisateurs", href: "/admin/users", icon: Users },
-  { label: "Livres", href: "/admin/books", icon: BookOpen },
-  { label: "Feedback", href: "/admin/feedback", icon: MessageSquare },
-  { label: "Tags & Ressentis", href: "/admin/tags", icon: Tags },
-  { label: "Analytiques", href: "/admin/analytics", icon: BarChart3 },
-  { label: "Emails", href: "/admin/emails", icon: Mail },
-  { label: "Blog", href: "/admin/blog", icon: FileText },
-  { label: "Santé système", href: "/admin/system", icon: Activity },
-] as const;
+const BASE_NAV_ITEMS = [
+  { label: "Tableau de bord", href: "/admin", icon: LayoutDashboard, badge: null },
+  { label: "Utilisateurs", href: "/admin/users", icon: Users, badge: null },
+  { label: "Livres", href: "/admin/books", icon: BookOpen, badge: null },
+  { label: "Feedback", href: "/admin/feedback", icon: MessageSquare, badge: null },
+  { label: "Tags & Ressentis", href: "/admin/tags", icon: Tags, badge: null },
+  { label: "Analytiques", href: "/admin/analytics", icon: BarChart3, badge: null },
+  { label: "Emails", href: "/admin/emails", icon: Mail, badge: null },
+  { label: "Blog", href: "/admin/blog", icon: FileText, badge: null },
+  { label: "Tendances", href: "/admin/tendances", icon: TrendingUp, badge: null as number | null },
+  { label: "Santé système", href: "/admin/system", icon: Activity, badge: null },
+];
 
 type AdminSidebarProps = {
   collapsed: boolean;
   pathname: string;
   className?: string;
+  pendingEditorialCount?: number;
 };
 
 const isActive = (pathname: string, href: string) => {
@@ -49,7 +52,14 @@ export const AdminSidebar = ({
   collapsed,
   pathname,
   className,
+  pendingEditorialCount = 0,
 }: AdminSidebarProps) => {
+  const navItems = BASE_NAV_ITEMS.map((item) =>
+    item.href === "/admin/tendances"
+      ? { ...item, badge: pendingEditorialCount > 0 ? pendingEditorialCount : null }
+      : item
+  );
+
   return (
     <TooltipProvider delayDuration={0}>
       <aside
@@ -79,7 +89,7 @@ export const AdminSidebar = ({
         {/* Navigation */}
         <ScrollArea className="flex-1 py-2">
           <nav className="flex flex-col gap-1 px-2">
-            {NAV_ITEMS.map((item) => {
+            {navItems.map((item) => {
               const active = isActive(pathname, item.href);
               const Icon = item.icon;
 
@@ -95,7 +105,16 @@ export const AdminSidebar = ({
                   )}
                 >
                   <Icon className="size-4 shrink-0" />
-                  {!collapsed && <span>{item.label}</span>}
+                  {!collapsed && (
+                    <>
+                      <span className="flex-1">{item.label}</span>
+                      {item.badge != null && (
+                        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-yellow-400 px-1 text-[10px] font-bold text-yellow-900">
+                          {item.badge}
+                        </span>
+                      )}
+                    </>
+                  )}
                 </Link>
               );
 

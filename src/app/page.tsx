@@ -3,10 +3,13 @@ import AppShell from "@/components/layout/app-shell";
 import BlogPreview from "@/components/blog/blog-preview";
 import FeedPreview from "@/components/feed/feed-preview";
 import HomeSearchBar from "@/components/search/home-search-bar";
+import { EditorialPreview } from "@/components/editorial/editorial-preview";
 import { WebsiteJsonLd } from "@/components/seo/website-json-ld";
 import { Badge } from "@/components/ui/badge";
+import { getPublishedEditorialLists } from "@/features/editorial/server/get-published-editorial-lists";
 
-const HomePage = () => {
+const HomePage = async () => {
+  const editorialLists = await getPublishedEditorialLists(4);
   return (
     <AppShell>
       <WebsiteJsonLd />
@@ -85,6 +88,18 @@ const HomePage = () => {
           </header>
           <FeedPreview />
         </section>
+
+        {editorialLists.length > 0 && (
+          <section className="space-y-4">
+            <header className="flex flex-col gap-1">
+              <h2 className="text-2xl font-semibold text-foreground">Tendances & Actu littéraire</h2>
+              <p className="text-sm text-muted-foreground">
+                Best-sellers internationaux, prix littéraires et sélections du moment.
+              </p>
+            </header>
+            <EditorialPreview lists={editorialLists} />
+          </section>
+        )}
 
         <section className="space-y-4">
           <header className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
