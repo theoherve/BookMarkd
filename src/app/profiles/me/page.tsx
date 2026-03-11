@@ -17,7 +17,6 @@ import ReadListSection from "@/components/profile/read-list-section";
 import ProfileEditButton from "@/components/profile/profile-edit-button";
 import FollowRequestsPanel from "@/components/profile/follow-requests-panel";
 import UserFeedbacksSection from "@/components/profile/user-feedbacks-section";
-import AdminSuggestionsSection from "@/components/profile/admin-suggestions-section";
 
 import { getCurrentSession } from "@/lib/auth/session";
 import { resolveSessionUserId } from "@/lib/auth/user";
@@ -143,14 +142,6 @@ const ProfilePage = async () => {
           <FollowRequestsPanel />
         </section>
 
-        <section className="space-y-6">
-          <UserFeedbacksSection />
-        </section>
-
-        <section className="space-y-6">
-          <AdminSuggestionsSection />
-        </section>
-
         <section className="grid gap-4 md:grid-cols-3">
           <Card className="border-border/60 bg-card/80 backdrop-blur">
             <CardHeader>
@@ -232,6 +223,10 @@ const ProfilePage = async () => {
               <p>• Filtrez le feed par recommandations &quot;Similaires&quot; pour découvrir des pépites.</p>
             </CardContent>
           </Card>
+        </section>
+
+        <section className="space-y-6">
+          <UserFeedbacksSection />
         </section>
       </div>
     </AppShell>
