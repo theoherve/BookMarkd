@@ -546,7 +546,8 @@ const BookPage = async ({ params }: BookPageProps) => {
         datePublished={book.publication_year}
       />
       <div className="space-y-10">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-4">
+          <BackButton ariaLabel="Retour à la page précédente" />
           <Breadcrumb
             items={[
               { label: "Accueil", href: "/" },
@@ -554,7 +555,6 @@ const BookPage = async ({ params }: BookPageProps) => {
               { label: book.title, href: canonicalUrl },
             ]}
           />
-          <BackButton ariaLabel="Retour à la page précédente" />
         </div>
         <header className="flex flex-col gap-8 lg:flex-row lg:items-start">
           <div className="flex-1 space-y-3">

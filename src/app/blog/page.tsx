@@ -25,13 +25,15 @@ const BlogListPage = async () => {
   return (
     <AppShell>
       <div className="space-y-10">
-        <BackButton ariaLabel="Retour à la page précédente" />
-        <Breadcrumb
-          items={[
-            { label: "Accueil", href: "/" },
-            { label: "Blog", href: "/blog" },
-          ]}
-        />
+        <div className="flex flex-wrap items-center gap-4">
+          <BackButton ariaLabel="Retour à la page précédente" />
+          <Breadcrumb
+            items={[
+              { label: "Accueil", href: "/" },
+              { label: "Blog", href: "/blog" },
+            ]}
+          />
+        </div>
         <header className="space-y-2">
           <h1 className="text-3xl font-semibold text-foreground">Blog</h1>
           <p className="text-muted-foreground text-sm">

@@ -22,9 +22,16 @@ export const metadata: Metadata = {
 const SearchPage = () => {
   return (
     <AppShell>
-      <Breadcrumb items={[{ label: "Accueil", href: "/" }, { label: "Recherche", href: "/search" }]} />
       <div className="space-y-8">
-        <BackButton ariaLabel="Retour à la page précédente" />
+        <div className="flex flex-wrap items-center gap-4">
+          <BackButton ariaLabel="Retour à la page précédente" />
+          <Breadcrumb
+            items={[
+              { label: "Accueil", href: "/" },
+              { label: "Recherche", href: "/search" },
+            ]}
+          />
+        </div>
         <section className="space-y-3">
           <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
             Recherche

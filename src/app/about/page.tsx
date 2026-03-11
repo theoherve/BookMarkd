@@ -21,9 +21,16 @@ export const metadata = {
 const AboutPage = () => {
   return (
     <AppShell>
-      <Breadcrumb items={[{ label: "Accueil", href: "/" }, { label: "À propos", href: "/about" }]} />
       <div className="space-y-10">
-        <BackButton ariaLabel="Retour à la page précédente" />
+        <div className="flex flex-wrap items-center gap-4">
+          <BackButton ariaLabel="Retour à la page précédente" />
+          <Breadcrumb
+            items={[
+              { label: "Accueil", href: "/" },
+              { label: "À propos", href: "/about" },
+            ]}
+          />
+        </div>
         <header className="space-y-2">
           <h1 className="text-3xl font-semibold text-foreground">
             À propos de BookMarkd

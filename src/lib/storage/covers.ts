@@ -57,6 +57,36 @@ export const getBookCoverUrl = async (
 
   // 2. Fallback sur l'URL de la DB (Supabase Storage ou externe type Google Books)
   if (normalizedDbUrl) {
+    // Si c'est une URL Google Books, essayer d'augmenter la définition
+    try {
+      const url = new URL(normalizedDbUrl);
+      const isGoogleBooksHost =
+        url.hostname.includes("books.google.") ||
+        url.hostname.includes("books.googleusercontent.com");
+
+      if (isGoogleBooksHost) {
+        const currentZoom = url.searchParams.get("zoom");
+
+        // Si aucun zoom ou zoom faible, on passe à 3 (bonne qualité sans être énorme)
+        if (!currentZoom || Number.parseInt(currentZoom, 10) < 3) {
+          url.searchParams.set("zoom", "3");
+        }
+
+        // S'assurer que les principaux paramètres sont là pour la couverture
+        if (!url.searchParams.get("img")) {
+          url.searchParams.set("img", "1");
+        }
+        if (!url.searchParams.get("printsec")) {
+          url.searchParams.set("printsec", "frontcover");
+        }
+
+        return url.toString();
+      }
+    } catch {
+      // Si l'URL n'est pas parseable, on renvoie telle quelle
+      return normalizedDbUrl;
+    }
+
     return normalizedDbUrl;
   }
 

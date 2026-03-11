@@ -78,13 +78,21 @@ const ListDetailPage = async ({ params }: ListDetailPageProps) => {
 
   return (
     <AppShell>
-      <Breadcrumb items={[
-        { label: "Accueil", href: "/" },
-        { label: "Listes", href: "/lists" },
-        { label: detail.title, href: `/lists/${detail.id}` },
-      ]} />
       <div className="space-y-8">
-        <BackLink href="/lists" label="Retour aux listes" ariaLabel="Retour à la page des listes" />
+        <div className="flex flex-wrap items-center gap-4">
+          <BackLink
+            href="/lists"
+            label="Retour aux listes"
+            ariaLabel="Retour à la page des listes"
+          />
+          <Breadcrumb
+            items={[
+              { label: "Accueil", href: "/" },
+              { label: "Listes", href: "/lists" },
+              { label: detail.title, href: `/lists/${detail.id}` },
+            ]}
+          />
+        </div>
         <section className="space-y-8">
           <header className="space-y-4 rounded-xl border border-border/60 bg-card/80 p-6">
             <div className="flex flex-wrap items-center gap-3">
