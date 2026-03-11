@@ -612,7 +612,7 @@ const BookPage = async ({ params }: BookPageProps) => {
             </div>
           </div>
 
-          <div className="relative mx-auto w-full max-w-[200px] shrink-0 overflow-hidden border border-border/60 bg-muted shadow-sm lg:mx-0">
+          <div className="relative mx-auto w-full max-w-[200px] aspect-[2/3] shrink-0 overflow-hidden border border-border/60 bg-muted shadow-sm lg:mx-0">
               {book.cover_url ? (
                 <Image
                   src={book.cover_url}
@@ -624,10 +624,10 @@ const BookPage = async ({ params }: BookPageProps) => {
               ) : viewerId ? (
                 <AddBookCoverButton
                   bookId={book.id}
-                  className="h-full min-h-[300px] w-full"
+                  className="h-full w-full"
                 />
               ) : (
-                <div className="flex h-full w-full min-h-[300px] items-center justify-center text-sm text-muted-foreground">
+                <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
                   Pas de couverture
                 </div>
               )}
