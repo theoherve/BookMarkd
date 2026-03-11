@@ -153,7 +153,7 @@ const KeywordPicker = ({
                 aria-checked={isSelected}
                 role="checkbox"
                 tabIndex={0}
-                className="text-sm"
+                className={`text-sm cursor-pointer ${!isSelected ? "hover:text-foreground" : ""}`}
               >
                 {keyword.label}
               </Button>
@@ -228,6 +228,7 @@ const KeywordPicker = ({
           type="button"
           onClick={handleSubmit}
           disabled={isPending || selectedIds.size === 0}
+          className={isPending || selectedIds.size === 0 ? "" : "cursor-pointer"}
         >
           {isPending ? "Sauvegarde..." : "Sauvegarder"}
         </Button>
@@ -311,7 +312,7 @@ const KeywordCloud = ({
             <TooltipTrigger asChild>
               <Badge
                 variant="secondary"
-                className="cursor-default text-sm font-medium"
+                className="cursor-pointer text-sm font-medium hover:text-foreground"
               >
                 {item.keyword.label} · {item.count}
               </Badge>

@@ -174,6 +174,8 @@ const NotificationsList = () => {
   const [errorMessages, setErrorMessages] = useState<Record<string, string>>({});
   const [followBackSent, setFollowBackSent] = useState<Record<string, boolean>>({});
   const [followBackPending, setFollowBackPending] = useState<Record<string, boolean>>({});
+  const [acceptedRequests, setAcceptedRequests] = useState<Record<string, boolean>>({});
+  const [rejectedRequests, setRejectedRequests] = useState<Record<string, boolean>>({});
 
   const load = async () => {
     const result = await getNotifications(50);
@@ -242,9 +244,7 @@ const NotificationsList = () => {
 
       const result = await acceptFollowRequest(finalRequestId);
       if (result.success) {
-        // Marquer la notification comme lue après acceptation
-        await markAsRead(notificationId);
-        await load();
+        setAcceptedRequests((prev) => ({ ...prev, [notificationId]: true }));
       } else {
         setErrorMessages((prev) => ({
           ...prev,
@@ -288,7 +288,7 @@ const NotificationsList = () => {
 
       const result = await rejectFollowRequest(finalRequestId);
       if (result.success) {
-        // Marquer la notification comme lue après refus
+        setRejectedRequests((prev) => ({ ...prev, [notificationId]: true }));
         await markAsRead(notificationId);
         await load();
       } else {
@@ -349,7 +349,7 @@ const NotificationsList = () => {
           onClick={handleMarkAll}
           disabled={isPending}
           aria-label="Tout marquer comme lu"
-          className="gap-2"
+          className="gap-2 cursor-pointer"
         >
           <Check className="h-4 w-4" />
           Tout marquer comme lu
@@ -357,25 +357,40 @@ const NotificationsList = () => {
       </div>
       <div className="space-y-3">
         {notifications.map((n) => {
-          // Pour les notifications de type "follow", construire l'URL du profil
-          const followerId = n.type === "follow" ? (n.payload.followerId as string) ?? null : null;
-          const followerUsername = n.type === "follow" ? (n.payload.followerUsername as string) ?? null : null;
-          const profileUrl = followerId
-            ? followerUsername
-              ? `/profiles/${followerUsername}`
-              : `/profiles/${followerId}`
-            : null;
+          // Construire l'URL du profil pour follow et follow_request
+          let profileUrl: string | null = null;
+          let profileName: string | null = null;
+
+          if (n.type === "follow") {
+            const followerId = (n.payload.followerId as string) ?? null;
+            const followerUsername = (n.payload.followerUsername as string) ?? null;
+            profileName = (n.payload.followerName as string) ?? null;
+            profileUrl = followerId
+              ? `/profiles/${followerUsername ?? followerId}`
+              : null;
+          } else if (n.type === "follow_request") {
+            const requesterId = (n.payload.requesterId as string) ?? null;
+            const requesterUsername = (n.payload.requesterUsername as string) ?? null;
+            profileName = (n.payload.requesterName as string) ?? null;
+            profileUrl = requesterId
+              ? `/profiles/${requesterUsername ?? requesterId}`
+              : null;
+          }
+
+          const isAccepted = acceptedRequests[n.id];
+          const isRejected = rejectedRequests[n.id];
+          const showFollowRequestActions = n.type === "follow_request" && !n.readAt && !isAccepted && !isRejected;
 
           const notificationCard = (
             <Card
               key={n.id}
-              className={`border ${n.readAt ? "border-border/60 bg-card/60" : "border-accent/40 bg-accent/5"} ${profileUrl ? "transition hover:shadow-md cursor-pointer" : ""}`}
+              className={`border ${n.readAt && !isAccepted ? "border-border/60 bg-card/60" : "border-accent/40 bg-accent/5"} ${profileUrl ? "transition hover:shadow-md cursor-pointer" : ""}`}
             >
               <CardHeader className="pb-2">
                 {renderNotification(n)}
               </CardHeader>
               <CardContent className="pt-0">
-                {n.type === "follow_request" && !n.readAt ? (
+                {showFollowRequestActions ? (
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <Button
@@ -388,7 +403,7 @@ const NotificationsList = () => {
                       }}
                       disabled={isPending}
                       aria-label="Accepter la demande"
-                      className="gap-2"
+                      className="gap-2 cursor-pointer"
                     >
                       <Check className="h-4 w-4" />
                       Accepter
@@ -403,11 +418,32 @@ const NotificationsList = () => {
                       }}
                       disabled={isPending}
                       aria-label="Refuser la demande"
-                      className="gap-2"
+                      className="gap-2 cursor-pointer hover:text-foreground"
                     >
                       <X className="h-4 w-4" />
                       Refuser
                     </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleMark(n.id)}
+                      disabled={isPending}
+                      aria-label="Marquer comme lu"
+                      className="cursor-pointer"
+                    >
+                      Marquer comme lu
+                    </Button>
+                  </div>
+                  {errorMessages[n.id] ? (
+                    <p className="text-xs text-destructive">{errorMessages[n.id]}</p>
+                  ) : null}
+                </div>
+              ) : isAccepted && n.type === "follow_request" ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-green-600 dark:text-green-400 font-medium">
+                    Demande acceptée
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
                     {(() => {
                       const requesterId = (n.payload.requesterId as string) || null;
                       const sent = requesterId ? followBackSent[requesterId] : false;
@@ -419,22 +455,25 @@ const NotificationsList = () => {
                           onClick={() => handleFollowBack(requesterId, n.id)}
                           disabled={isPending || pending || sent}
                           aria-label={sent ? "Demande de suivi envoyée" : "Suivre en retour"}
-                          className="gap-2"
+                          className="gap-2 cursor-pointer hover:text-foreground"
                         >
                           <UserPlus className="h-4 w-4" />
                           {sent ? "Demande envoyée" : "Suivre en retour"}
                         </Button>
                       ) : null;
                     })()}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleMark(n.id)}
-                      disabled={isPending}
-                      aria-label="Marquer comme lu"
-                    >
-                      Marquer comme lu
-                    </Button>
+                    {profileUrl ? (
+                      <Button
+                        asChild
+                        variant="ghost"
+                        size="sm"
+                        className="cursor-pointer"
+                      >
+                        <Link href={profileUrl}>
+                          Voir le profil
+                        </Link>
+                      </Button>
+                    ) : null}
                   </div>
                   {errorMessages[n.id] ? (
                     <p className="text-xs text-destructive">{errorMessages[n.id]}</p>
@@ -447,6 +486,7 @@ const NotificationsList = () => {
                   onClick={() => handleMark(n.id)}
                   disabled={isPending}
                   aria-label="Marquer comme lu"
+                  className="cursor-pointer"
                 >
                   Marquer comme lu
                 </Button>
@@ -455,16 +495,15 @@ const NotificationsList = () => {
             </Card>
           );
 
-          // Si c'est une notification de type "follow" avec une URL de profil, rendre la carte cliquable
-          if (profileUrl && n.type === "follow") {
+          // Si la carte a une URL de profil et qu'on n'est PAS en état "accepté" (pour ne pas interférer avec les boutons)
+          if (profileUrl && !isAccepted) {
             return (
               <Link
                 key={n.id}
                 href={profileUrl}
                 className="block"
-                aria-label={`Voir le profil de ${n.payload.followerName as string ?? "l'utilisateur"}`}
+                aria-label={`Voir le profil de ${profileName ?? "l'utilisateur"}`}
                 onClick={(e) => {
-                  // Empêcher la navigation si on clique sur un bouton
                   const target = e.target as HTMLElement;
                   if (target.closest("button")) {
                     e.preventDefault();
@@ -476,7 +515,6 @@ const NotificationsList = () => {
             );
           }
 
-          // Sinon, rendre la carte normale
           return notificationCard;
         })}
       </div>

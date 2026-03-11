@@ -89,7 +89,7 @@ const ReviewForm = ({ bookId }: ReviewFormProps) => {
           </select>
         </label>
       </div>
-      <Button type="submit" disabled={isPending}>
+      <Button type="submit" disabled={isPending} className="cursor-pointer">
         {isPending ? "Publication..." : "Publier l'avis"}
       </Button>
       {feedback ? (

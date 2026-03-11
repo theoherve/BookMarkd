@@ -95,7 +95,7 @@ export const requestFollow = async (
     // Récupérer le nom du demandeur pour la notification
     const { data: requester, error: requesterErr } = await db.client
       .from("users")
-      .select("display_name")
+      .select("display_name, username")
       .eq("id", requesterId)
       .maybeSingle();
     if (requesterErr) {
@@ -124,6 +124,7 @@ export const requestFollow = async (
     void createNotification(targetUserId, "follow_request", {
       requestId: newRequest.id,
       requesterId: requesterId,
+      requesterUsername: requester?.username ?? null,
       requesterName: requester?.display_name ?? null,
     });
     return { success: true };

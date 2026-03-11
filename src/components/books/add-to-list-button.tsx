@@ -74,7 +74,7 @@ const AddToListButton = ({ bookId, disabled, className }: AddToListButtonProps) 
           variant="outline"
           disabled={disabled}
           aria-label="Ajouter ce livre à une liste"
-          className={cn("gap-2", className)}
+          className={cn("gap-2 cursor-pointer hover:text-foreground", className)}
         >
           <ListPlus className="h-4 w-4" aria-hidden />
           Ajouter à une liste

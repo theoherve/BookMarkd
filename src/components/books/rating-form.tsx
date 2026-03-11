@@ -91,16 +91,16 @@ const RatingForm = ({ bookId, currentRating }: RatingFormProps) => {
                 aria-label={`Noter ${star} sur 5`}
                 onClick={() => handleStarClick(star)}
                 disabled={isPending}
-                className="relative inline-flex h-8 w-8 items-center justify-center text-2xl transition hover:scale-110 disabled:cursor-not-allowed disabled:opacity-50"
+                className="relative inline-flex h-8 w-8 cursor-pointer items-center justify-center text-2xl transition hover:scale-110 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {/* Étoile de fond (vide) */}
-                <span className="text-muted-foreground drop-shadow-[0_0_16px_rgba(214,176,135)]">★</span>
+                <span className="text-yellow-500/30">★</span>
                 {/* Étoile colorée (pleine ou partielle) */}
                 <span
                   className={`absolute inset-0 flex items-center justify-center overflow-hidden ${state === "full"
-                    ? "text-[#c4a652]"
+                    ? "text-yellow-500"
                     : state === "half"
-                      ? "text-[#c4a652]"
+                      ? "text-yellow-500"
                       : "text-transparent"
                     }`}
                   style={
