@@ -4,8 +4,6 @@ import { requireAdmin } from "@/lib/auth/require-admin";
 import db from "@/lib/supabase/db";
 import type { SystemHealthCheck } from "@/types/admin";
 
-type ActionResult = { success: true } | { success: false; message: string };
-
 export const getSystemHealthChecks = async (): Promise<SystemHealthCheck[]> => {
   await requireAdmin();
 

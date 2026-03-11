@@ -36,7 +36,7 @@ const BackButton = ({
       tabIndex={0}
       className={
         className ??
-        "inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-md w-fit"
+        "inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-md w-fit cursor-pointer"
       }
     >
       <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />

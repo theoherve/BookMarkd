@@ -230,7 +230,6 @@ const backfillGoogleBooksCovers = async () => {
   // On reste simple (range avec offset) vu que c'est un script ponctuel
   // et que le volume de données reste maîtrisé.
   // Si le volume grossit beaucoup, on pourra passer à une pagination par curseur.
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const to = from + batchSize - 1;
     const processed = await migrateBatch(from, to);

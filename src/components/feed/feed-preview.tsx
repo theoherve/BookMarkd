@@ -57,7 +57,7 @@ const FeedPreview = () => {
     return (
       <Card className="border-destructive/30 bg-destructive/10">
         <CardHeader>
-          <CardTitle className="text-destructive">Impossible de charger l’aperçu</CardTitle>
+          <CardTitle className="text-destructive">Impossible de charger l'aperçu</CardTitle>
           <CardDescription className="text-destructive/80">
             Vérifiez votre connexion et réessayez dans quelques instants.
           </CardDescription>
@@ -75,19 +75,35 @@ const FeedPreview = () => {
     );
   }
 
+  const isCommunityMode = data.activitiesSource === "community";
+
   const condensedActivities = condenseActivities(data.activities);
   const activities = condensedActivities.slice(0, MAX_ITEMS);
   const friendsBooks = data.friendsBooks.slice(0, MAX_ITEMS);
   const recommendations = data.recommendations.slice(0, MAX_ITEMS);
+  const trendingBooks = (data.trendingBooks ?? []).slice(0, MAX_ITEMS);
+  const topRatedBooks = (data.topRatedBooks ?? []).slice(0, MAX_ITEMS);
+  const recentBooks = (data.recentBooks ?? []).slice(0, MAX_ITEMS);
+
+  // En mode communautaire, les sections amis sont remplacées par le contenu global
+  const showTrending = isCommunityMode && trendingBooks.length > 0;
+  const showTopRated = topRatedBooks.length > 0;
+  const showRecent = isCommunityMode && recentBooks.length > 0;
 
   return (
     <div className="space-y-6">
+
+      {/* ── Activités ──────────────────────────────────────────────────── */}
       <PreviewSection
-        title="Activités récentes"
-        description="Les derniers partages de votre cercle de lecture."
+        title={isCommunityMode ? "Dans la communauté" : "Activités récentes"}
+        description={
+          isCommunityMode
+            ? "Ce que lisent et partagent les lecteur·ices BookMarkd en ce moment."
+            : "Les derniers partages de votre cercle de lecture."
+        }
       >
         {activities.length === 0 ? (
-          <EmptyPreview message="Aucune activité récente de vos amis. Ajoutez des ami·e·s pour suivre leurs activités !" />
+          <EmptyPreview message="Aucune activité récente pour le moment." />
         ) : (
           <PreviewRow ref={activitiesScrollRef}>
             {activities.map((activity) => (
@@ -119,39 +135,87 @@ const FeedPreview = () => {
         )}
       </PreviewSection>
 
-      <PreviewSection
-        title="Lectures des amis"
-        description="Les livres qui occupent vos ami·e·s cette semaine."
-      >
-        {friendsBooks.length === 0 ? (
-          <EmptyPreview message="Ajoutez des ami·e·s pour suivre leurs bibliothèques." />
-        ) : (
+      {/* ── Livres des amis OU tendances communautaires ─────────────────── */}
+      {showTrending ? (
+        <PreviewSection
+          title="Les plus lus en ce moment"
+          description="Les titres que la communauté BookMarkd ne lâche pas."
+        >
           <PreviewRow>
-            {friendsBooks.map((book) => (
+            {trendingBooks.map((book) => (
               <PreviewItem key={book.id}>
-                <BookFeedCard item={book} />
+                <RecommendationCard item={book} />
               </PreviewItem>
             ))}
           </PreviewRow>
-        )}
-      </PreviewSection>
+        </PreviewSection>
+      ) : (
+        <PreviewSection
+          title="Lectures des amis"
+          description="Les livres qui occupent vos ami·e·s cette semaine."
+        >
+          {friendsBooks.length === 0 ? (
+            <EmptyPreview message="Ajoutez des ami·e·s pour suivre leurs bibliothèques." />
+          ) : (
+            <PreviewRow>
+              {friendsBooks.map((book) => (
+                <PreviewItem key={book.id}>
+                  <BookFeedCard item={book} />
+                </PreviewItem>
+              ))}
+            </PreviewRow>
+          )}
+        </PreviewSection>
+      )}
 
-      <PreviewSection
-        title="Nous vous suggérons"
-        description="Des recommandations calculées à partir de vos goûts."
-      >
-        {recommendations.length === 0 ? (
-          <EmptyPreview message="Aucune recommandation pour le moment. Continuez de noter vos lectures !" />
-        ) : (
+      {/* ── Nouveautés (mode communautaire uniquement) ───────────────────── */}
+      {showRecent && (
+        <PreviewSection
+          title="Nouveautés"
+          description="Les derniers livres ajoutés sur BookMarkd."
+        >
           <PreviewRow>
-            {recommendations.map((recommendation) => (
-              <PreviewItem key={recommendation.id}>
-                <RecommendationCard item={recommendation} />
+            {recentBooks.map((book) => (
+              <PreviewItem key={book.id}>
+                <RecommendationCard item={book} />
               </PreviewItem>
             ))}
           </PreviewRow>
-        )}
-      </PreviewSection>
+        </PreviewSection>
+      )}
+
+      {/* ── Recommandations personnalisées OU mieux notés ───────────────── */}
+      {showTopRated ? (
+        <PreviewSection
+          title="Les mieux notés"
+          description="Les livres les plus appréciés par la communauté BookMarkd."
+        >
+          <PreviewRow>
+            {topRatedBooks.map((book) => (
+              <PreviewItem key={book.id}>
+                <RecommendationCard item={book} />
+              </PreviewItem>
+            ))}
+          </PreviewRow>
+        </PreviewSection>
+      ) : (
+        <PreviewSection
+          title="Nous vous suggérons"
+          description="Des recommandations calculées à partir de vos goûts."
+        >
+          {recommendations.length === 0 ? (
+            <EmptyPreview message="Aucune recommandation pour le moment. Continuez de noter vos lectures !" />
+          ) : (
+            <PreviewRow>
+              {recommendations.map((recommendation) => (
+                <PreviewItem key={recommendation.id}>
+                  <RecommendationCard item={recommendation} />
+                </PreviewItem>
+              ))}
+            </PreviewRow>
+          )}
+        </PreviewSection>
+      )}
     </div>
   );
 };
@@ -168,7 +232,7 @@ const PreviewSection = ({
   return (
     <Card className="border-border/60 bg-card/80 backdrop-blur">
       <CardHeader className="space-y-1.5">
-        <CardTitle className="text-lg font-semibold text-foreground">{title}</CardTitle>
+        <CardTitle className="text-lg font-semibold text-foreground m-0">{title}</CardTitle>
         <CardDescription className="text-sm text-muted-foreground">{description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">{children}</CardContent>
@@ -213,4 +277,3 @@ const FeedPreviewSkeleton = () => {
 };
 
 export default FeedPreview;
-

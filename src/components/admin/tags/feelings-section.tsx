@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -94,7 +95,7 @@ export const AdminFeelingsSection = ({ feelings, orphanedFeelings }: AdminFeelin
                           {f.books.slice(0, 10).map((book) => (
                             <div key={book.id} className="flex gap-2">
                               {book.coverUrl ? (
-                                <img src={book.coverUrl} alt={book.title} className="h-10 w-7 shrink-0 rounded object-cover" />
+                                <Image src={book.coverUrl} alt={book.title} width={28} height={40} className="h-10 w-7 shrink-0 rounded object-cover" />
                               ) : (
                                 <div className="flex h-10 w-7 shrink-0 items-center justify-center rounded bg-muted">
                                   <BookOpen className="size-3 text-muted-foreground" />

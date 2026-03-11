@@ -52,6 +52,10 @@ export const useInfiniteFeedQuery = () => {
   const [recommendations, setRecommendations] = useState<FeedResponse["recommendations"]>([]);
   const [hasMoreActivities, setHasMoreActivities] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [activitiesSource, setActivitiesSource] = useState<FeedResponse["activitiesSource"]>(undefined);
+  const [trendingBooks, setTrendingBooks] = useState<FeedResponse["trendingBooks"]>(undefined);
+  const [topRatedBooks, setTopRatedBooks] = useState<FeedResponse["topRatedBooks"]>(undefined);
+  const [recentBooks, setRecentBooks] = useState<FeedResponse["recentBooks"]>(undefined);
   const initialFetched = useRef(false);
 
   const initialQuery = useQuery({
@@ -66,6 +70,10 @@ export const useInfiniteFeedQuery = () => {
     setFriendsBooks(initialQuery.data.friendsBooks);
     setRecommendations(initialQuery.data.recommendations);
     setHasMoreActivities(initialQuery.data.hasMoreActivities ?? false);
+    setActivitiesSource(initialQuery.data.activitiesSource);
+    setTrendingBooks(initialQuery.data.trendingBooks);
+    setTopRatedBooks(initialQuery.data.topRatedBooks);
+    setRecentBooks(initialQuery.data.recentBooks);
   }, [initialQuery.data]);
 
   const loadMore = useCallback(async () => {
@@ -89,6 +97,10 @@ export const useInfiniteFeedQuery = () => {
         friendsBooks,
         recommendations,
         hasMoreActivities,
+        activitiesSource,
+        trendingBooks,
+        topRatedBooks,
+        recentBooks,
       }
     : undefined;
 

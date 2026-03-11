@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { useState, useTransition } from "react";
 import {
   Table,
@@ -176,9 +177,11 @@ export const UsersTable = ({
                             {user.reviews.slice(0, 10).map((review) => (
                               <div key={review.id} className="flex gap-2">
                                 {review.bookCoverUrl ? (
-                                  <img
+                                  <Image
                                     src={review.bookCoverUrl}
                                     alt={review.bookTitle}
+                                    width={32}
+                                    height={48}
                                     className="h-12 w-8 shrink-0 rounded object-cover"
                                   />
                                 ) : (

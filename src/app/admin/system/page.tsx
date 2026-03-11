@@ -132,7 +132,7 @@ const SystemPage = async () => {
                 Supabase URL
               </dt>
               <dd className="truncate">
-                {process.env.NEXT_PUBLIC_SUPABASE_URL ? "Configuré" : "Non configuré"}
+                {process.env.NEXT_PUBLIC_BOOK_MARKD_SUPABASE_URL ? "Configuré" : "Non configuré"}
               </dd>
             </div>
             <div>
