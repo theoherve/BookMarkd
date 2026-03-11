@@ -39,8 +39,102 @@ const DEFAULT_ACTIVITY_LIMIT = 8;
 const MAX_ACTIVITY_LIMIT = 50;
 const FRIENDS_BOOKS_LIMIT = 6;
 const RECOMMENDATIONS_LIMIT = 6;
+const COMMUNITY_CONTENT_LIMIT = 6;
 
 export const dynamic = "force-dynamic";
+
+// ─── Helpers contenu communautaire ───────────────────────────────────────────
+
+type RawBook = {
+  bookId: string;
+  title: string;
+  author: string;
+  coverUrl: string | null;
+  averageRating: number | null;
+};
+
+/** Livres les plus lus (status = finished), triés par nombre de lecteurs */
+async function fetchTrendingBooks(limit: number): Promise<Array<RawBook & { readersCount: number }>> {
+  const { data } = await db.client
+    .from("user_books")
+    .select("book_id, books(id, title, author, cover_url, average_rating)")
+    .eq("status", "finished");
+
+  if (!data) return [];
+
+  const counts = new Map<string, RawBook & { readersCount: number }>();
+  for (const row of data as unknown as Array<{
+    book_id: string;
+    books: { id: string; title: string; author: string; cover_url: string | null; average_rating: number | null } | null;
+  }>) {
+    const book = row.books;
+    if (!book) continue;
+    const existing = counts.get(book.id);
+    if (existing) {
+      existing.readersCount++;
+    } else {
+      counts.set(book.id, {
+        bookId: book.id,
+        title: book.title,
+        author: book.author,
+        coverUrl: book.cover_url,
+        averageRating: book.average_rating,
+        readersCount: 1,
+      });
+    }
+  }
+
+  return Array.from(counts.values())
+    .sort((a, b) => b.readersCount - a.readersCount)
+    .slice(0, limit);
+}
+
+/** Livres les mieux notés, en excluant les livres déjà dans la liste de l'utilisateur */
+async function fetchTopRatedBooks(limit: number, excludeIds: string[] = []): Promise<RawBook[]> {
+  const { data } = await db.client
+    .from("books")
+    .select("id, title, author, cover_url, average_rating")
+    .not("average_rating", "is", null)
+    .order("average_rating", { ascending: false })
+    .limit(limit + excludeIds.length + 10);
+
+  if (!data) return [];
+
+  return (data as Array<{ id: string; title: string; author: string; cover_url: string | null; average_rating: number | null }>)
+    .filter((b) => !excludeIds.includes(b.id))
+    .slice(0, limit)
+    .map((b) => ({
+      bookId: b.id,
+      title: b.title,
+      author: b.author,
+      coverUrl: b.cover_url,
+      averageRating: b.average_rating,
+    }));
+}
+
+/** Livres récemment ajoutés sur la plateforme */
+async function fetchRecentBooks(limit: number, excludeIds: string[] = []): Promise<RawBook[]> {
+  const { data } = await db.client
+    .from("books")
+    .select("id, title, author, cover_url, average_rating")
+    .order("created_at", { ascending: false })
+    .limit(limit + excludeIds.length + 10);
+
+  if (!data) return [];
+
+  return (data as Array<{ id: string; title: string; author: string; cover_url: string | null; average_rating: number | null }>)
+    .filter((b) => !excludeIds.includes(b.id))
+    .slice(0, limit)
+    .map((b) => ({
+      bookId: b.id,
+      title: b.title,
+      author: b.author,
+      coverUrl: b.cover_url,
+      averageRating: b.average_rating,
+    }));
+}
+
+// ─── Route GET ────────────────────────────────────────────────────────────────
 
 export async function GET(request: Request) {
   try {
@@ -71,8 +165,12 @@ export async function GET(request: Request) {
       );
     }
 
-    const activitiesPromise = ((): Promise<
-      { data: Array<{
+    const needsCommunityContent = followingIds.length === 0;
+
+    // ── Activités ──────────────────────────────────────────────────────────
+    // Si l'utilisateur a des amis : leurs activités. Sinon : activités récentes de toute la communauté.
+    const activitiesPromise = ((): Promise<{
+      data: Array<{
         id: string;
         type: string;
         payload: unknown;
@@ -81,142 +179,105 @@ export async function GET(request: Request) {
       }>;
       hasMoreActivities: boolean;
     }> => {
-      // Ne récupérer que les activités des amis, pas celles de l'utilisateur connecté
-      if (followingIds.length === 0) {
-        return Promise.resolve({ data: [], hasMoreActivities: false });
-      }
-
-      return Promise.resolve(
-        db.client
-          .from("activities")
+      let q = db.client
+        .from("activities")
         .select(
-          `
-          id,
-          type,
-          payload,
-          created_at,
-          user:user_id ( id, display_name, avatar_url )
-        `,
+          `id, type, payload, created_at, user:user_id ( id, display_name, avatar_url )`,
         )
-        .in("user_id", followingIds)
         .order("created_at", { ascending: false })
-        .range(activitiesOffset, activitiesOffset + activitiesLimit)
-        .then((r) => {
-          const data = (r.data ?? []) as unknown as Array<{
+        .range(activitiesOffset, activitiesOffset + activitiesLimit);
+
+      if (followingIds.length > 0) {
+        // Activités des amis uniquement
+        q = q.in("user_id", followingIds);
+      } else if (viewerId) {
+        // Toute la communauté sauf soi-même
+        q = q.not("user_id", "eq", viewerId);
+      }
+      // Si pas connecté : toute la communauté sans filtre
+
+      return Promise.resolve(q).then((r) => {
+        const data = (r.data ?? []) as unknown as Array<{
+          id: string;
+          type: string;
+          payload: unknown;
+          created_at: string;
+          user?: { id: string; display_name: string | null; avatar_url: string | null };
+        }>;
+        const hasMore = data.length > activitiesLimit;
+        const slice = data.slice(0, activitiesLimit);
+        return {
+          data: db.toCamel<Array<{
             id: string;
             type: string;
             payload: unknown;
-            created_at: string;
-            user?: { id: string; display_name: string | null; avatar_url: string | null };
-          }>;
-          const hasMore = data.length > activitiesLimit;
-          const slice = data.slice(0, activitiesLimit);
-          return {
-            data: db.toCamel<
-              Array<{
-                id: string;
-                type: string;
-                payload: unknown;
-                createdAt: string;
-                user?: { id: string; displayName: string | null; avatarUrl: string | null };
-              }>
-            >(slice),
-            hasMoreActivities: hasMore,
-          };
-        }),
-      );
+            createdAt: string;
+            user?: { id: string; displayName: string | null; avatarUrl: string | null };
+          }>>(slice),
+          hasMoreActivities: hasMore,
+        };
+      });
     })();
 
+    // ── Livres des amis ────────────────────────────────────────────────────
     const friendsBooksPromise = (() => {
-      let q = db.client
+      if (followingIds.length === 0) return Promise.resolve([]);
+
+      return db.client
         .from("user_books")
         .select(
-          `
-          id,
-          status,
-          updated_at,
-          rating,
-          user:user_id ( id, display_name, avatar_url ),
-          book:book_id ( id, title, author, cover_url, average_rating )
-        `,
-        );
-      if (followingIds.length > 0) {
-        q = q.in("user_id", followingIds);
-      } else {
-        // Si l'utilisateur ne suit personne, retourner un tableau vide
-        return Promise.resolve([]);
-      }
-      return q
+          `id, status, updated_at, rating,
+           user:user_id ( id, display_name, avatar_url ),
+           book:book_id ( id, title, author, cover_url, average_rating )`,
+        )
+        .in("user_id", followingIds)
         .order("updated_at", { ascending: false })
         .limit(FRIENDS_BOOKS_LIMIT)
         .then((r) =>
-          db.toCamel<
-            Array<{
-              id: string;
-              status: string | null;
-              updatedAt: string;
-              rating: number | null;
-              user?: { id: string; displayName: string | null; avatarUrl: string | null };
-              book?: {
-                id: string;
-                title: string;
-                author: string;
-                coverUrl: string | null;
-                averageRating: number | null;
-              };
-            }>
-          >(r.data ?? []),
+          db.toCamel<Array<{
+            id: string;
+            status: string | null;
+            updatedAt: string;
+            rating: number | null;
+            user?: { id: string; displayName: string | null; avatarUrl: string | null };
+            book?: { id: string; title: string; author: string; coverUrl: string | null; averageRating: number | null };
+          }>>(r.data ?? []),
         );
     })();
 
-    // Générer des recommandations basées sur les tags
+    // ── Recommandations personnalisées ─────────────────────────────────────
     const recommendationsPromise = (async () => {
-      if (!viewerId) {
-        return [];
-      }
+      if (!viewerId) return [];
 
-      // 1. Récupérer les livres de l'utilisateur (terminés, en cours, dans la readlist)
       const { data: userBooks, error: userBooksErr } = await db.client
         .from("user_books")
         .select("book_id, status")
         .eq("user_id", viewerId)
         .in("status", ["finished", "reading", "to_read"]);
-      
+
       if (userBooksErr) throw userBooksErr;
-      if (!userBooks || userBooks.length === 0) {
-        return [];
-      }
+      if (!userBooks || userBooks.length === 0) return [];
 
       const userBookIds = (userBooks ?? []).map(
         (ub) => (ub as { book_id: string }).book_id,
       ).filter((id): id is string => Boolean(id));
 
-      if (userBookIds.length === 0) {
-        return [];
-      }
+      if (userBookIds.length === 0) return [];
 
-      // 2. Récupérer les tags de ces livres avec pondération selon le statut
-      // finished = 3, reading = 2, to_read = 1
       const { data: userBookTags, error: tagsErr } = await db.client
         .from("book_tags")
-        .select(`
-          book_id,
-          tag:tag_id ( id, name )
-        `)
+        .select(`book_id, tag:tag_id ( id, name )`)
         .in("book_id", userBookIds);
-      
+
       if (tagsErr) throw tagsErr;
 
-      // Créer une map des poids par tag (basé sur le statut du livre)
       const tagWeights = new Map<string, number>();
       const userBookStatusMap = new Map<string, string>();
-      
+
       (userBooks ?? []).forEach((ub) => {
         const bookId = (ub as { book_id: string; status: string }).book_id;
         const status = (ub as { book_id: string; status: string }).status;
-        if (bookId) {
-          userBookStatusMap.set(bookId, status);
-        }
+        if (bookId) userBookStatusMap.set(bookId, status);
       });
 
       const getTagName = (tag: unknown): string | null => {
@@ -229,33 +290,23 @@ export async function GET(request: Request) {
         const bookId = (relation as { book_id: string | null }).book_id;
         const tag = (relation as { tag: unknown }).tag;
         const tagName = getTagName(tag);
-        
-        if (!bookId || !tagName) {
-          return;
-        }
+        if (!bookId || !tagName) return;
 
         const status = userBookStatusMap.get(bookId) ?? "to_read";
         const weight = status === "finished" ? 3 : status === "reading" ? 2 : 1;
-        
-        const currentWeight = tagWeights.get(tagName) ?? 0;
-        tagWeights.set(tagName, currentWeight + weight);
+        tagWeights.set(tagName, (tagWeights.get(tagName) ?? 0) + weight);
       });
 
-      if (tagWeights.size === 0) {
-        return [];
-      }
+      if (tagWeights.size === 0) return [];
 
-      // 3. Récupérer tous les livres qui ont au moins un tag en commun
       const relevantTagNames = Array.from(tagWeights.keys());
       const { data: relevantTagIds, error: relevantTagsErr } = await db.client
         .from("tags")
         .select("id, name")
         .in("name", relevantTagNames);
-      
+
       if (relevantTagsErr) throw relevantTagsErr;
-      if (!relevantTagIds || relevantTagIds.length === 0) {
-        return [];
-      }
+      if (!relevantTagIds || relevantTagIds.length === 0) return [];
 
       const relevantTagIdMap = new Map(
         (relevantTagIds ?? []).map((t) => [
@@ -266,75 +317,46 @@ export async function GET(request: Request) {
 
       const { data: candidateBooks, error: candidateErr } = await db.client
         .from("book_tags")
-        .select(`
-          book_id,
-          tag:tag_id ( name )
-        `)
-        .in(
-          "tag_id",
-          Array.from(relevantTagIdMap.values()),
-        );
-      
+        .select(`book_id, tag:tag_id ( name )`)
+        .in("tag_id", Array.from(relevantTagIdMap.values()));
+
       if (candidateErr) throw candidateErr;
 
-      // 4. Calculer les scores pour chaque livre candidat
-      const bookScores = new Map<
-        string,
-        { score: number; matchingTags: string[] }
-      >();
+      const bookScores = new Map<string, { score: number; matchingTags: string[] }>();
 
       (candidateBooks ?? []).forEach((relation) => {
         const bookId = (relation as { book_id: string | null }).book_id;
         const tag = (relation as { tag: unknown }).tag;
         const tagName = getTagName(tag);
-        
-        if (!bookId || !tagName) {
-          return;
-        }
-
-        // Ignorer les livres déjà dans la readlist de l'utilisateur
-        if (userBookIds.includes(bookId)) {
-          return;
-        }
+        if (!bookId || !tagName) return;
+        if (userBookIds.includes(bookId)) return;
 
         const tagWeight = tagWeights.get(tagName) ?? 0;
         const existing = bookScores.get(bookId);
-        
         if (existing) {
           existing.score += tagWeight;
-          if (!existing.matchingTags.includes(tagName)) {
-            existing.matchingTags.push(tagName);
-          }
+          if (!existing.matchingTags.includes(tagName)) existing.matchingTags.push(tagName);
         } else {
-          bookScores.set(bookId, {
-            score: tagWeight,
-            matchingTags: [tagName],
-          });
+          bookScores.set(bookId, { score: tagWeight, matchingTags: [tagName] });
         }
       });
 
-      if (bookScores.size === 0) {
-        return [];
-      }
+      if (bookScores.size === 0) return [];
 
-      // 5. Récupérer les détails des livres avec les meilleurs scores
       const sortedBookIds = Array.from(bookScores.entries())
         .sort((a, b) => b[1].score - a[1].score)
         .slice(0, RECOMMENDATIONS_LIMIT)
         .map(([bookId]) => bookId);
 
-      if (sortedBookIds.length === 0) {
-        return [];
-      }
+      if (sortedBookIds.length === 0) return [];
 
       const { data: recommendedBooks, error: booksErr } = await db.client
         .from("books")
         .select("id, title, author, cover_url")
         .in("id", sortedBookIds);
-      
+
       if (booksErr) throw booksErr;
 
-      // 6. Formater les recommandations avec les scores normalisés (0-100)
       const allScores = Array.from(bookScores.values()).map((s) => s.score);
       const maxScore = Math.max(...allScores);
       const minScore = Math.min(...allScores);
@@ -344,9 +366,6 @@ export async function GET(request: Request) {
         const bookId = (book as { id: string }).id;
         const scoreData = bookScores.get(bookId);
         const rawScore = scoreData?.score ?? 0;
-        
-        // Normaliser le score entre 0 et 100
-        // Si tous les scores sont identiques, donner 50 (milieu)
         const normalizedScore = scoreRange === 0
           ? 50
           : Math.round(((rawScore - minScore) / scoreRange) * 100);
@@ -369,15 +388,46 @@ export async function GET(request: Request) {
       });
     })();
 
-    const [activitiesResult, friendsBooks, recommendationsRaw] = await Promise.all([
-      activitiesPromise,
-      friendsBooksPromise,
-      recommendationsPromise,
-    ]);
+    // ── Contenu communautaire (en parallèle, uniquement si pas d'amis) ─────
+    const trendingBooksPromise = needsCommunityContent
+      ? fetchTrendingBooks(COMMUNITY_CONTENT_LIMIT)
+      : Promise.resolve([] as Awaited<ReturnType<typeof fetchTrendingBooks>>);
+
+    const recentBooksPromise = needsCommunityContent
+      ? fetchRecentBooks(COMMUNITY_CONTENT_LIMIT)
+      : Promise.resolve([] as RawBook[]);
+
+    const [activitiesResult, friendsBooks, recommendationsRaw, trendingBooksRaw, recentBooksRaw] =
+      await Promise.all([
+        activitiesPromise,
+        friendsBooksPromise,
+        recommendationsPromise,
+        trendingBooksPromise,
+        recentBooksPromise,
+      ]);
 
     const activities = activitiesResult.data;
     const hasMoreActivities = activitiesResult.hasMoreActivities;
 
+    // Livres mieux notés : uniquement si pas de recommandations personnalisées
+    const userBooksForExclusion: string[] = [];
+    if (viewerId && (recommendationsRaw ?? []).length === 0) {
+      const { data: ub } = await db.client
+        .from("user_books")
+        .select("book_id")
+        .eq("user_id", viewerId);
+      if (ub) {
+        for (const row of ub as Array<{ book_id: string }>) {
+          if (row.book_id) userBooksForExclusion.push(row.book_id);
+        }
+      }
+    }
+
+    const topRatedBooksRaw = (recommendationsRaw ?? []).length === 0
+      ? await fetchTopRatedBooks(COMMUNITY_CONTENT_LIMIT, userBooksForExclusion)
+      : [] as RawBook[];
+
+    // ── Collecte de tous les IDs de livres à enrichir ──────────────────────
     const recommendations = (recommendationsRaw ?? []) as Array<{
       id: string;
       score: number;
@@ -386,17 +436,21 @@ export async function GET(request: Request) {
       book?: { id: string; title: string; author: string; coverUrl: string | null };
     }>;
 
-    const recommendationBookIds = recommendations
-      .map((item) => item.book?.id)
-      .filter((id): id is string => Boolean(id));
+    const allEnrichmentBookIds = [
+      ...recommendations.map((item) => item.book?.id).filter((id): id is string => Boolean(id)),
+      ...trendingBooksRaw.map((b) => b.bookId),
+      ...topRatedBooksRaw.map((b) => b.bookId),
+      ...recentBooksRaw.map((b) => b.bookId),
+    ];
 
+    // ── Viewer readlist ────────────────────────────────────────────────────
     let viewerReadlistBooks = new Set<string>();
-    if (viewerId && recommendationBookIds.length > 0) {
+    if (viewerId && allEnrichmentBookIds.length > 0) {
       const { data: viewerEntries, error: viewerErr } = await db.client
         .from("user_books")
         .select("book_id")
         .eq("user_id", viewerId)
-        .in("book_id", recommendationBookIds);
+        .in("book_id", allEnrichmentBookIds);
       if (viewerErr) throw viewerErr;
       viewerReadlistBooks = new Set(
         (viewerEntries ?? [])
@@ -405,20 +459,14 @@ export async function GET(request: Request) {
       );
     }
 
-    const friendContextByBook = new Map<
-      string,
-      { names: string[]; count: number; highlights: string[] }
-    >();
+    // ── Contexte amis pour les recommandations ─────────────────────────────
+    const friendContextByBook = new Map<string, { names: string[]; count: number; highlights: string[] }>();
+    const recommendationBookIds = recommendations.map((item) => item.book?.id).filter((id): id is string => Boolean(id));
+
     if (followingIds.length > 0 && recommendationBookIds.length > 0) {
       const { data: friendEntries, error: friendErr } = await db.client
         .from("user_books")
-        .select(
-          `
-          status,
-          book_id,
-          user:user_id ( id, display_name )
-        `,
-        )
+        .select(`status, book_id, user:user_id ( id, display_name )`)
         .in("user_id", followingIds)
         .in("book_id", recommendationBookIds);
       if (friendErr) throw friendErr;
@@ -430,16 +478,9 @@ export async function GET(request: Request) {
       }>;
       friendEntriesTyped.forEach((entry) => {
         const bookId = entry.book_id ?? undefined;
-        if (!bookId) {
-          return;
-        }
-
-        const friendName = Array.isArray(entry.user)
-          ? entry.user[0]?.display_name ?? null
-          : null;
-        if (!friendName) {
-          return;
-        }
+        if (!bookId) return;
+        const friendName = Array.isArray(entry.user) ? entry.user[0]?.display_name ?? null : null;
+        if (!friendName) return;
 
         const statusLabel =
           (entry.status ?? "") === "finished"
@@ -452,26 +493,20 @@ export async function GET(request: Request) {
         if (existing) {
           existing.names.push(friendName);
           existing.count += 1;
-          if (existing.highlights.length < 3) {
-            existing.highlights.push(statusLabel);
-          }
-          return;
+          if (existing.highlights.length < 3) existing.highlights.push(statusLabel);
+        } else {
+          friendContextByBook.set(bookId, { names: [friendName], count: 1, highlights: [statusLabel] });
         }
-
-        friendContextByBook.set(bookId, {
-          names: [friendName],
-          count: 1,
-          highlights: [statusLabel],
-        });
       });
     }
 
+    // ── Tags par livre ─────────────────────────────────────────────────────
     const tagsByBook = new Map<string, string[]>();
-    if (recommendationBookIds.length > 0) {
+    if (allEnrichmentBookIds.length > 0) {
       const { data: tagRelations, error: tagsErr } = await db.client
         .from("book_tags")
         .select("book_id, tag:tag_id ( name )")
-        .in("book_id", recommendationBookIds);
+        .in("book_id", allEnrichmentBookIds);
       if (tagsErr) throw tagsErr;
 
       const getTagNameFromRelation = (tag: unknown): string | undefined => {
@@ -480,47 +515,25 @@ export async function GET(request: Request) {
         return (t as { name?: string | null })?.name ?? undefined;
       };
 
-      const tagRelationsTyped = (tagRelations ?? []) as Array<{
-        book_id: string | null;
-        tag: unknown;
-      }>;
-      tagRelationsTyped.forEach((relation) => {
-        const bookId = relation.book_id ?? undefined;
-        const tagName = getTagNameFromRelation(relation.tag);
-        if (!bookId || !tagName) {
-          return;
-        }
-
+      (tagRelations ?? []).forEach((relation) => {
+        const bookId = (relation as { book_id: string | null }).book_id ?? undefined;
+        const tagName = getTagNameFromRelation((relation as { tag: unknown }).tag);
+        if (!bookId || !tagName) return;
         const existing = tagsByBook.get(bookId);
-        if (existing) {
-          existing.push(tagName);
-          return;
-        }
-
-        tagsByBook.set(bookId, [tagName]);
+        if (existing) { existing.push(tagName); } else { tagsByBook.set(bookId, [tagName]); }
       });
     }
 
-    // Récupérer tous les utilisateurs ayant lu chaque livre recommandé
+    // ── Lecteurs par livre ─────────────────────────────────────────────────
     const readersByBook = new Map<string, Array<{
-      id: string;
-      username: string | null;
-      displayName: string;
-      avatarUrl: string | null;
+      id: string; username: string | null; displayName: string; avatarUrl: string | null;
       status: "to_read" | "reading" | "finished";
     }>>();
-    if (recommendationBookIds.length > 0) {
+    if (allEnrichmentBookIds.length > 0) {
       const { data: bookReadersData, error: readersErr } = await db.client
         .from("user_books")
-        .select(
-          `
-          book_id,
-          status,
-          user_id,
-          user:user_id ( id, username, display_name, avatar_url )
-        `,
-        )
-        .in("book_id", recommendationBookIds)
+        .select(`book_id, status, user_id, user:user_id ( id, username, display_name, avatar_url )`)
+        .in("book_id", allEnrichmentBookIds)
         .order("updated_at", { ascending: false });
 
       if (readersErr) {
@@ -528,26 +541,17 @@ export async function GET(request: Request) {
       }
 
       if (bookReadersData && bookReadersData.length > 0) {
-        const userBooks = db.toCamel<
-          Array<{
-            bookId: string;
-            status: "to_read" | "reading" | "finished";
-            userId: string;
-            user?: {
-              id: string;
-              username: string | null;
-              displayName: string;
-              avatarUrl: string | null;
-            };
-          }>
-        >(bookReadersData ?? []);
+        const userBooks = db.toCamel<Array<{
+          bookId: string;
+          status: "to_read" | "reading" | "finished";
+          userId: string;
+          user?: { id: string; username: string | null; displayName: string; avatarUrl: string | null };
+        }>>(bookReadersData ?? []);
 
         userBooks.forEach((ub) => {
           const bookId = ub.bookId;
           if (!bookId || !ub.user) return;
-
           const existing = readersByBook.get(bookId) ?? [];
-          // Limiter à 5 utilisateurs par livre
           if (existing.length < 5) {
             existing.push({
               id: ub.user.id,
@@ -562,74 +566,48 @@ export async function GET(request: Request) {
       }
     }
 
-    // Helper : le payload est transformé en camelCase par db.toCamel
+    // ── Formatage des activités ────────────────────────────────────────────
     const getPayloadValue = (p: Record<string, unknown>, key: string) => {
       const camel = p[key.replace(/_([a-z])/g, (_m, c) => c.toUpperCase())];
       const snake = p[key];
       return camel ?? snake;
     };
 
-    // Récupérer les IDs des livres manquants dans les payloads
     const bookIdsToFetch = new Set<string>();
     activities.forEach((item) => {
       const payload = item.payload ?? {};
       const normalizedPayload =
-        typeof payload === "object" &&
-        payload !== null &&
-        !Array.isArray(payload)
+        typeof payload === "object" && payload !== null && !Array.isArray(payload)
           ? (payload as Record<string, unknown>)
           : {};
-
       const bookId = getPayloadValue(normalizedPayload, "book_id") as string | null | undefined;
       const bookTitle = getPayloadValue(normalizedPayload, "book_title") as string | null | undefined;
       const bookAuthor = getPayloadValue(normalizedPayload, "book_author") as string | null | undefined;
-
-      // Si on a un book_id mais pas titre ou auteur, on doit récupérer les détails
-      if (bookId && (!bookTitle || !bookAuthor)) {
-        bookIdsToFetch.add(bookId);
-      }
+      if (bookId && (!bookTitle || !bookAuthor)) bookIdsToFetch.add(bookId);
     });
 
-    // Récupérer les titres et auteurs des livres manquants
-    const bookDetailsMap = new Map<
-      string,
-      { title: string; author: string }
-    >();
+    const bookDetailsMap = new Map<string, { title: string; author: string }>();
     if (bookIdsToFetch.size > 0) {
       const { data: books, error: booksError } = await db.client
         .from("books")
         .select("id, title, author")
         .in("id", Array.from(bookIdsToFetch));
-
       if (!booksError && books) {
-        (
-          books as Array<{ id: string; title: string; author: string }>
-        ).forEach((book) => {
-          bookDetailsMap.set(book.id, {
-            title: book.title,
-            author: book.author,
-          });
+        (books as Array<{ id: string; title: string; author: string }>).forEach((book) => {
+          bookDetailsMap.set(book.id, { title: book.title, author: book.author });
         });
       }
     }
 
-    // Filtrer les activités selon la visibilité pour les reviews
     const filteredActivities = activities.filter((item) => {
-      // Pour les reviews, vérifier la visibilité
       if (item.type === "review") {
         const payload = item.payload ?? {};
         const normalizedPayload =
-          typeof payload === "object" &&
-          payload !== null &&
-          !Array.isArray(payload)
+          typeof payload === "object" && payload !== null && !Array.isArray(payload)
             ? (payload as Record<string, unknown>)
             : {};
-
         const visibility = getPayloadValue(normalizedPayload, "visibility") as string | null | undefined;
-        // Ne montrer que les reviews "public" ou "friends" (les "private" sont exclues)
-        if (visibility === "private") {
-          return false;
-        }
+        if (visibility === "private") return false;
       }
       return true;
     });
@@ -637,28 +615,21 @@ export async function GET(request: Request) {
     const formattedActivities: FeedActivity[] = filteredActivities.map((item) => {
       const payload = item.payload ?? {};
       const normalizedPayload =
-        typeof payload === "object" &&
-        payload !== null &&
-        !Array.isArray(payload)
+        typeof payload === "object" && payload !== null && !Array.isArray(payload)
           ? (payload as Record<string, unknown>)
           : {};
 
       const bookId = getPayloadValue(normalizedPayload, "book_id") as string | null | undefined;
       const bookTitleFromPayload = getPayloadValue(normalizedPayload, "book_title") as string | null | undefined;
       const bookAuthorFromPayload = getPayloadValue(normalizedPayload, "book_author") as string | null | undefined;
-
       const bookDetails = bookId ? bookDetailsMap.get(bookId) : undefined;
-      const bookTitle =
-        bookTitleFromPayload ?? (bookDetails?.title ?? null) ?? null;
-      const bookAuthor =
-        bookAuthorFromPayload ?? (bookDetails?.author ?? null) ?? null;
-
+      const bookTitle = bookTitleFromPayload ?? (bookDetails?.title ?? null) ?? null;
+      const bookAuthor = bookAuthorFromPayload ?? (bookDetails?.author ?? null) ?? null;
       const note =
         (getPayloadValue(normalizedPayload, "note") as string | null | undefined) ??
         (getPayloadValue(normalizedPayload, "review_snippet") as string | null | undefined) ??
         (getPayloadValue(normalizedPayload, "status_note") as string | null | undefined) ??
         null;
-
       const rating = getPayloadValue(normalizedPayload, "rating") as number | null | undefined;
 
       return {
@@ -675,63 +646,101 @@ export async function GET(request: Request) {
       };
     });
 
+    // ── Formatage des livres d'amis ────────────────────────────────────────
     const formattedFriendsBooks: FeedFriendBook[] = friendsBooks.map((item) => ({
       id: item.id,
       bookId: item.book?.id ?? "",
       title: item.book?.title ?? "",
       author: item.book?.author ?? "",
       coverUrl: item.book?.coverUrl ?? null,
-      averageRating: typeof item.book?.averageRating === "number"
-        ? item.book!.averageRating!
-        : null,
+      averageRating: typeof item.book?.averageRating === "number" ? item.book!.averageRating! : null,
       status: item.status as "to_read" | "reading" | "finished",
       updatedAt: item.updatedAt,
       readerName: item.user?.displayName ?? "Lectrice anonyme",
       readerAvatarUrl: item.user?.avatarUrl ?? null,
     }));
 
-    const formattedRecommendations: FeedRecommendation[] = recommendations.map(
-      (item) => {
-        const bookId = item.book?.id ?? "";
-        const friendContext = friendContextByBook.get(bookId);
-        
-        const metadata = item.metadata ?? {};
-        const normalizedMetadata =
-          typeof metadata === "object" &&
-          metadata !== null &&
-          !Array.isArray(metadata)
-            ? (metadata as Record<string, unknown>)
-            : {};
+    // ── Formatage des recommandations personnalisées ───────────────────────
+    const formattedRecommendations: FeedRecommendation[] = recommendations.map((item) => {
+      const bookId = item.book?.id ?? "";
+      const friendContext = friendContextByBook.get(bookId);
+      const metadata = item.metadata ?? {};
+      const normalizedMetadata =
+        typeof metadata === "object" && metadata !== null && !Array.isArray(metadata)
+          ? (metadata as Record<string, unknown>)
+          : {};
+      const tags = tagsByBook.get(bookId) ?? [];
+      const readers = readersByBook.get(bookId) ?? [];
 
-        // Utiliser tous les tags du livre depuis la base de données pour l'affichage
-        const tags = tagsByBook.get(bookId) ?? [];
-        const readers = readersByBook.get(bookId) ?? [];
+      return {
+        id: item.id,
+        bookId,
+        title: item.book?.title ?? "",
+        author: item.book?.author ?? "",
+        coverUrl: item.book?.coverUrl ?? null,
+        reason:
+          (normalizedMetadata.reason as string | null | undefined) ??
+          (normalizedMetadata.explanation as string | null | undefined) ??
+          (normalizedMetadata.match as string | null | undefined) ??
+          (friendContext ? `${friendContext.names.slice(0, 2).join(", ")} l'a recommandé` : null),
+        source: isRecommendationSource(item.source) ? item.source : "global",
+        score: typeof item.score === "number" ? item.score : Number(item.score ?? 0),
+        friendNames: friendContext?.names ?? [],
+        friendCount: friendContext?.count ?? 0,
+        viewerHasInReadlist: viewerReadlistBooks.has(bookId),
+        friendHighlights: friendContext?.highlights ?? [],
+        tags: tags.slice(0, 5),
+        readers,
+      };
+    });
 
-        return {
-          id: item.id,
-          bookId,
-          title: item.book?.title ?? "",
-          author: item.book?.author ?? "",
-          coverUrl: item.book?.coverUrl ?? null,
-          reason:
-            (normalizedMetadata.reason as string | null | undefined) ??
-            (normalizedMetadata.explanation as string | null | undefined) ??
-            (normalizedMetadata.match as string | null | undefined) ??
-            (friendContext
-              ? `${friendContext.names.slice(0, 2).join(", ")} l'a recommandé`
-              : null),
-          source: isRecommendationSource(item.source)
-            ? item.source
-            : "global",
-          score: typeof item.score === "number" ? item.score : Number(item.score ?? 0),
-          friendNames: friendContext?.names ?? [],
-          friendCount: friendContext?.count ?? 0,
-          viewerHasInReadlist: viewerReadlistBooks.has(bookId),
-          friendHighlights: friendContext?.highlights ?? [],
-          tags: tags.slice(0, 5),
-          readers: readers,
-        };
-      },
+    // ── Formatage du contenu communautaire ────────────────────────────────
+
+    /** Mappe un RawBook vers FeedRecommendation pour l'affichage communautaire */
+    const mapRawBookToRecommendation = (
+      book: RawBook,
+      prefix: string,
+      reason: string,
+      scoreLabel: string,
+      score: number,
+    ): FeedRecommendation => ({
+      id: `${prefix}-${book.bookId}`,
+      bookId: book.bookId,
+      title: book.title,
+      author: book.author,
+      coverUrl: book.coverUrl,
+      reason,
+      source: "global",
+      score,
+      scoreLabel,
+      viewerHasInReadlist: viewerReadlistBooks.has(book.bookId),
+      tags: (tagsByBook.get(book.bookId) ?? []).slice(0, 5),
+      readers: readersByBook.get(book.bookId) ?? [],
+      friendNames: [],
+      friendCount: 0,
+      friendHighlights: [],
+    });
+
+    const formattedTrendingBooks: FeedRecommendation[] = trendingBooksRaw.map((book) => {
+      const count = book.readersCount;
+      const label = `${count} lecteur·ice${count > 1 ? "s" : ""} l'ont terminé`;
+      return mapRawBookToRecommendation(book, "trending", label, label, count);
+    });
+
+    const formattedTopRatedBooks: FeedRecommendation[] = topRatedBooksRaw.map((book) => {
+      const avg = book.averageRating ?? 0;
+      const label = `Note : ${avg.toFixed(1)}/5`;
+      return mapRawBookToRecommendation(book, "top-rated", label, label, Math.round(avg * 20));
+    });
+
+    const formattedRecentBooks: FeedRecommendation[] = recentBooksRaw.map((book) =>
+      mapRawBookToRecommendation(
+        book,
+        "recent",
+        "Récemment ajouté·e sur BookMarkd",
+        "", // scoreLabel vide = badge masqué
+        0,
+      ),
     );
 
     return NextResponse.json({
@@ -739,6 +748,10 @@ export async function GET(request: Request) {
       friendsBooks: formattedFriendsBooks,
       recommendations: formattedRecommendations,
       hasMoreActivities,
+      activitiesSource: needsCommunityContent ? "community" : "friends",
+      trendingBooks: formattedTrendingBooks.length > 0 ? formattedTrendingBooks : undefined,
+      topRatedBooks: formattedTopRatedBooks.length > 0 ? formattedTopRatedBooks : undefined,
+      recentBooks: formattedRecentBooks.length > 0 ? formattedRecentBooks : undefined,
     });
   } catch (error) {
     console.error("[feed] GET error:", error);
@@ -748,4 +761,3 @@ export async function GET(request: Request) {
     );
   }
 }
-

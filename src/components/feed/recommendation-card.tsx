@@ -106,13 +106,15 @@ const RecommendationCard = ({ item }: RecommendationCardProps) => {
                     : "Suggestions générées à partir des tags de vos livres terminés, en cours ou dans votre liste de lecture."}
               </TooltipContent>
             </Tooltip>
-            <Badge
-              variant="secondary"
-              className="w-full max-w-full rounded-full bg-accent/20 px-3 py-1 text-center text-xs font-medium text-accent-foreground dark:text-foreground wrap-break-word whitespace-normal"
-              aria-label={`Affinité estimée ${item.score} pour cent`}
-            >
-              Affinité estimée : {item.score}%
-            </Badge>
+            {item.scoreLabel !== "" && (item.scoreLabel !== undefined || item.score > 0) ? (
+              <Badge
+                variant="secondary"
+                className="w-full max-w-full rounded-full bg-accent/20 px-3 py-1 text-center text-xs font-medium text-accent-foreground dark:text-foreground wrap-break-word whitespace-normal"
+                aria-label={item.scoreLabel ?? `Affinité estimée ${item.score} pour cent`}
+              >
+                {item.scoreLabel ?? `Affinité estimée : ${item.score}%`}
+              </Badge>
+            ) : null}
           </div>
           {item.friendCount ? (
             <div className="space-y-2 rounded-2xl border border-border/40 bg-card/50 p-4 text-xs text-muted-foreground">

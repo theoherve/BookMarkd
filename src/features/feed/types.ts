@@ -43,6 +43,8 @@ export type FeedRecommendation = {
   reason?: string | null;
   source: "friends" | "global" | "similar";
   score: number;
+  /** Libellé personnalisé pour le badge score (ex: "12 lecteurs", "Note : 4.5/5"). Si absent, affiche "Affinité estimée : X%". Si vide, masque le badge. */
+  scoreLabel?: string;
   friendNames?: string[];
   friendCount?: number;
   viewerHasInReadlist?: boolean;
@@ -57,5 +59,13 @@ export type FeedResponse = {
   recommendations: FeedRecommendation[];
   /** Présent quand la pagination des activités est utilisée (query params) */
   hasMoreActivities?: boolean;
+  /** Indique si les activités affichées viennent des amis ou de la communauté entière */
+  activitiesSource?: "friends" | "community";
+  /** Livres les plus lus sur la plateforme (rempli quand l'utilisateur n'a pas d'amis) */
+  trendingBooks?: FeedRecommendation[];
+  /** Livres les mieux notés (rempli quand pas de recommandations personnalisées) */
+  topRatedBooks?: FeedRecommendation[];
+  /** Livres récemment ajoutés (rempli quand pas d'amis) */
+  recentBooks?: FeedRecommendation[];
 };
 

@@ -3,7 +3,7 @@ import { AnalyticsViewsChart } from "@/components/admin/analytics/views-chart";
 import { TopContentTable } from "@/components/admin/analytics/top-content-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/admin/shared/stat-card";
-import { Eye, BookOpen, FileText, Globe } from "lucide-react";
+import { BookOpen, FileText, Globe } from "lucide-react";
 
 const AdminAnalyticsPage = async () => {
   const [pageViews, topPages, topBooks, topPosts] = await Promise.all([

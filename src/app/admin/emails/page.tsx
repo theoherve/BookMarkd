@@ -1,7 +1,7 @@
 import { getEmailLogs, getEmailStats } from "@/features/admin/server/get-email-logs";
 import { EmailLogsTable } from "@/components/admin/emails/email-logs-table";
 import { StatCard } from "@/components/admin/shared/stat-card";
-import { Mail, Check, XCircle, Percent } from "lucide-react";
+import { Check, XCircle, Percent } from "lucide-react";
 
 type Props = {
   searchParams: Promise<{
