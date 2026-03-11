@@ -43,7 +43,6 @@ export const metadata = {
 const FaqPage = () => {
   return (
     <AppShell>
-      <Breadcrumb items={[{ label: "Accueil", href: "/" }, { label: "FAQ", href: "/faq" }]} />
       <FaqJsonLd
         items={FAQ_ITEMS.map((item) => ({
           question: item.question,
@@ -51,7 +50,15 @@ const FaqPage = () => {
         }))}
       />
       <div className="space-y-10">
-        <BackButton ariaLabel="Retour à la page précédente" />
+        <div className="flex flex-wrap items-center gap-4">
+          <BackButton ariaLabel="Retour à la page précédente" />
+          <Breadcrumb
+            items={[
+              { label: "Accueil", href: "/" },
+              { label: "FAQ", href: "/faq" },
+            ]}
+          />
+        </div>
         <header className="space-y-2">
           <h1 className="text-3xl font-semibold text-foreground">
             Questions fréquentes

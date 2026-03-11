@@ -76,18 +76,20 @@ const BlogPostPage = async ({ params }: BlogPostPageProps) => {
         image={post.image}
       />
       <div className="mx-auto flex max-w-5xl flex-col gap-6 py-8 sm:py-10 lg:py-12">
-        <BackLink
-          href="/blog"
-          label="Retour au blog"
-          ariaLabel="Retour à la liste des articles du blog"
-        />
-        <Breadcrumb
-          items={[
-            { label: "Accueil", href: "/" },
-            { label: "Blog", href: "/blog" },
-            { label: post.title, href: `/blog/${post.slug}` },
-          ]}
-        />
+        <div className="flex flex-wrap items-center gap-4">
+          <BackLink
+            href="/blog"
+            label="Retour au blog"
+            ariaLabel="Retour à la liste des articles du blog"
+          />
+          <Breadcrumb
+            items={[
+              { label: "Accueil", href: "/" },
+              { label: "Blog", href: "/blog" },
+              { label: post.title, href: `/blog/${post.slug}` },
+            ]}
+          />
+        </div>
         <section
           aria-label={`Article du blog : ${post.title}`}
           className="relative w-full max-w-4xl px-4 sm:px-0"

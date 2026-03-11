@@ -1,4 +1,5 @@
 const GOOGLE_BOOKS_API_ENDPOINT = "https://www.googleapis.com/books/v1/volumes";
+const GOOGLE_BOOKS_COVER_ENDPOINT = "https://books.google.com/books/content";
 
 const GOOGLE_BOOKS_QUOTA_LIMIT = 950; // Limite de sécurité (1000 req/jour max)
 
@@ -64,6 +65,24 @@ const buildCoverUrl = (imageLinks?: GoogleBooksVolumeInfo["imageLinks"]) => {
 
   // Remplacer http par https pour éviter les problèmes de sécurité
   return coverUrl.replace(/^http:/, "https:");
+};
+
+const buildHighResCoverUrl = (
+  volumeId?: string,
+  imageLinks?: GoogleBooksVolumeInfo["imageLinks"]
+) => {
+  if (volumeId) {
+    const url = new URL(GOOGLE_BOOKS_COVER_ENDPOINT);
+    url.searchParams.set("id", volumeId);
+    url.searchParams.set("printsec", "frontcover");
+    url.searchParams.set("img", "1");
+    url.searchParams.set("zoom", "3");
+    url.searchParams.set("edge", "curl");
+
+    return url.toString();
+  }
+
+  return buildCoverUrl(imageLinks);
 };
 
 const extractYear = (publishedDate?: string): number | null => {
@@ -189,7 +208,7 @@ export const searchGoogleBooks = async (
         title,
         author,
         publicationYear: extractYear(volumeInfo.publishedDate),
-        coverUrl: buildCoverUrl(volumeInfo.imageLinks),
+        coverUrl: buildHighResCoverUrl(item.id, volumeInfo.imageLinks),
         summary: volumeInfo.description || null,
         isbn: extractISBN(volumeInfo.industryIdentifiers),
         publisher: volumeInfo.publisher || null,
@@ -239,7 +258,7 @@ export const fetchGoogleBooksDetails = async (googleBooksId: string) => {
     const volumeInfo = data.volumeInfo || {};
 
     const description = volumeInfo.description || null;
-    const coverUrl = buildCoverUrl(volumeInfo.imageLinks);
+    const coverUrl = buildHighResCoverUrl(volumeId, volumeInfo.imageLinks);
     const categories = Array.isArray(volumeInfo.categories)
       ? volumeInfo.categories.slice(0, 8)
       : [];
@@ -310,7 +329,7 @@ export const lookupGoogleBooksByISBN = async (
       title: volumeInfo.title || "Titre inconnu",
       author: authors[0] || "Auteur inconnu",
       publicationYear: extractYear(volumeInfo.publishedDate),
-      coverUrl: buildCoverUrl(volumeInfo.imageLinks),
+      coverUrl: buildHighResCoverUrl(item.id, volumeInfo.imageLinks),
       summary: volumeInfo.description || null,
       isbn: extractISBN(volumeInfo.industryIdentifiers),
       publisher: volumeInfo.publisher || null,
