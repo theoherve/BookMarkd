@@ -123,10 +123,12 @@ const PublicProfilePage = async ({ params }: ProfilePageProps) => {
 
   return (
     <AppShell>
-      <Breadcrumb items={[
-        { label: "Accueil", href: "/" },
-        { label: profile.displayName, href: `/profiles/${username}` },
-      ]} />
+      <div className="mb-6">
+        <Breadcrumb items={[
+          { label: "Accueil", href: "/" },
+          { label: profile.displayName, href: `/profiles/${username}` },
+        ]} />
+      </div>
       <ProfileJsonLd
         name={profile.displayName}
         url={`https://bookmarkd.app/profiles/${username}`}

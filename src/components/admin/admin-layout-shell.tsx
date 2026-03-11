@@ -5,7 +5,13 @@ import { usePathname } from "next/navigation";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { AdminHeader } from "@/components/admin/admin-header";
 
-export const AdminLayoutShell = ({ children }: { children: React.ReactNode }) => {
+export const AdminLayoutShell = ({
+  children,
+  pendingEditorialCount = 0,
+}: {
+  children: React.ReactNode;
+  pendingEditorialCount?: number;
+}) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const pathname = usePathname();
 
@@ -16,6 +22,7 @@ export const AdminLayoutShell = ({ children }: { children: React.ReactNode }) =>
         collapsed={sidebarCollapsed}
         pathname={pathname}
         className="hidden md:flex"
+        pendingEditorialCount={pendingEditorialCount}
       />
 
       {/* Main area */}
