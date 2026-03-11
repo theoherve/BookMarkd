@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +45,7 @@ const UserFeedbacksSection = () => {
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
 
   const fetchFeedbacks = useCallback(async (showLoading = true) => {
     if (showLoading) {
@@ -83,76 +85,24 @@ const UserFeedbacksSection = () => {
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [fetchFeedbacks]);
 
-  if (loading) {
-    return (
-      <Card className="border-border/60 bg-card/80 backdrop-blur">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold text-foreground">
-            Mes feedbacks
-          </CardTitle>
-          <CardDescription className="text-sm text-muted-foreground">
-            Vos suggestions et rapports de bugs.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">Chargement...</p>
-        </CardContent>
-      </Card>
-    );
+  const count = feedbacks.length;
+
+  // Masquer entièrement la section si pas de feedbacks
+  if (!loading && !error && count === 0) {
+    return null;
   }
 
-  if (error) {
-    return (
-      <Card className="border-border/60 bg-card/80 backdrop-blur">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold text-foreground">
-            Mes feedbacks
-          </CardTitle>
-          <CardDescription className="text-sm text-muted-foreground">
-            Vos suggestions et rapports de bugs.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-destructive">{error}</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  const renderContent = () => {
+    if (loading) {
+      return <p className="text-sm text-muted-foreground">Chargement...</p>;
+    }
 
-  if (feedbacks.length === 0) {
-    return (
-      <Card className="border-border/60 bg-card/80 backdrop-blur">
-        <CardHeader>
-          <CardTitle className="text-xl font-semibold text-foreground">
-            Mes feedbacks
-          </CardTitle>
-          <CardDescription className="text-sm text-muted-foreground">
-            Vos suggestions et rapports de bugs.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Vous n&apos;avez pas encore soumis de feedback.
-          </p>
-          <Button asChild variant="outline">
-            <Link href="/feedback">Soumettre un feedback</Link>
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
+    if (error) {
+      return <p className="text-sm text-destructive">{error}</p>;
+    }
 
-  return (
-    <Card className="border-border/60 bg-card/80 backdrop-blur">
-      <CardHeader>
-        <CardTitle className="text-xl font-semibold text-foreground">
-          Mes feedbacks
-        </CardTitle>
-        <CardDescription className="text-sm text-muted-foreground">
-          Vos suggestions et rapports de bugs ({feedbacks.length}).
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    return (
+      <div className="space-y-4">
         {feedbacks.map((feedback) => {
           const createdAtLabel = formatRelativeTimeFromNow(feedback.createdAt);
           const badgeStyle = statusBadgeStyles[feedback.status];
@@ -216,7 +166,31 @@ const UserFeedbacksSection = () => {
             <Link href="/feedback">Soumettre un nouveau feedback</Link>
           </Button>
         </div>
-      </CardContent>
+      </div>
+    );
+  };
+
+  return (
+    <Card className="border-border/60 bg-card/80 backdrop-blur">
+      <CardHeader
+        className="cursor-pointer select-none"
+        onClick={() => setOpen((prev) => !prev)}
+      >
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-xl font-semibold text-foreground">
+              Mes feedbacks{!loading && count > 0 ? ` (${count})` : ""}
+            </CardTitle>
+            <CardDescription className="text-sm text-muted-foreground">
+              Vos suggestions et rapports de bugs.
+            </CardDescription>
+          </div>
+          <ChevronDown
+            className={`h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          />
+        </div>
+      </CardHeader>
+      {open && <CardContent>{renderContent()}</CardContent>}
     </Card>
   );
 };
