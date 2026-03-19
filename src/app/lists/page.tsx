@@ -29,7 +29,7 @@ const ListsPage = async () => {
           </h1>
           <p className="text-sm text-muted-foreground">
             Découvrez les sélections partagées par la communauté BookMarkd.
-            Trouvez l'inspiration pour vos prochaines lectures.
+            Trouvez l&apos;inspiration pour vos prochaines lectures.
           </p>
         </header>
         {publicLists.length === 0 ? (
