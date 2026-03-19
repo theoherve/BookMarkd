@@ -56,6 +56,10 @@ export async function getAdminEditorialLists({
       status: row.status as AdminEditorialList["status"],
       nytimesListName: (row.nytimes_list_name as string | null) ?? null,
       weekDate: (row.week_date as string | null) ?? null,
+      periodType: (row.period_type as AdminEditorialList["periodType"]) ?? null,
+      semesterLabel: (row.semester_label as string | null) ?? null,
+      periodStart: (row.period_start as string | null) ?? null,
+      periodEnd: (row.period_end as string | null) ?? null,
       displayOrder: (row.display_order as number) ?? 0,
       badgeLabel: (row.badge_label as string | null) ?? null,
       expiresAt: (row.expires_at as string | null) ?? null,
@@ -95,7 +99,7 @@ export async function getAdminEditorialListDetail(listId: string) {
 
     const { data: books, error: booksError } = await db.client
       .from("editorial_list_books")
-      .select("*, books(id, slug, title, author, cover_url)")
+      .select("*, books(id, title, author, cover_url)")
       .eq("list_id", listId)
       .order("position", { ascending: true });
 
@@ -110,6 +114,10 @@ export async function getAdminEditorialListDetail(listId: string) {
       status: list.status as AdminEditorialList["status"],
       nytimesListName: (list.nytimes_list_name as string | null) ?? null,
       weekDate: (list.week_date as string | null) ?? null,
+      periodType: (list.period_type as AdminEditorialList["periodType"]) ?? null,
+      semesterLabel: (list.semester_label as string | null) ?? null,
+      periodStart: (list.period_start as string | null) ?? null,
+      periodEnd: (list.period_end as string | null) ?? null,
       displayOrder: (list.display_order as number) ?? 0,
       badgeLabel: (list.badge_label as string | null) ?? null,
       expiresAt: (list.expires_at as string | null) ?? null,
@@ -117,18 +125,22 @@ export async function getAdminEditorialListDetail(listId: string) {
       createdAt: list.created_at as string,
       updatedAt: list.updated_at as string,
       books: (books ?? []).map((b) => {
-        const localBook = b.books as { id: string; slug: string; title: string; author: string; cover_url: string | null } | null;
+        const localBook = b.books as { id: string; title: string; author: string; cover_url: string | null } | null;
         return {
           id: b.id as string,
           listId: b.list_id as string,
           bookId: (b.book_id as string | null) ?? null,
-          bookSlug: localBook?.slug ?? null,
+          bookSlug: null as string | null,
           externalTitle: (b.external_title as string | null) ?? localBook?.title ?? null,
           externalAuthor: (b.external_author as string | null) ?? localBook?.author ?? null,
           externalIsbn: (b.external_isbn as string | null) ?? null,
           externalCoverUrl: (b.external_cover_url as string | null) ?? localBook?.cover_url ?? null,
           nytimesRank: (b.nytimes_rank as number | null) ?? null,
           nytimesDescription: (b.nytimes_description as string | null) ?? null,
+          appearances: (b.appearances as number | null) ?? null,
+          avgRank: (b.avg_rank as number | null) ?? null,
+          bestRank: (b.best_rank as number | null) ?? null,
+          aggregateScore: (b.aggregate_score as number | null) ?? null,
           position: b.position as number,
           createdAt: b.created_at as string,
         };

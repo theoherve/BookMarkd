@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
-import { Trash2, CheckCircle, EyeOff, Archive } from "lucide-react";
+import { Trash2, CheckCircle, EyeOff, Archive, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,6 +34,8 @@ export const EditorialListDetail = ({ list }: Props) => {
   const [isPending, startTransition] = useTransition();
   const [removingId, setRemovingId] = useState<string | null>(null);
 
+  const isSemester = list.periodType === "semester";
+
   const handlePublish = () => {
     startTransition(async () => { await publishEditorialList(list.id); });
   };
@@ -62,6 +64,11 @@ export const EditorialListDetail = ({ list }: Props) => {
         <EditorialSourceBadge source={list.source} />
         {list.badgeLabel && (
           <Badge variant="outline">{list.badgeLabel}</Badge>
+        )}
+        {isSemester && list.semesterLabel && (
+          <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
+            {list.semesterLabel}
+          </Badge>
         )}
         <span className="ml-auto flex gap-2">
           {list.status === "draft" && (
@@ -147,17 +154,41 @@ export const EditorialListDetail = ({ list }: Props) => {
                     </div>
                     {/* Info */}
                     <div className="min-w-0 flex-1">
-                      {book.nytimesRank && (
-                        <p className="mb-0.5 text-xs font-semibold text-muted-foreground">
-                          #{book.nytimesRank}
-                        </p>
-                      )}
+                      {/* Position / rank display */}
+                      <p className="mb-0.5 text-xs font-semibold text-muted-foreground">
+                        #{book.position + 1}
+                      </p>
                       <p className="line-clamp-2 text-sm font-medium leading-tight">
                         {book.externalTitle ?? "Sans titre"}
                       </p>
                       <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
                         {book.externalAuthor ?? "Auteur inconnu"}
                       </p>
+                      {/* Semester stats */}
+                      {isSemester && book.appearances != null && (
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                          <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-blue-50 text-blue-700 border-blue-200">
+                            {book.appearances} sem.
+                          </Badge>
+                          {book.avgRank != null && (
+                            <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-amber-50 text-amber-700 border-amber-200">
+                              <BarChart3 className="size-2 mr-0.5" />
+                              Moy. {book.avgRank.toFixed(1)}
+                            </Badge>
+                          )}
+                          {book.bestRank != null && (
+                            <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 bg-green-50 text-green-700 border-green-200">
+                              Best #{book.bestRank}
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+                      {/* Weekly rank (legacy / non-semester) */}
+                      {!isSemester && book.nytimesRank && (
+                        <Badge variant="outline" className="mt-1 text-[10px] bg-gray-50">
+                          NYT #{book.nytimesRank}
+                        </Badge>
+                      )}
                       {book.bookId && (
                         <Badge variant="outline" className="mt-1 text-[10px] bg-blue-50 text-blue-700 border-blue-200">
                           Lié localement

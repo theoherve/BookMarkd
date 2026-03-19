@@ -1,5 +1,6 @@
 import { unstable_noStore as noStore } from "next/cache";
 import db from "@/lib/supabase/db";
+import { generateBookSlug } from "@/lib/slug";
 import type { PublishedEditorialList } from "@/types/editorial";
 
 export async function getPublishedEditorialLists(limit = 4): Promise<PublishedEditorialList[]> {
@@ -25,7 +26,7 @@ export async function getPublishedEditorialLists(limit = 4): Promise<PublishedEd
 
     const { data: books, error: booksError } = await db.client
       .from("editorial_list_books")
-      .select("*, books(id, slug, title, author, cover_url)")
+      .select("*, books(id, title, author, cover_url)")
       .in("list_id", listIds)
       .order("position", { ascending: true });
 
@@ -35,18 +36,22 @@ export async function getPublishedEditorialLists(limit = 4): Promise<PublishedEd
       const listBooks = (books ?? [])
         .filter((b) => b.list_id === list.id)
         .map((b) => {
-          const localBook = b.books as { id: string; slug: string; title: string; author: string; cover_url: string | null } | null;
+          const localBook = b.books as { id: string; title: string; author: string; cover_url: string | null } | null;
           return {
             id: b.id as string,
             listId: b.list_id as string,
             bookId: (b.book_id as string | null) ?? null,
-            bookSlug: localBook?.slug ?? null,
+            bookSlug: localBook ? generateBookSlug(localBook.title, localBook.author) : null,
             externalTitle: (b.external_title as string | null) ?? localBook?.title ?? null,
             externalAuthor: (b.external_author as string | null) ?? localBook?.author ?? null,
             externalIsbn: (b.external_isbn as string | null) ?? null,
             externalCoverUrl: (b.external_cover_url as string | null) ?? localBook?.cover_url ?? null,
             nytimesRank: (b.nytimes_rank as number | null) ?? null,
             nytimesDescription: (b.nytimes_description as string | null) ?? null,
+            appearances: (b.appearances as number | null) ?? null,
+            avgRank: (b.avg_rank as number | null) ?? null,
+            bestRank: (b.best_rank as number | null) ?? null,
+            aggregateScore: (b.aggregate_score as number | null) ?? null,
             position: b.position as number,
             createdAt: b.created_at as string,
           };
@@ -61,6 +66,10 @@ export async function getPublishedEditorialLists(limit = 4): Promise<PublishedEd
         status: "published" as const,
         nytimesListName: (list.nytimes_list_name as string | null) ?? null,
         weekDate: (list.week_date as string | null) ?? null,
+        periodType: (list.period_type as PublishedEditorialList["periodType"]) ?? null,
+        semesterLabel: (list.semester_label as string | null) ?? null,
+        periodStart: (list.period_start as string | null) ?? null,
+        periodEnd: (list.period_end as string | null) ?? null,
         displayOrder: (list.display_order as number) ?? 0,
         badgeLabel: (list.badge_label as string | null) ?? null,
         expiresAt: (list.expires_at as string | null) ?? null,

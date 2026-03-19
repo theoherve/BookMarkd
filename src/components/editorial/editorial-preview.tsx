@@ -24,6 +24,7 @@ export const EditorialPreview = ({ lists }: Props) => {
         const typeBadge = TYPE_BADGE[list.type];
         const displayLabel = list.badgeLabel ?? typeBadge.label;
         const visibleBooks = list.books.slice(0, 10);
+        const isSemester = list.periodType === "semester";
 
         return (
           <Card key={list.id} className="border-border/60 bg-card/80 backdrop-blur">
@@ -35,6 +36,11 @@ export const EditorialPreview = ({ lists }: Props) => {
                 {list.source === "nytimes" && (
                   <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-200">
                     NY Times
+                  </Badge>
+                )}
+                {isSemester && list.semesterLabel && (
+                  <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
+                    {list.semesterLabel}
                   </Badge>
                 )}
               </div>
@@ -67,7 +73,14 @@ export const EditorialPreview = ({ lists }: Props) => {
                             {book.externalTitle ?? "—"}
                           </div>
                         )}
-                        {book.nytimesRank && (
+                        {/* Semester: show appearances count */}
+                        {isSemester && book.appearances != null && (
+                          <span className="absolute left-1.5 top-1.5 flex h-auto items-center gap-0.5 rounded-full bg-black/70 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                            {book.appearances} sem.
+                          </span>
+                        )}
+                        {/* Weekly: show NYT rank */}
+                        {!isSemester && book.nytimesRank && (
                           <span className="absolute left-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-[10px] font-bold text-white">
                             {book.nytimesRank}
                           </span>

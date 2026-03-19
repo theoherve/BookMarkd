@@ -1,57 +1,44 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 
 import AppShell from "@/components/layout/app-shell";
 import BackButton from "@/components/layout/back-button";
-import ListSummaryCard from "@/components/lists/list-summary-card";
+import PublicListCard from "@/components/lists/public-list-card";
 
-import { getUserLists } from "@/features/lists/server/get-user-lists";
-
-import { getCurrentSession } from "@/lib/auth/session";
-import { resolveSessionUserId } from "@/lib/auth/user";
+import { getPublicLists } from "@/features/lists/server/get-public-lists";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata: Metadata = {
-  title: "Vos listes",
-  description: "Retrouvez toutes vos listes de lecture personnelles et collaboratives.",
-  robots: { index: false, follow: false },
+  title: "Listes publiques",
+  description:
+    "Explorez les listes de lecture publiques partagées par la communauté BookMarkd.",
 };
 
 const ListsPage = async () => {
-  const session = await getCurrentSession();
-
-  const userId = await resolveSessionUserId(session);
-
-  if (!userId) {
-    redirect("/login?callbackUrl=/lists");
-  }
-
-  const lists = await getUserLists(userId);
+  const publicLists = await getPublicLists();
 
   return (
     <AppShell>
       <div className="space-y-8">
         <BackButton ariaLabel="Retour à la page précédente" />
         <header className="flex flex-col gap-3">
-          <h1 className="text-3xl font-semibold text-foreground">Vos listes</h1>
+          <h1 className="text-3xl font-semibold text-foreground">
+            Listes publiques
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Centralisez vos sélections, partagez des inspirations et gérez vos lectures collaboratives.
+            Découvrez les sélections partagées par la communauté BookMarkd.
+            Trouvez l'inspiration pour vos prochaines lectures.
           </p>
-          <Link
-            href="/lists/create"
-            className="w-fit rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-foreground transition hover:bg-accent/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-          >
-            Créer une nouvelle liste
-          </Link>
         </header>
-        {lists.length === 0 ? (
+        {publicLists.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border/60 bg-card/60 p-10 text-center">
-            <h2 className="text-lg font-semibold text-foreground">Aucune liste pour le moment</h2>
+            <h2 className="text-lg font-semibold text-foreground">
+              Aucune liste publique pour le moment
+            </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Lancez-vous en créant votre première collection personnalisée.
+              Soyez le premier à partager une liste avec la communauté !
             </p>
             <Link
               href="/lists/create"
@@ -62,8 +49,8 @@ const ListsPage = async () => {
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2">
-            {lists.map((list) => (
-              <ListSummaryCard key={list.id} list={list} />
+            {publicLists.map((list) => (
+              <PublicListCard key={list.id} list={list} />
             ))}
           </div>
         )}
@@ -73,4 +60,3 @@ const ListsPage = async () => {
 };
 
 export default ListsPage;
-

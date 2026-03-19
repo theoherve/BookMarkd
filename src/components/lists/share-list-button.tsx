@@ -73,7 +73,7 @@ const ShareListButton = ({ listId, listTitle }: ShareListButtonProps) => {
           onClick={handleShare}
           disabled={isPending}
           aria-label={copied ? "Lien copié" : "Partager cette liste"}
-          className="gap-2"
+          className="cursor-pointer gap-2"
         >
           {copied ? (
             <>

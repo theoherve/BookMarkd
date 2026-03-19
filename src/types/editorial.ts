@@ -1,6 +1,7 @@
 export type EditorialListType = "bestseller" | "award" | "selection" | "new_releases";
 export type EditorialListSource = "nytimes" | "manual";
 export type EditorialListStatus = "draft" | "published" | "archived";
+export type EditorialPeriodType = "weekly" | "semester";
 
 export type EditorialListBook = {
   id: string;
@@ -13,9 +14,14 @@ export type EditorialListBook = {
   externalAuthor: string | null;
   externalIsbn: string | null;
   externalCoverUrl: string | null;
-  // NY Times metadata
+  // NY Times metadata (weekly)
   nytimesRank: number | null;
   nytimesDescription: string | null;
+  // Semester aggregation stats
+  appearances: number | null;
+  avgRank: number | null;
+  bestRank: number | null;
+  aggregateScore: number | null;
   position: number;
   createdAt: string;
 };
@@ -29,6 +35,11 @@ export type EditorialList = {
   status: EditorialListStatus;
   nytimesListName: string | null;
   weekDate: string | null;
+  // Semester fields
+  periodType: EditorialPeriodType | null;
+  semesterLabel: string | null;
+  periodStart: string | null;
+  periodEnd: string | null;
   displayOrder: number;
   badgeLabel: string | null;
   expiresAt: string | null;
