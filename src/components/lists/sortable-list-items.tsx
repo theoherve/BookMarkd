@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useTransition } from "react";
+import React, { useState, useEffect, useMemo, useTransition } from "react";
 import {
   DndContext,
   closestCenter,
@@ -21,9 +21,12 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
+import { Search, X } from "lucide-react";
+
 import type { ListItem } from "@/features/lists/types";
 import { reorderListItems } from "@/server/actions/lists";
 import ListItemCard from "@/components/lists/list-item-card";
+import { Input } from "@/components/ui/input";
 
 type SortableListItemProps = {
   listId: string;
@@ -109,10 +112,21 @@ const SortableListItems = ({
 }: SortableListItemsProps) => {
   const [, startTransition] = useTransition();
   const [localItems, setLocalItems] = useState(items);
+  const [filterQuery, setFilterQuery] = useState("");
 
   useEffect(() => {
     setLocalItems(items);
   }, [items]);
+
+  const filteredItems = useMemo(() => {
+    if (!filterQuery.trim()) return localItems;
+    const q = filterQuery.toLowerCase();
+    return localItems.filter(
+      (item) =>
+        item.book.title.toLowerCase().includes(q) ||
+        item.book.author.toLowerCase().includes(q),
+    );
+  }, [localItems, filterQuery]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -158,7 +172,27 @@ const SortableListItems = ({
   if (!canEdit) {
     return (
       <div className="space-y-4">
-        {localItems.map((item, index) => (
+        <div className="relative max-w-md">
+          <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Rechercher dans la liste…"
+            value={filterQuery}
+            onChange={(e) => setFilterQuery(e.target.value)}
+            className="pl-9 pr-9 rounded-full border-border/60 bg-card/80 backdrop-blur"
+          />
+          {filterQuery && (
+            <button
+              type="button"
+              onClick={() => setFilterQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground cursor-pointer"
+              aria-label="Effacer la recherche"
+            >
+              <X className="h-4 w-4" aria-hidden />
+            </button>
+          )}
+        </div>
+        {filteredItems.map((item, index) => (
           <ListItemCard
             key={item.id}
             listId={listId}
@@ -167,33 +201,79 @@ const SortableListItems = ({
             positionLabel={`#${index + 1}`}
           />
         ))}
+        {filterQuery && filteredItems.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            Aucun livre ne correspond à &quot;{filterQuery}&quot;.
+          </p>
+        )}
       </div>
     );
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragEnd={handleDragEnd}
-    >
-      <SortableContext
-        items={localItems.map((item) => item.id)}
-        strategy={verticalListSortingStrategy}
-      >
+    <div className="space-y-4">
+      <div className="relative max-w-md">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          type="text"
+          placeholder="Rechercher dans la liste…"
+          value={filterQuery}
+          onChange={(e) => setFilterQuery(e.target.value)}
+          className="pl-9 pr-9 rounded-full border-border/60 bg-card/80 backdrop-blur"
+        />
+        {filterQuery && (
+          <button
+            type="button"
+            onClick={() => setFilterQuery("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground cursor-pointer"
+            aria-label="Effacer la recherche"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+      {filterQuery ? (
         <div className="space-y-4">
-          {localItems.map((item, index) => (
-            <SortableListItem
+          {filteredItems.map((item, index) => (
+            <ListItemCard
               key={item.id}
               listId={listId}
               item={item}
               canEdit={canEdit}
-              index={index}
+              positionLabel={`#${index + 1}`}
             />
           ))}
+          {filteredItems.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              Aucun livre ne correspond à &quot;{filterQuery}&quot;.
+            </p>
+          )}
         </div>
-      </SortableContext>
-    </DndContext>
+      ) : (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={localItems.map((item) => item.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-4">
+              {localItems.map((item, index) => (
+                <SortableListItem
+                  key={item.id}
+                  listId={listId}
+                  item={item}
+                  canEdit={canEdit}
+                  index={index}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
+      )}
+    </div>
   );
 };
 

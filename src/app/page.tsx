@@ -3,13 +3,18 @@ import AppShell from "@/components/layout/app-shell";
 import BlogPreview from "@/components/blog/blog-preview";
 import FeedPreview from "@/components/feed/feed-preview";
 import HomeSearchBar from "@/components/search/home-search-bar";
+import PublicListCard from "@/components/lists/public-list-card";
 import { EditorialPreview } from "@/components/editorial/editorial-preview";
 import { WebsiteJsonLd } from "@/components/seo/website-json-ld";
 import { Badge } from "@/components/ui/badge";
 import { getPublishedEditorialLists } from "@/features/editorial/server/get-published-editorial-lists";
+import { getPublicLists } from "@/features/lists/server/get-public-lists";
 
 const HomePage = async () => {
-  const editorialLists = await getPublishedEditorialLists(4);
+  const [editorialLists, publicLists] = await Promise.all([
+    getPublishedEditorialLists(4),
+    getPublicLists(4),
+  ]);
   return (
     <AppShell>
       <WebsiteJsonLd />
@@ -98,6 +103,31 @@ const HomePage = async () => {
               </p>
             </header>
             <EditorialPreview lists={editorialLists} />
+          </section>
+        )}
+
+        {publicLists.length > 0 && (
+          <section className="space-y-4">
+            <header className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+              <div>
+                <h2 className="text-2xl font-semibold text-foreground">Listes de la communauté</h2>
+                <p className="text-sm text-muted-foreground">
+                  Les sélections partagées par les lecteur·rice·s de BookMarkd.
+                </p>
+              </div>
+              <Link
+                href="/lists"
+                className="text-sm font-medium text-primary underline-offset-2 hover:underline"
+                aria-label="Voir toutes les listes publiques"
+              >
+                Voir tout →
+              </Link>
+            </header>
+            <div className="grid gap-6 md:grid-cols-2">
+              {publicLists.map((list) => (
+                <PublicListCard key={list.id} list={list} />
+              ))}
+            </div>
           </section>
         )}
 

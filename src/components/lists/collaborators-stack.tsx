@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 
 import type { ListCollaborator } from "@/features/lists/types";
 
@@ -41,11 +42,14 @@ const CollaboratorsStack = ({ owner, collaborators }: CollaboratorsStackProps) =
   return (
     <div className="flex flex-wrap items-center gap-3">
       <div className="flex -space-x-3">
-        {people.slice(0, 5).map((person) => (
-          <div
+        {people.slice(0, 5).map((person, index) => (
+          <Link
             key={person.id}
-            className="relative h-10 w-10 overflow-hidden rounded-full border-2 border-background bg-muted"
+            href={`/profiles/${person.id}`}
+            className="relative h-10 w-10 overflow-hidden rounded-full border-2 border-background bg-muted transition hover:z-10 hover:ring-2 hover:ring-primary"
             title={`${person.displayName} • ${person.role}`}
+            aria-label={`Voir le profil de ${person.displayName}`}
+            style={{ zIndex: people.length - index }}
           >
             {person.avatarUrl ? (
               <Image
@@ -61,9 +65,15 @@ const CollaboratorsStack = ({ owner, collaborators }: CollaboratorsStackProps) =
                 {buildInitials(person.displayName)}
               </span>
             )}
-          </div>
+          </Link>
         ))}
       </div>
+      <Link
+        href={`/profiles/${owner.id}`}
+        className="text-sm text-muted-foreground transition hover:text-foreground"
+      >
+        par <span className="font-medium text-foreground">{owner.displayName}</span>
+      </Link>
       {people.length > 5 ? (
         <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
           +{people.length - 5} autres
@@ -74,4 +84,3 @@ const CollaboratorsStack = ({ owner, collaborators }: CollaboratorsStackProps) =
 };
 
 export default CollaboratorsStack;
-

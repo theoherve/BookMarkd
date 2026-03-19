@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Eye, EyeOff, Trash2, Archive, Pencil, CheckCircle } from "lucide-react";
+import { Eye, EyeOff, Trash2, Archive, Pencil, CheckCircle, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -88,14 +88,12 @@ export const EditorialListsTable = ({ lists, total }: Props) => {
 
   return (
     <div className="space-y-2">
-      <p className="text-sm text-muted-foreground">{total} liste{total > 1 ? "s" : ""} au total</p>
+      <p className="text-xs text-muted-foreground">{total} liste{total > 1 ? "s" : ""} au total</p>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Titre</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Source</TableHead>
               <TableHead>Statut</TableHead>
               <TableHead className="text-right">Livres</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -107,36 +105,42 @@ export const EditorialListsTable = ({ lists, total }: Props) => {
               const isLoading = isPending && actionListId === list.id;
 
               return (
-                <TableRow key={list.id}>
-                  <TableCell>
-                    <div className="space-y-0.5">
-                      <p className="font-medium text-sm leading-tight">{list.title}</p>
-                      {list.weekDate && (
-                        <p className="text-xs text-muted-foreground">
-                          Semaine du {new Date(list.weekDate).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
-                        </p>
-                      )}
+                <TableRow key={list.id} className="h-12">
+                  <TableCell className="py-2">
+                    <div className="flex items-center gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm leading-tight truncate">{list.title}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <EditorialTypeBadge type={list.type} />
+                          <EditorialSourceBadge source={list.source} />
+                          {list.periodType === "semester" && list.semesterLabel && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-indigo-50 text-indigo-700 border-indigo-200">
+                              <Calendar className="size-2.5 mr-0.5" />
+                              {list.semesterLabel}
+                            </Badge>
+                          )}
+                          {list.periodType === "weekly" && list.weekDate && (
+                            <span className="text-[10px] text-muted-foreground">
+                              Sem. {new Date(list.weekDate).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <EditorialTypeBadge type={list.type} />
-                  </TableCell>
-                  <TableCell>
-                    <EditorialSourceBadge source={list.source} />
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={statusConfig.className}>
+                  <TableCell className="py-2">
+                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-4 ${statusConfig.className}`}>
                       {statusConfig.label}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right text-sm text-muted-foreground">
+                  <TableCell className="py-2 text-right text-xs text-muted-foreground">
                     {list.bookCount}
                   </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="icon" asChild className="h-8 w-8">
+                  <TableCell className="py-2 text-right">
+                    <div className="flex items-center justify-end gap-0.5">
+                      <Button variant="ghost" size="icon" asChild className="h-7 w-7">
                         <Link href={`/admin/tendances/${list.id}`}>
-                          <Pencil className="size-4" />
+                          <Pencil className="size-3.5" />
                         </Link>
                       </Button>
 
@@ -144,12 +148,12 @@ export const EditorialListsTable = ({ lists, total }: Props) => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-green-600 hover:text-green-700"
+                          className="h-7 w-7 text-green-600 hover:text-green-700"
                           onClick={() => handlePublish(list.id)}
                           disabled={isLoading}
                           title="Publier"
                         >
-                          <CheckCircle className="size-4" />
+                          <CheckCircle className="size-3.5" />
                         </Button>
                       )}
 
@@ -158,22 +162,22 @@ export const EditorialListsTable = ({ lists, total }: Props) => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-7 w-7"
                             onClick={() => handleUnpublish(list.id)}
                             disabled={isLoading}
                             title="Dépublier"
                           >
-                            <EyeOff className="size-4" />
+                            <EyeOff className="size-3.5" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-muted-foreground"
+                            className="h-7 w-7 text-muted-foreground"
                             onClick={() => handleArchive(list.id)}
                             disabled={isLoading}
                             title="Archiver"
                           >
-                            <Archive className="size-4" />
+                            <Archive className="size-3.5" />
                           </Button>
                         </>
                       )}
@@ -182,12 +186,12 @@ export const EditorialListsTable = ({ lists, total }: Props) => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-green-600 hover:text-green-700"
+                          className="h-7 w-7 text-green-600 hover:text-green-700"
                           onClick={() => handlePublish(list.id)}
                           disabled={isLoading}
                           title="Republier"
                         >
-                          <Eye className="size-4" />
+                          <Eye className="size-3.5" />
                         </Button>
                       )}
 
@@ -196,10 +200,10 @@ export const EditorialListsTable = ({ lists, total }: Props) => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            className="h-7 w-7 text-destructive hover:text-destructive"
                             disabled={isPending}
                           >
-                            <Trash2 className="size-4" />
+                            <Trash2 className="size-3.5" />
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>

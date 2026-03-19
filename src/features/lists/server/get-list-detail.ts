@@ -44,7 +44,7 @@ export const getListDetail = async (
         id,
         position,
         note,
-        book:book_id ( id, title, author, cover_url, average_rating )
+        book:book_id ( id, title, author, cover_url, summary, publication_year, average_rating, book_tags ( tag:tag_id ( id, name ) ) )
       )
     `,
     )
@@ -78,7 +78,10 @@ export const getListDetail = async (
         title: string;
         author: string;
         coverUrl: string | null;
+        summary: string | null;
+        publicationYear: number | null;
         averageRating: number | null;
+        bookTags?: Array<{ tag?: { id: string; name: string } }>;
       };
     }>;
   }>(listRow);
@@ -111,6 +114,23 @@ export const getListDetail = async (
       role: entry.role as CollaboratorRole,
     }));
 
+  // Fetch readers count for each book in the list
+  const bookIds = (list.items ?? [])
+    .map((item) => item.book?.id)
+    .filter((id): id is string => Boolean(id));
+
+  const readersCountByBook = new Map<string, number>();
+  if (bookIds.length > 0) {
+    const { data: readersRows } = await db.client
+      .from("user_books")
+      .select("book_id")
+      .in("book_id", bookIds);
+    for (const row of readersRows ?? []) {
+      const { bookId } = db.toCamel<{ bookId: string }>(row);
+      readersCountByBook.set(bookId, (readersCountByBook.get(bookId) ?? 0) + 1);
+    }
+  }
+
   const items = (list.items ?? [])
     .map((item) => ({
       id: item.id,
@@ -121,10 +141,16 @@ export const getListDetail = async (
         title: item.book?.title as string,
         author: item.book?.author as string,
         coverUrl: (item.book?.coverUrl as string | null) ?? null,
+        summary: (item.book?.summary as string | null) ?? null,
+        publicationYear: item.book?.publicationYear ?? null,
         averageRating:
           typeof item.book?.averageRating === "number"
             ? item.book!.averageRating!
             : null,
+        tags: (item.book?.bookTags ?? [])
+          .filter((bt) => Boolean(bt.tag))
+          .map((bt) => ({ id: bt.tag!.id, name: bt.tag!.name })),
+        readersCount: readersCountByBook.get(item.book?.id as string) ?? 0,
       },
     }))
     .sort((left, right) => left.position - right.position);

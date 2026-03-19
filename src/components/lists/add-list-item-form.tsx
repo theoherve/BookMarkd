@@ -150,6 +150,7 @@ const AddListItemForm = ({
               type="submit"
               disabled={!canEdit || isPending || searchQuery.trim().length < 2}
               aria-busy={isSearching}
+              className="cursor-pointer"
             >
               Rechercher
             </Button>

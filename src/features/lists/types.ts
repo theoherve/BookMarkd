@@ -32,7 +32,11 @@ export type ListItem = {
     title: string;
     author: string;
     coverUrl: string | null;
+    summary: string | null;
     averageRating: number | null;
+    publicationYear: number | null;
+    tags: Array<{ id: string; name: string }>;
+    readersCount: number;
   };
 };
 
@@ -51,6 +55,19 @@ export type ListDetail = {
   viewerRole: ViewerRole;
   items: ListItem[];
   updatedAt: string;
+};
+
+export type PublicListSummary = {
+  id: string;
+  title: string;
+  description: string | null;
+  itemCount: number;
+  updatedAt: string;
+  owner: {
+    id: string;
+    displayName: string;
+    avatarUrl: string | null;
+  };
 };
 
 export type AvailableBook = {

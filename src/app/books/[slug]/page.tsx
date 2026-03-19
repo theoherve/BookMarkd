@@ -24,6 +24,8 @@ import BookReadersList from "@/components/books/book-readers-list";
 import BookFeelingsSection from "@/components/books/book-feelings-section";
 import SimilarBooksSection from "@/components/books/similar-books-section";
 import AddBookCoverButton from "@/components/books/add-book-cover-button";
+import EditableBookCover from "@/components/books/editable-book-cover";
+import EditableBookSummary from "@/components/books/editable-book-summary";
 import { BookJsonLd } from "@/components/seo/book-json-ld";
 import { trackBookView } from "@/lib/analytics/track-book-view";
 import { getBookReaders } from "@/features/books/server/get-book-readers";
@@ -38,6 +40,7 @@ import { getCurrentSession } from "@/lib/auth/session";
 import { formatRating } from "@/lib/utils";
 import { generateBookSlug, extractBookIdFromSlug } from "@/lib/slug";
 import { getBookCoverUrl } from "@/lib/storage/covers";
+import { isUserAdmin } from "@/lib/auth/admin";
 
 type BookPageProps = {
   params: Promise<{
@@ -523,6 +526,8 @@ const BookPage = async ({ params }: BookPageProps) => {
   const viewerFeelings = viewerFeelingsData.keywordIds;
   const viewerFeelingsVisibility = viewerFeelingsData.visibility;
 
+  const isAdmin = await isUserAdmin(viewerId);
+
   const canonicalSlug = generateBookSlug(book.title, book.author);
   const canonicalUrl = `https://bookmarkd.app/books/${canonicalSlug}`;
 
@@ -614,13 +619,21 @@ const BookPage = async ({ params }: BookPageProps) => {
 
           <div className="relative mx-auto w-full max-w-[200px] aspect-[2/3] shrink-0 overflow-hidden border border-border/60 bg-muted shadow-sm lg:mx-0">
               {book.cover_url ? (
-                <Image
-                  src={book.cover_url}
-                  alt={`Couverture de ${book.title}`}
-                  fill
-                  sizes="200px"
-                  className="object-cover"
-                />
+                isAdmin ? (
+                  <EditableBookCover
+                    bookId={book.id}
+                    coverUrl={book.cover_url}
+                    title={book.title}
+                  />
+                ) : (
+                  <Image
+                    src={book.cover_url}
+                    alt={`Couverture de ${book.title}`}
+                    fill
+                    sizes="200px"
+                    className="object-cover"
+                  />
+                )
               ) : viewerId ? (
                 <AddBookCoverButton
                   bookId={book.id}
@@ -637,10 +650,14 @@ const BookPage = async ({ params }: BookPageProps) => {
         <div className="space-y-8">
           <section className="space-y-3">
             <h2 className="text-lg font-semibold text-foreground">Résumé</h2>
-            <p className="text-sm leading-6 text-muted-foreground">
-              {book.summary ??
-                "Pas encore de résumé sur BookMarkd. Ajoutez votre avis après lecture pour aider la communauté."}
-            </p>
+            {isAdmin ? (
+              <EditableBookSummary bookId={book.id} summary={book.summary} />
+            ) : (
+              <p className="text-sm leading-6 text-muted-foreground">
+                {book.summary ??
+                  "Pas encore de résumé sur BookMarkd. Ajoutez votre avis après lecture pour aider la communauté."}
+              </p>
+            )}
           </section>
 
           <section className="space-y-6">

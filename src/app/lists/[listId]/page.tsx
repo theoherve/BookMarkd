@@ -135,7 +135,7 @@ const ListDetailPage = async ({ params }: ListDetailPageProps) => {
               <CollaboratorsStack owner={detail.owner} collaborators={detail.collaborators} />
             </div>
           </header>
-          <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+          <div className={canEdit ? "grid gap-6 lg:grid-cols-[2fr_1fr]" : ""}>
             <div>
               {detail.items.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-border/60 bg-card/60 p-8 text-center text-sm text-muted-foreground">
@@ -149,13 +149,15 @@ const ListDetailPage = async ({ params }: ListDetailPageProps) => {
                 />
               )}
             </div>
-            <aside className="space-y-4">
-              <AddListItemForm
-                listId={detail.id}
-                availableBooks={[]}
-                canEdit={canEdit}
-              />
-            </aside>
+            {canEdit && (
+              <aside className="space-y-4">
+                <AddListItemForm
+                  listId={detail.id}
+                  availableBooks={[]}
+                  canEdit={canEdit}
+                />
+              </aside>
+            )}
           </div>
         </section>
       </div>
