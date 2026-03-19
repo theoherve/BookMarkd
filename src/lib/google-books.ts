@@ -129,7 +129,8 @@ const getApiKey = (): string | null => {
 
 export const searchGoogleBooks = async (
   query: string,
-  limit = 6
+  limit = 6,
+  options?: { langRestrict?: string | null }
 ): Promise<GoogleBooksResult[]> => {
   try {
     const apiKey = getApiKey();
@@ -143,7 +144,10 @@ export const searchGoogleBooks = async (
     url.searchParams.set("q", query);
     url.searchParams.set("maxResults", String(limit));
     url.searchParams.set("key", apiKey);
-    url.searchParams.set("langRestrict", "fr"); // Prioriser les livres français
+    const lang = options?.langRestrict !== null ? (options?.langRestrict ?? "fr") : undefined;
+    if (lang) {
+      url.searchParams.set("langRestrict", lang);
+    }
 
     const response = await fetch(url.toString(), {
       headers: {

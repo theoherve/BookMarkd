@@ -99,7 +99,13 @@ export async function getAdminEditorialListDetail(listId: string) {
 
     const { data: books, error: booksError } = await db.client
       .from("editorial_list_books")
-      .select("*, books(id, title, author, cover_url)")
+      .select(`
+        id, list_id, book_id, position, created_at,
+        external_title, external_author, external_isbn, external_cover_url,
+        nytimes_rank, nytimes_description,
+        appearances, avg_rank, best_rank, aggregate_score,
+        books(id, title, author, cover_url)
+      `)
       .eq("list_id", listId)
       .order("position", { ascending: true });
 
@@ -125,7 +131,8 @@ export async function getAdminEditorialListDetail(listId: string) {
       createdAt: list.created_at as string,
       updatedAt: list.updated_at as string,
       books: (books ?? []).map((b) => {
-        const localBook = b.books as { id: string; title: string; author: string; cover_url: string | null } | null;
+        const booksRel = b.books as unknown as { id: string; title: string; author: string; cover_url: string | null } | { id: string; title: string; author: string; cover_url: string | null }[] | null;
+        const localBook = Array.isArray(booksRel) ? booksRel[0] ?? null : booksRel;
         return {
           id: b.id as string,
           listId: b.list_id as string,
