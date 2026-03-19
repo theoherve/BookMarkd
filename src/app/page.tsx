@@ -3,7 +3,7 @@ import AppShell from "@/components/layout/app-shell";
 import BlogPreview from "@/components/blog/blog-preview";
 import FeedPreview from "@/components/feed/feed-preview";
 import HomeSearchBar from "@/components/search/home-search-bar";
-import PublicListCard from "@/components/lists/public-list-card";
+import { BookOpen, ChevronRight, User } from "lucide-react";
 import { EditorialPreview } from "@/components/editorial/editorial-preview";
 import { WebsiteJsonLd } from "@/components/seo/website-json-ld";
 import { Badge } from "@/components/ui/badge";
@@ -123,9 +123,30 @@ const HomePage = async () => {
                 Voir tout →
               </Link>
             </header>
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="divide-y divide-border/60 rounded-xl border border-border/60 bg-card/80 backdrop-blur">
               {publicLists.map((list) => (
-                <PublicListCard key={list.id} list={list} />
+                <Link
+                  key={list.id}
+                  href={`/lists/${list.id}`}
+                  className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50"
+                >
+                  <div className="flex flex-1 flex-col gap-0.5 min-w-0">
+                    <p className="truncate text-sm font-semibold text-foreground">
+                      {list.title}
+                    </p>
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <BookOpen className="h-3 w-3" />
+                        {list.itemCount} livre{list.itemCount > 1 ? "s" : ""}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <User className="h-3 w-3" />
+                        {list.owner.displayName}
+                      </span>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                </Link>
               ))}
             </div>
           </section>

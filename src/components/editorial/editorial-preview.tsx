@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { PublishedEditorialList } from "@/types/editorial";
 
 const TYPE_BADGE: Record<PublishedEditorialList["type"], { label: string; className: string }> = {
@@ -19,99 +18,68 @@ export const EditorialPreview = ({ lists }: Props) => {
   if (lists.length === 0) return null;
 
   return (
-    <div className="space-y-6">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
       {lists.map((list) => {
         const typeBadge = TYPE_BADGE[list.type];
         const displayLabel = list.badgeLabel ?? typeBadge.label;
-        const visibleBooks = list.books.slice(0, 10);
+        const previewBooks = list.books.slice(0, 4);
         const isSemester = list.periodType === "semester";
 
         return (
-          <Card key={list.id} className="border-border/60 bg-card/80 backdrop-blur">
-            <CardHeader className="space-y-1.5">
-              <div className="flex flex-wrap items-start gap-2">
-                <Badge variant="outline" className={typeBadge.className}>
+          <Link
+            key={list.id}
+            href={`/tendances/${list.id}`}
+            className="group flex flex-col overflow-hidden rounded-xl border border-border/60 bg-card/80 backdrop-blur transition-shadow hover:shadow-md"
+          >
+            {/* Mosaic of 4 covers */}
+            <div className="grid grid-cols-2 gap-0.5 p-1.5">
+              {previewBooks.map((book) => (
+                <div
+                  key={book.id}
+                  className="relative aspect-2/3 overflow-hidden rounded-md bg-muted"
+                >
+                  {book.externalCoverUrl ? (
+                    <Image
+                      src={book.externalCoverUrl}
+                      alt={book.externalTitle ?? ""}
+                      fill
+                      className="object-cover transition-transform group-hover:scale-105"
+                      sizes="80px"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center p-1 text-center text-[8px] text-muted-foreground">
+                      {book.externalTitle ?? "—"}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {/* Fill empty slots if < 4 books */}
+              {Array.from({ length: Math.max(0, 4 - previewBooks.length) }).map((_, i) => (
+                <div key={`empty-${i}`} className="aspect-2/3 rounded-md bg-muted" />
+              ))}
+            </div>
+
+            {/* Info */}
+            <div className="flex flex-1 flex-col gap-1.5 px-2.5 pb-2.5 pt-1">
+              <div className="flex flex-wrap items-center gap-1">
+                <Badge variant="outline" className={`${typeBadge.className} text-[10px] px-1.5 py-0`}>
                   {displayLabel}
                 </Badge>
-                {list.source === "nytimes" && (
-                  <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-200">
-                    NY Times
-                  </Badge>
-                )}
                 {isSemester && list.semesterLabel && (
-                  <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
+                  <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px] px-1.5 py-0">
                     {list.semesterLabel}
                   </Badge>
                 )}
               </div>
-              <CardTitle className="text-lg font-semibold text-foreground m-0">
+              <p className="line-clamp-2 text-xs font-semibold leading-tight text-foreground">
                 {list.title}
-              </CardTitle>
-              {list.description && (
-                <CardDescription className="text-sm text-muted-foreground">
-                  {list.description}
-                </CardDescription>
-              )}
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-stretch gap-4 overflow-x-auto py-2">
-                {visibleBooks.map((book) => {
-                  const bookContent = (
-                    <div className="flex w-[140px] shrink-0 flex-col gap-2">
-                      {/* Cover */}
-                      <div className="relative h-[200px] w-full overflow-hidden rounded-lg bg-muted shadow-sm">
-                        {book.externalCoverUrl ? (
-                          <Image
-                            src={book.externalCoverUrl}
-                            alt={book.externalTitle ?? ""}
-                            fill
-                            className="object-cover transition-transform hover:scale-105"
-                            unoptimized
-                          />
-                        ) : (
-                          <div className="flex h-full items-center justify-center bg-muted p-2 text-center text-xs text-muted-foreground">
-                            {book.externalTitle ?? "—"}
-                          </div>
-                        )}
-                        {/* Semester: show appearances count */}
-                        {isSemester && book.appearances != null && (
-                          <span className="absolute left-1.5 top-1.5 flex h-auto items-center gap-0.5 rounded-full bg-black/70 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                            {book.appearances} sem.
-                          </span>
-                        )}
-                        {/* Weekly: show NYT rank */}
-                        {!isSemester && book.nytimesRank && (
-                          <span className="absolute left-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-[10px] font-bold text-white">
-                            {book.nytimesRank}
-                          </span>
-                        )}
-                      </div>
-                      {/* Title + author */}
-                      <div className="space-y-0.5">
-                        <p className="line-clamp-2 text-xs font-medium leading-tight text-foreground">
-                          {book.externalTitle ?? "Sans titre"}
-                        </p>
-                        <p className="line-clamp-1 text-[11px] text-muted-foreground">
-                          {book.externalAuthor ?? ""}
-                        </p>
-                      </div>
-                    </div>
-                  );
-
-                  // If linked to a local book, make it a link
-                  if (book.bookSlug) {
-                    return (
-                      <Link key={book.id} href={`/books/${book.bookSlug}`} className="block">
-                        {bookContent}
-                      </Link>
-                    );
-                  }
-
-                  return <div key={book.id}>{bookContent}</div>;
-                })}
-              </div>
-            </CardContent>
-          </Card>
+              </p>
+              <p className="mt-auto text-[11px] text-muted-foreground">
+                {list.books.length} livre{list.books.length > 1 ? "s" : ""}
+              </p>
+            </div>
+          </Link>
         );
       })}
     </div>
