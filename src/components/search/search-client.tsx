@@ -148,7 +148,7 @@ const SearchClient = () => {
       {/* Barre de recherche */}
       <form
         onSubmit={handleSubmit}
-        className="flex flex-col rounded-3xl border border-border bg-card/60 p-6 shadow-sm backdrop-blur"
+        className="flex flex-col rounded-3xl border border-border bg-card/60 p-6 shadow-sm backdrop-blur mb-1"
       >
         {showFilters ? (
           <div className="mb-4 flex w-full flex-wrap items-center gap-4 rounded-xl bg-card/70 p-2">
@@ -311,6 +311,25 @@ const SearchClient = () => {
             </Badge>
           ))}
         </div>
+      ) : null}
+
+      {/* Résumé de la recherche */}
+      {hasSearchQuery && !isLoading && (booksData || usersData || blogData) ? (
+        <p className="text-sm text-muted-foreground mb-4">
+          {[
+            booksData
+              ? `${booksData.supabaseCount + booksData.externalCount} livre${booksData.supabaseCount + booksData.externalCount > 1 ? "s" : ""}`
+              : null,
+            submittedQuery && usersData
+              ? `${usersData.count} utilisateur${usersData.count > 1 ? "s" : ""}`
+              : null,
+            submittedQuery && blogData
+              ? `${blogData.count} article${blogData.count > 1 ? "s" : ""}`
+              : null,
+          ]
+            .filter(Boolean)
+            .join(", ")}
+        </p>
       ) : null}
 
       {/* Chargement global */}

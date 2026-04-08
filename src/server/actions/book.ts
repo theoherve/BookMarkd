@@ -319,6 +319,82 @@ export const createReview = async ({
   }
 };
 
+export const updateReview = async (
+  reviewId: string,
+  content: string,
+): Promise<ActionResult> => {
+  try {
+    if (!content.trim()) {
+      return { success: false, message: "Votre avis ne peut pas être vide." };
+    }
+    const userId = await requireSession();
+
+    const { data: review, error: fetchError } = await db.client
+      .from("reviews")
+      .select("user_id, book_id")
+      .eq("id", reviewId)
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+    if (!review) return { success: false, message: "Avis introuvable." };
+    if (review.user_id !== userId) {
+      return { success: false, message: "Vous ne pouvez modifier que vos propres avis." };
+    }
+
+    const { error: updateError } = await db.client
+      .from("reviews")
+      .update({ content: content.trim() })
+      .eq("id", reviewId);
+
+    if (updateError) throw updateError;
+
+    revalidateBook(review.book_id as string);
+    return { success: true };
+  } catch (error) {
+    if ((error as Error).message === "AUTH_REQUIRED") {
+      return { success: false, message: "Connectez-vous pour modifier un avis." };
+    }
+    console.error("[book] updateReview error:", error);
+    return { success: false, message: "Impossible de modifier cet avis." };
+  }
+};
+
+export const deleteReview = async (
+  reviewId: string,
+): Promise<ActionResult> => {
+  try {
+    const userId = await requireSession();
+
+    const { data: review, error: fetchError } = await db.client
+      .from("reviews")
+      .select("user_id, book_id")
+      .eq("id", reviewId)
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+    if (!review) return { success: false, message: "Avis introuvable." };
+    if (review.user_id !== userId) {
+      return { success: false, message: "Vous ne pouvez supprimer que vos propres avis." };
+    }
+
+    const { error: deleteError } = await db.client
+      .from("reviews")
+      .delete()
+      .eq("id", reviewId);
+
+    if (deleteError) throw deleteError;
+
+    revalidateBook(review.book_id as string);
+    return { success: true };
+  } catch (error) {
+    if ((error as Error).message === "AUTH_REQUIRED") {
+      return { success: false, message: "Connectez-vous pour supprimer un avis." };
+    }
+    console.error("[book] deleteReview error:", error);
+    return { success: false, message: "Impossible de supprimer cet avis." };
+  }
+};
+
 export const addReviewComment = async (
   reviewId: string,
   content: string,
@@ -389,6 +465,99 @@ export const addReviewComment = async (
       success: false,
       message: "Impossible d'ajouter ce commentaire.",
     };
+  }
+};
+
+export const updateReviewComment = async (
+  commentId: string,
+  content: string,
+): Promise<ActionResult> => {
+  try {
+    if (!content.trim()) {
+      return {
+        success: false,
+        message: "Votre commentaire ne peut pas être vide.",
+      };
+    }
+    const userId = await requireSession();
+
+    const { data: comment, error: fetchError } = await db.client
+      .from("review_comments")
+      .select("user_id, review_id, reviews:review_id ( book_id )")
+      .eq("id", commentId)
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+    if (!comment) {
+      return { success: false, message: "Commentaire introuvable." };
+    }
+    if (comment.user_id !== userId) {
+      return { success: false, message: "Vous ne pouvez modifier que vos propres commentaires." };
+    }
+
+    const { error: updateError } = await db.client
+      .from("review_comments")
+      .update({ content: content.trim() })
+      .eq("id", commentId);
+
+    if (updateError) throw updateError;
+
+    const bookId = (comment.reviews as { book_id?: string } | null)?.book_id;
+    if (bookId) revalidateBook(bookId);
+
+    return { success: true };
+  } catch (error) {
+    if ((error as Error).message === "AUTH_REQUIRED") {
+      return { success: false, message: "Connectez-vous pour modifier un commentaire." };
+    }
+    console.error("[book] updateReviewComment error:", error);
+    return { success: false, message: "Impossible de modifier ce commentaire." };
+  }
+};
+
+export const deleteReviewComment = async (
+  commentId: string,
+  reviewId: string,
+): Promise<ActionResult> => {
+  try {
+    const userId = await requireSession();
+
+    const { data: comment, error: fetchError } = await db.client
+      .from("review_comments")
+      .select("user_id")
+      .eq("id", commentId)
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+    if (!comment) {
+      return { success: false, message: "Commentaire introuvable." };
+    }
+    if (comment.user_id !== userId) {
+      return { success: false, message: "Vous ne pouvez supprimer que vos propres commentaires." };
+    }
+
+    const { error: deleteError } = await db.client
+      .from("review_comments")
+      .delete()
+      .eq("id", commentId);
+
+    if (deleteError) throw deleteError;
+
+    const { data: review } = await db.client
+      .from("reviews")
+      .select("book_id")
+      .eq("id", reviewId)
+      .maybeSingle();
+
+    if (review?.book_id) revalidateBook(review.book_id as string);
+
+    return { success: true };
+  } catch (error) {
+    if ((error as Error).message === "AUTH_REQUIRED") {
+      return { success: false, message: "Connectez-vous pour supprimer un commentaire." };
+    }
+    console.error("[book] deleteReviewComment error:", error);
+    return { success: false, message: "Impossible de supprimer ce commentaire." };
   }
 };
 

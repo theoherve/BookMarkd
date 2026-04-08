@@ -1,12 +1,25 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useOptimistic, useState, useTransition } from "react";
 import Image from "next/image";
+import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 
-import { addReviewComment } from "@/server/actions/book";
+import {
+  addReviewComment,
+  updateReviewComment,
+  deleteReviewComment,
+  updateReview,
+  deleteReview,
+} from "@/server/actions/book";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenuRoot,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { formatRelativeTimeFromNow } from "@/lib/datetime";
 import ReviewLikeButton from "@/components/books/review-like-button";
 
@@ -95,6 +108,119 @@ const ReviewCommentForm = ({
   );
 };
 
+const CommentItem = ({
+  comment,
+  reviewId,
+  viewerId,
+  onUpdate,
+  onDelete,
+}: {
+  comment: ReviewComment;
+  reviewId: string;
+  viewerId?: string | null;
+  onUpdate: (commentId: string, newContent: string) => void;
+  onDelete: (commentId: string) => void;
+}) => {
+  const isOwner = viewerId === comment.user.id;
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(comment.content);
+  const [isPending, startTransition] = useTransition();
+
+  const handleSave = () => {
+    if (!editContent.trim()) return;
+    startTransition(async () => {
+      onUpdate(comment.id, editContent.trim());
+      setIsEditing(false);
+      const result = await updateReviewComment(comment.id, editContent.trim());
+      if (!result.success) {
+        onUpdate(comment.id, comment.content);
+      }
+    });
+  };
+
+  const handleDelete = () => {
+    startTransition(async () => {
+      onDelete(comment.id);
+      const result = await deleteReviewComment(comment.id, reviewId);
+      if (!result.success) {
+        // La revalidation côté serveur restaurera le commentaire
+      }
+    });
+  };
+
+  return (
+    <div className="space-y-1 text-sm">
+      <div className="flex items-center gap-2">
+        <span className="font-medium text-foreground">
+          {comment.user.displayName}
+        </span>
+        <span className="text-xs text-muted-foreground">
+          {formatRelativeTimeFromNow(comment.createdAt)}
+        </span>
+        {isOwner && !isEditing ? (
+          <DropdownMenuRoot>
+            <DropdownMenuTrigger asChild>
+              <button className="ml-auto rounded-md p-1 text-muted-foreground hover:text-foreground">
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => {
+                  setEditContent(comment.content);
+                  setIsEditing(true);
+                }}
+              >
+                <Pencil className="mr-2 h-3.5 w-3.5" />
+                Modifier
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={handleDelete}
+              >
+                <Trash2 className="mr-2 h-3.5 w-3.5" />
+                Supprimer
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenuRoot>
+        ) : null}
+      </div>
+      {isEditing ? (
+        <div className="space-y-2">
+          <Textarea
+            value={editContent}
+            onChange={(e) => setEditContent(e.target.value)}
+            rows={2}
+          />
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditing(false)}
+              disabled={isPending}
+            >
+              Annuler
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={isPending || !editContent.trim()}
+            >
+              Enregistrer
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <p className="text-muted-foreground">{comment.content}</p>
+      )}
+    </div>
+  );
+};
+
+type OptimisticAction =
+  | { type: "update"; commentId: string; content: string }
+  | { type: "delete"; commentId: string };
+
 const ReviewItem = ({
   review,
   viewerId,
@@ -102,20 +228,75 @@ const ReviewItem = ({
   review: BookReview;
   viewerId?: string | null;
 }) => {
+  const isReviewOwner = viewerId === review.user.id;
   const createdAtLabel = formatRelativeTimeFromNow(review.createdAt);
   const canSeeSpoiler = !review.spoiler || review.user.id === viewerId;
   const [showSpoiler, setShowSpoiler] = useState(canSeeSpoiler);
+  const [isEditingReview, setIsEditingReview] = useState(false);
+  const [editReviewContent, setEditReviewContent] = useState(review.content);
+  const [isReviewPending, startReviewTransition] = useTransition();
+  const [isDeleted, setIsDeleted] = useState(false);
+
+  const [optimisticComments, dispatchOptimistic] = useOptimistic(
+    review.comments,
+    (state: ReviewComment[], action: OptimisticAction) => {
+      if (action.type === "update") {
+        return state.map((c) =>
+          c.id === action.commentId ? { ...c, content: action.content } : c,
+        );
+      }
+      if (action.type === "delete") {
+        return state.filter((c) => c.id !== action.commentId);
+      }
+      return state;
+    },
+  );
+
+  const handleUpdate = (commentId: string, newContent: string) => {
+    dispatchOptimistic({ type: "update", commentId, content: newContent });
+  };
+
+  const handleDelete = (commentId: string) => {
+    dispatchOptimistic({ type: "delete", commentId });
+  };
+
+  const [optimisticContent, setOptimisticContent] = useOptimistic(review.content);
+
+  const handleSaveReview = () => {
+    if (!editReviewContent.trim()) return;
+    startReviewTransition(async () => {
+      setOptimisticContent(editReviewContent.trim());
+      setIsEditingReview(false);
+      const result = await updateReview(review.id, editReviewContent.trim());
+      if (!result.success) {
+        setOptimisticContent(review.content);
+      }
+    });
+  };
+
+  const handleDeleteReview = () => {
+    startReviewTransition(async () => {
+      setIsDeleted(true);
+      const result = await deleteReview(review.id);
+      if (!result.success) {
+        setIsDeleted(false);
+      }
+    });
+  };
+
+  if (isDeleted) return null;
 
   return (
     <article className="space-y-4 rounded-3xl border border-border/50 bg-card/70 p-6">
       <header className="flex items-start gap-4">
-        <div className="relative h-10 w-10 overflow-hidden rounded-full border border-border/50 bg-muted">
+        <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-border/50 bg-muted">
           {review.user.avatarUrl ? (
             <Image
               src={review.user.avatarUrl}
               alt={`Avatar ${review.user.displayName}`}
               fill
               sizes="40px"
+              className="object-cover"
               unoptimized
             />
           ) : (
@@ -142,6 +323,33 @@ const ReviewItem = ({
                 Spoiler
               </Badge>
             ) : null}
+            {isReviewOwner && !isEditingReview ? (
+              <DropdownMenuRoot>
+                <DropdownMenuTrigger asChild>
+                  <button className="ml-auto rounded-md p-1 text-muted-foreground hover:text-foreground">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setEditReviewContent(review.content);
+                      setIsEditingReview(true);
+                    }}
+                  >
+                    <Pencil className="mr-2 h-3.5 w-3.5" />
+                    Modifier
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={handleDeleteReview}
+                  >
+                    <Trash2 className="mr-2 h-3.5 w-3.5" />
+                    Supprimer
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenuRoot>
+            ) : null}
           </div>
           {review.title ? (
             <h4 className="text-base font-semibold text-foreground">
@@ -151,7 +359,32 @@ const ReviewItem = ({
         </div>
       </header>
       <div className="space-y-3 text-sm text-muted-foreground">
-        {review.spoiler && !showSpoiler ? (
+        {isEditingReview ? (
+          <div className="space-y-2">
+            <Textarea
+              value={editReviewContent}
+              onChange={(e) => setEditReviewContent(e.target.value)}
+              rows={4}
+            />
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditingReview(false)}
+                disabled={isReviewPending}
+              >
+                Annuler
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSaveReview}
+                disabled={isReviewPending || !editReviewContent.trim()}
+              >
+                Enregistrer
+              </Button>
+            </div>
+          </div>
+        ) : review.spoiler && !showSpoiler ? (
           <Button
             variant="outline"
             size="sm"
@@ -160,7 +393,7 @@ const ReviewItem = ({
             Afficher le contenu spoiler
           </Button>
         ) : (
-          <p className="leading-6">{review.content}</p>
+          <p className="leading-6">{optimisticContent}</p>
         )}
       </div>
       <div className="flex items-center gap-3">
@@ -170,20 +403,17 @@ const ReviewItem = ({
           initialHasLiked={review.likes.some((like) => like.id === viewerId)}
         />
       </div>
-      {review.comments.length > 0 ? (
+      {optimisticComments.length > 0 ? (
         <div className="space-y-3 rounded-2xl border border-border/40 bg-card/50 p-4">
-          {review.comments.map((comment) => (
-            <div key={comment.id} className="space-y-1 text-sm">
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-foreground">
-                  {comment.user.displayName}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {formatRelativeTimeFromNow(comment.createdAt)}
-                </span>
-              </div>
-              <p className="text-muted-foreground">{comment.content}</p>
-            </div>
+          {optimisticComments.map((comment) => (
+            <CommentItem
+              key={comment.id}
+              comment={comment}
+              reviewId={review.id}
+              viewerId={viewerId}
+              onUpdate={handleUpdate}
+              onDelete={handleDelete}
+            />
           ))}
         </div>
       ) : null}
