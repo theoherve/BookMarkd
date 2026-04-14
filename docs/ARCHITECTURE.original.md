@@ -90,7 +90,7 @@ src/
 | Route | Description |
 |-------|-------------|
 | `/login` | Connexion (credentials) |
-| `/signup` | Création compte |
+| `/signup` | Création de compte |
 
 ### App — `(app)/`
 
@@ -99,16 +99,16 @@ src/
 | `/` | Accueil (listes éditoriales, blog, listes communauté) |
 | `/feed` | Feed social (activités suivis) |
 | `/search` | Recherche globale (livres, users, blog) |
-| `/notifications` | Centre notifications |
+| `/notifications` | Centre de notifications |
 | `/books/[slug]` | Fiche livre |
-| `/books/create` | Ajout manuel livre |
+| `/books/create` | Ajout manuel d'un livre |
 | `/lists` | Dashboard listes utilisateur |
 | `/lists/[listId]` | Détail liste |
 | `/lists/create` | Création liste |
 | `/profiles/me` | Profil personnel |
 | `/profiles/[username]` | Profil public |
-| `/profiles/[username]/books` | Livres utilisateur |
-| `/profiles/[username]/lists` | Listes utilisateur |
+| `/profiles/[username]/books` | Livres d'un utilisateur |
+| `/profiles/[username]/lists` | Listes d'un utilisateur |
 | `/profiles/[username]/followers` | Followers |
 | `/tendances/[listId]` | Détail liste éditoriale |
 | `/wrapped/[year]` | Année en revue |
@@ -149,7 +149,7 @@ src/
 | `/api/auth/[...nextauth]` | * | NextAuth handler |
 | `/api/books/search` | GET | Recherche livres (Supabase + Google Books + OpenLibrary) |
 | `/api/books/isbn/[isbn]` | GET | Lookup ISBN multi-sources |
-| `/api/search/suggestions` | GET | Suggestions recherche |
+| `/api/search/suggestions` | GET | Suggestions de recherche |
 | `/api/search/blog` | GET | Recherche blog |
 | `/api/users/search` | GET | Recherche utilisateurs |
 | `/api/tags` | GET | Tags disponibles |
@@ -164,7 +164,7 @@ src/
 | `/api/cron/fetch-nytimes-bestsellers` | POST | Cron NY Times |
 | `/api/cron/aggregate-semester-bestsellers` | POST | Cron agrégation tendances |
 
-> Mutations principales via **Server Actions** (`src/server/actions/`), pas routes API.
+> Les mutations principales passent par **Server Actions** (`src/server/actions/`), pas par des routes API.
 
 ### Server Actions principales
 
@@ -174,7 +174,7 @@ src/
 | `review.ts` | CRUD avis |
 | `lists.ts` | CRUD listes, gestion items |
 | `follow.ts` | Follow/unfollow, demandes |
-| `profile.ts` | Update profil, bio, avatar |
+| `profile.ts` | Mise à jour profil, bio, avatar |
 | `auth.ts` | Inscription, connexion |
 | `feedback.ts` | Soumission feedback |
 | `notifications.ts` | Gestion notifications |
@@ -188,7 +188,7 @@ src/
 
 ## Base de données (PostgreSQL / Supabase)
 
-RLS activé toutes tables. UUIDs, timestamps `created_at`/`updated_at`.
+RLS activé sur toutes les tables. UUIDs, timestamps `created_at`/`updated_at`.
 
 ### Tables principales
 
@@ -238,9 +238,9 @@ RLS activé toutes tables. UUIDs, timestamps `created_at`/`updated_at`.
 
 ## Auth
 
-- **NextAuth.js** stratégie JWT
+- **NextAuth.js** avec stratégie JWT
 - **CredentialsProvider** (email/password, hash bcrypt)
-- Session dans JWT token (inclut `isAdmin`)
+- Session stockée dans JWT token (inclut `isAdmin`)
 - **Middleware** (`src/middleware.ts`) : protège `/admin/*`, redirige non-auth vers `/login`
 - Supabase PostgreSQL pour stockage users (pas Supabase Auth)
 
@@ -250,4 +250,4 @@ RLS activé toutes tables. UUIDs, timestamps `created_at`/`updated_at`.
 
 - **TanStack Query** — données serveur (feed, recherche, listes, profils)
 - **Zustand** — état UI local (filtres, modals, toasts)
-- **Server Actions** — mutations invalidant caches Query
+- **Server Actions** — mutations qui invalident les caches Query

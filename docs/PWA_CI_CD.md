@@ -1,7 +1,5 @@
 # PWA CI/CD - Guide d'intégration
 
-Ce guide explique comment intégrer les tests PWA dans votre pipeline CI/CD.
-
 ## Scripts disponibles
 
 ### Lighthouse PWA Audit
@@ -30,11 +28,7 @@ pnpm test:pwa
 pnpm test:ui tests/e2e/pwa-offline.spec.ts
 ```
 
-## Intégration CI/CD
-
-### GitHub Actions
-
-Exemple de workflow :
+## Intégration GitHub Actions
 
 ```yaml
 name: PWA Tests
@@ -49,11 +43,9 @@ jobs:
   lighthouse:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 8
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'pnpm'
@@ -69,9 +61,9 @@ jobs:
   playwright:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: pnpm/action-setup@v2
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'pnpm'
@@ -84,56 +76,6 @@ jobs:
       - run: pnpm test:pwa
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:3000
-```
-
-### GitLab CI
-
-```yaml
-pwa-tests:
-  image: node:20
-  before_script:
-    - npm install -g pnpm
-    - pnpm install
-    - pnpm playwright:install
-  script:
-    - pnpm build
-    - pnpm start &
-    - sleep 10
-    - pnpm lighthouse:pwa
-    - pnpm test:pwa
-  artifacts:
-    paths:
-      - lighthouse-reports/
-    expire_in: 1 week
-```
-
-### Vercel / Netlify
-
-Pour les déploiements sur Vercel/Netlify, ajoutez un script de vérification post-deploy :
-
-```json
-{
-  "scripts": {
-    "postdeploy": "pnpm lighthouse:pwa"
-  }
-}
-```
-
-## Configuration Lighthouse CI
-
-Le fichier `.lighthouserc.js` est configuré pour :
-- Tester 3 pages principales
-- Exiger un score PWA >= 90
-- Générer des rapports dans `lighthouse-reports/`
-
-Pour utiliser Lighthouse CI complet :
-
-```bash
-# Installer Lighthouse CI
-pnpm add -D @lhci/cli
-
-# Lancer avec config
-lhci autorun
 ```
 
 ## Seuils de qualité
@@ -162,8 +104,4 @@ Les rapports Lighthouse sont sauvegardés dans `lighthouse-reports/` :
 - `pwa-{page}-mobile.json` : Rapport mobile
 - `pwa-{page}-desktop.json` : Rapport desktop
 
-Pour visualiser les rapports :
-1. Ouvrir `lighthouse-reports/pwa-{page}-mobile.json`
-2. Utiliser [Lighthouse Viewer](https://googlechrome.github.io/lighthouse/viewer/) ou
-3. Utiliser `lhci upload` pour les envoyer à un service externe
-
+Visualiser via [Lighthouse Viewer](https://googlechrome.github.io/lighthouse/viewer/) ou `lhci upload`.

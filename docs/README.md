@@ -1,33 +1,25 @@
-# BookMarkd – Letterboxd des livres
+# BookMarkd — Documentation
 
-BookMarkd est une application web Next.js qui permet aux lectrices et lecteurs de suivre leurs lectures, partager leurs avis et découvrir de nouveaux ouvrages via un feed social riche et des recommandations personnalisées.
+BookMarkd est une application web de gestion de bibliothèque personnelle et de découverte littéraire. Feed social, avis, listes, scan ISBN, tendances éditoriales.
 
-## Fonctionnalités clés
+## Stack
 
-- Feed social temps réel (activités d’amis, lectures, recommandations).
-- Fiches livres complètes (métadonnées, notes, commentaires, listes de lecteurs).
-- Gestion des états de lecture (À lire, En cours, Lu) et notation sur 5 étoiles.
-- Listes personnalisées et partageables (ex. “Top fantasy”, “Cadeaux”).
-- Recherche avancée avec filtres (genre, auteur, note, état).
-- Authentification email/mot de passe (OAuth en option).
-- Intégration d’une API externe (Open Library) pour enrichir le catalogue.
+Next.js 16 (App Router) · TypeScript · TailwindCSS 4 · shadcn/ui · Supabase (PostgreSQL + Storage) · NextAuth · Vercel
 
-## Stack technique
+## Fonctionnalités
 
-- Next.js 14+ (App Router, Server Actions, RSC).
-- TypeScript strict.
-- TailwindCSS 4 + shadcn/ui (Radix UI).
-- Gestion d’état client : Zustand + TanStack Query.
-- Authentification : NextAuth (adapter OAuth futur).
-- Base de données : PostgreSQL (SQLite pour le dev local).
-- ORM : Supabase client (cf. `ARCHITECTURE.md`).
-- Déploiement cible : Vercel + Supabase (Postgres, Auth, Storage).
-
-## Auth & inscription
-
-- Connexion : `/login` (credentials démo `camille@example.com` / `bookmarkd123`).
-- Inscription : `/signup` (Server Action `registerUser`, validation email/mot de passe).
-- Voir `docs/API.md` & `docs/GOOGLE_BOOKS_MIGRATION.md` pour les évolutions prévues.
+- Bibliothèque personnelle (À lire / En cours / Lu) avec notation
+- Avis et commentaires (visibilité public/amis/privé)
+- Listes personnalisées et collaboratives
+- Feed social (activités des suivis)
+- Recherche multi-sources (Google Books, Open Library, base locale)
+- Scan code-barres ISBN (mobile)
+- Tendances éditoriales (NY Times bestsellers, listes curées)
+- Blog intégré
+- Wrapped — année en revue
+- Feeling keywords (badges émotionnels sur livres)
+- PWA avec support offline (IndexedDB queue + sync)
+- Panneau admin complet (analytics, gestion users/books/blog/tags)
 
 ## Getting Started
 
@@ -36,19 +28,17 @@ pnpm install
 pnpm run dev
 ```
 
-- Créer un fichier `.env.local` (voir `ARCHITECTURE.md`).
-- Lancer la base locale : voir `supabase/schema.sql` pour la configuration.
+Créer `.env.local` avec les variables Supabase, NextAuth, Google Books API (voir `ARCHITECTURE.md`).
 
-## Roadmap initiale
+## Documentation
 
-1. Setup Next.js, TailwindCSS 4, shadcn/ui.
-2. Auth email/mot de passe (NextAuth) + profils utilisateurs.
-3. Modèle de données livres + états + commentaires.
-4. Feed social + suivi d’amis.
-5. Recherche avancée + intégration Open Library.
-6. Listes personnalisées + recommandations.
-7. Notifications & gamification (succès, badges) – phase ultérieure.
-
-Pour plus de détails, consulter `ARCHITECTURE.md`, `API.md`, `DB_SCHEMA.md`.
-
-
+| Fichier | Contenu |
+|---------|---------|
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Stack, structure, routes, API, schéma DB, composants |
+| [GOOGLE_BOOKS_SETUP.md](GOOGLE_BOOKS_SETUP.md) | Configuration API Google Books |
+| [FEELING_KEYWORDS.md](FEELING_KEYWORDS.md) | Feature feeling keywords |
+| [FAQ_INSTALLATION.md](FAQ_INSTALLATION.md) | Guide installation PWA |
+| [PWA_OFFLINE_QUEUE.md](PWA_OFFLINE_QUEUE.md) | Système offline queue |
+| [PWA_TESTING_GUIDE.md](PWA_TESTING_GUIDE.md) | Guide test PWA |
+| [PWA_TEST_CHECKLIST.md](PWA_TEST_CHECKLIST.md) | Checklist QA PWA |
+| [PWA_CI_CD.md](PWA_CI_CD.md) | Intégration CI/CD PWA |

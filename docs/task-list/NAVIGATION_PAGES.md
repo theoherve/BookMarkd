@@ -1,4 +1,0 @@
-- [x] Créer `/feed`
-- [x] Créer `/profiles/me`
-- [x] Mettre à jour l’accueil avec raccourcis
-- [x] Vérifier données Supabase associées
