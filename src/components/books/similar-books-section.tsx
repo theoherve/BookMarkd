@@ -14,9 +14,10 @@ import { generateBookSlug } from "@/lib/slug";
 
 type SimilarBooksSectionProps = {
   books: SimilarBook[];
+  currentBookTitle: string;
 };
 
-const SimilarBooksSection = ({ books }: SimilarBooksSectionProps) => {
+const SimilarBooksSection = ({ books, currentBookTitle }: SimilarBooksSectionProps) => {
   if (books.length === 0) {
     return null;
   }
@@ -33,7 +34,7 @@ const SimilarBooksSection = ({ books }: SimilarBooksSectionProps) => {
         Livres similaires
       </h2>
       <p className="text-sm text-muted-foreground">
-        D&apos;autres titres de la bibliothèque BookMarkd qui partagent des tags ou le même auteur.
+        Si tu as aimé <span className="font-medium text-foreground">{currentBookTitle}</span>, tu pourrais aussi apprécier&nbsp;:
       </p>
       <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         {books.map((book) => {

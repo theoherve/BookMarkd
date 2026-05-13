@@ -682,7 +682,7 @@ const BookPage = async ({ params }: BookPageProps) => {
 
           {similarBooks.length > 0 ? (
             <section className="space-y-6">
-              <SimilarBooksSection books={similarBooks} />
+              <SimilarBooksSection books={similarBooks} currentBookTitle={book.title} />
             </section>
           ) : null}
         </div>
