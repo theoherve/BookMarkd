@@ -103,7 +103,7 @@ const RecommendationCard = ({ item }: RecommendationCardProps) => {
                   ? "Calcul basé sur vos amis et leurs activités récentes."
                   : item.source === "global"
                     ? "Titres les plus populaires sur BookMarkd cette semaine."
-                    : "Suggestions générées à partir des tags de vos livres terminés, en cours ou dans votre liste de lecture."}
+                    : "Score combinant tags en commun (50%), notes de vos amis (30%) et popularité (20%)."}
               </TooltipContent>
             </Tooltip>
             {item.scoreLabel !== "" && (item.scoreLabel !== undefined || item.score > 0) ? (

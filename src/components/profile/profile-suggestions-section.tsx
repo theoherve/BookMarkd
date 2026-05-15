@@ -73,6 +73,15 @@ const ProfileSuggestionCard = ({ item }: { item: ProfileSuggestion }) => {
             >
               {item.score}%
             </Badge>
+            {item.friendsCount > 0 && item.friendsAvgRating !== null ? (
+              <Badge
+                variant="outline"
+                className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-normal"
+                title={`${item.friendsCount} ami${item.friendsCount > 1 ? "s" : ""} ont noté ce livre`}
+              >
+                {item.friendsCount} ami{item.friendsCount > 1 ? "s" : ""} · {item.friendsAvgRating.toFixed(1)}/5
+              </Badge>
+            ) : null}
             <p className="line-clamp-2 text-[11px] text-muted-foreground">
               {item.reason}
             </p>

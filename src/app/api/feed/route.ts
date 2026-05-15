@@ -7,6 +7,8 @@ import type {
   FeedRecommendation,
 } from "@/features/feed/types";
 import { getCurrentSession } from "@/lib/auth/session";
+import { computeCompatibilityScore } from "@/features/recommendations/compatibility-score";
+import { getFriendsRatingScore } from "@/features/recommendations/server/get-friends-rating-score";
 
 
 const ACTIVITY_TYPES: FeedActivity["type"][] = [
@@ -352,7 +354,7 @@ export async function GET(request: Request) {
 
       const { data: recommendedBooks, error: booksErr } = await db.client
         .from("books")
-        .select("id, title, author, cover_url")
+        .select("id, title, author, cover_url, average_rating")
         .in("id", sortedBookIds);
 
       if (booksErr) throw booksErr;
@@ -362,21 +364,47 @@ export async function GET(request: Request) {
       const minScore = Math.min(...allScores);
       const scoreRange = maxScore - minScore;
 
+      const friendsRatings = await getFriendsRatingScore(viewerId, sortedBookIds);
+
       return (recommendedBooks ?? []).map((book) => {
         const bookId = (book as { id: string }).id;
         const scoreData = bookScores.get(bookId);
         const rawScore = scoreData?.score ?? 0;
-        const normalizedScore = scoreRange === 0
+        const tagScore = scoreRange === 0
           ? 50
           : Math.round(((rawScore - minScore) / scoreRange) * 100);
 
+        const friends = friendsRatings.get(bookId) ?? null;
+        const avgRating = (book as { average_rating: number | null }).average_rating;
+        const popularityScore = typeof avgRating === "number" ? avgRating * 20 : null;
+
+        const compatibilityScore = computeCompatibilityScore({
+          tagScore,
+          friendsAvgRating: friends?.avgRating ?? null,
+          popularityScore,
+        });
+
+        const reasonParts: string[] = [];
+        const tagCount = scoreData?.matchingTags.length ?? 0;
+        if (tagCount > 0) {
+          reasonParts.push(
+            `${tagCount} tag${tagCount > 1 ? "s" : ""} en commun : ${(scoreData?.matchingTags ?? []).slice(0, 3).join(", ")}`,
+          );
+        }
+        if (friends && friends.friendCount > 0) {
+          reasonParts.push(
+            `${friends.friendCount} ami${friends.friendCount > 1 ? "s" : ""} a${friends.friendCount > 1 ? "ont" : ""} noté ${friends.avgRating.toFixed(1)}/5`,
+          );
+        }
+
         return {
           id: `tag-recommendation-${bookId}`,
-          score: normalizedScore,
+          score: compatibilityScore,
           source: "similar",
           metadata: {
-            reason: `Basé sur ${scoreData?.matchingTags.length ?? 0} tag(s) en commun : ${(scoreData?.matchingTags ?? []).slice(0, 3).join(", ")}`,
+            reason: reasonParts.join(" • ") || "Basé sur vos lectures",
             matchingTags: scoreData?.matchingTags ?? [],
+            friendCount: friends?.friendCount ?? 0,
           },
           book: {
             id: (book as { id: string }).id,
