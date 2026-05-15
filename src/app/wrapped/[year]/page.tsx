@@ -53,7 +53,7 @@ const WrappedPage = async ({ params }: WrappedPageProps) => {
   }
 
   return (
-    <div className="overflow-hidden">
+    <div className="-mx-4 -my-6 flex h-[calc(100dvh-201px)] flex-col overflow-hidden px-4 py-4 md:-mx-6 md:-my-10 md:h-[calc(100dvh-225px)] md:px-6 md:py-6">
       <WrappedContainer stats={stats} />
     </div>
   );

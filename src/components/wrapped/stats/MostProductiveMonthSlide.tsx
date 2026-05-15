@@ -1,5 +1,6 @@
 "use client";
 
+import { CalendarRange } from "lucide-react";
 import WrappedSlide from "../WrappedSlide";
 
 const MONTH_NAMES = [
@@ -22,19 +23,21 @@ type MostProductiveMonthSlideProps = {
   year: number;
 };
 
+const slate = "#6883a8";
+
 const MostProductiveMonthSlide = ({
   mostProductiveMonth,
   year,
 }: MostProductiveMonthSlideProps) => {
   if (!mostProductiveMonth) {
     return (
-      <WrappedSlide gradient="bg-gradient-to-br from-cyan-600 via-blue-600 to-indigo-600">
+      <WrappedSlide>
         <div className="space-y-6">
-          <h2 className="text-4xl font-bold text-white md:text-5xl">
-            Votre mois le plus productif en {year}
-          </h2>
-          <p className="text-xl text-white/90 md:text-2xl">
-            Pas assez de données pour déterminer votre mois le plus productif
+          <span className="text-xs font-medium uppercase tracking-[0.25em] text-[#6b5747] dark:text-[#bda68f]">
+            Mois le plus productif · {year}
+          </span>
+          <p className="text-xl italic text-[#2f1c11]/80 md:text-2xl dark:text-[#f7f1ea]/80">
+            Pas assez de données pour le déterminer
           </p>
         </div>
       </WrappedSlide>
@@ -44,19 +47,32 @@ const MostProductiveMonthSlide = ({
   const monthName = MONTH_NAMES[mostProductiveMonth.month - 1];
 
   return (
-    <WrappedSlide gradient="bg-gradient-to-br from-cyan-600 via-blue-600 to-indigo-600">
-      <div className="space-y-6">
-        <h2 className="text-4xl font-bold text-white md:text-5xl">
-          Votre mois le plus productif en {year}
+    <WrappedSlide>
+      <div className="flex flex-col items-center gap-5 sm:gap-7">
+        <span className="text-[10px] font-medium uppercase tracking-[0.25em] text-[#6b5747] sm:text-xs dark:text-[#bda68f]">
+          Mois le plus productif · {year}
+        </span>
+
+        <CalendarRange
+          className="h-14 w-14 sm:h-16 sm:w-16 md:h-20 md:w-20"
+          strokeWidth={1.5}
+          style={{ color: slate }}
+        />
+
+        <h2
+          className="text-7xl font-bold capitalize tracking-tight sm:text-8xl md:text-9xl"
+          style={{ color: slate }}
+        >
+          {monthName}
         </h2>
-        <div className="space-y-4">
-          <div className="text-6xl font-bold text-white md:text-7xl capitalize">
-            {monthName}
-          </div>
-          <p className="text-2xl text-white/90 md:text-3xl">
-            {mostProductiveMonth.count}{" "}
+
+        <div className="flex items-baseline gap-3 pt-2">
+          <span className="text-4xl font-bold text-[#2f1c11] sm:text-5xl md:text-6xl dark:text-[#f7f1ea]">
+            {mostProductiveMonth.count}
+          </span>
+          <span className="text-base text-[#6b5747] sm:text-lg dark:text-[#bda68f]">
             {mostProductiveMonth.count === 1 ? "livre lu" : "livres lus"}
-          </p>
+          </span>
         </div>
       </div>
     </WrappedSlide>

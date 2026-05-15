@@ -1,5 +1,6 @@
 "use client";
 
+import { Star } from "lucide-react";
 import WrappedSlide from "../WrappedSlide";
 
 type AverageRatingSlideProps = {
@@ -7,19 +8,24 @@ type AverageRatingSlideProps = {
   year: number;
 };
 
+const olive = "#8a9b6a";
+const oliveDark = "#98b780";
+
 const AverageRatingSlide = ({
   averageRating,
   year,
 }: AverageRatingSlideProps) => {
+  const filled = Math.round(averageRating);
+
   if (averageRating === 0) {
     return (
-      <WrappedSlide gradient="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600">
+      <WrappedSlide>
         <div className="space-y-6">
-          <h2 className="text-4xl font-bold text-white md:text-5xl">
-            Votre note moyenne en {year}
-          </h2>
-          <p className="text-xl text-white/90 md:text-2xl">
-            Pas assez de livres notés pour cette année
+          <span className="inline-block text-xs font-medium uppercase tracking-[0.25em] text-[#6b5747] dark:text-[#bda68f]">
+            Note moyenne · {year}
+          </span>
+          <p className="text-xl text-[#2f1c11]/80 italic md:text-2xl dark:text-[#f7f1ea]/80">
+            Pas assez de livres notés cette année
           </p>
         </div>
       </WrappedSlide>
@@ -27,16 +33,39 @@ const AverageRatingSlide = ({
   }
 
   return (
-    <WrappedSlide gradient="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600">
-      <div className="space-y-6">
-        <h2 className="text-4xl font-bold text-white md:text-5xl">
-          Votre note moyenne en {year}
-        </h2>
-        <div className="space-y-4">
-          <div className="text-8xl font-bold text-white md:text-9xl">
+    <WrappedSlide>
+      <div className="flex flex-col items-center gap-6 sm:gap-8">
+        <span className="text-[10px] font-medium uppercase tracking-[0.25em] text-[#6b5747] sm:text-xs dark:text-[#bda68f]">
+          Note moyenne · {year}
+        </span>
+
+        <div className="flex items-end gap-3">
+          <span
+            className="text-[11rem] font-bold leading-none tracking-tight sm:text-[12rem] md:text-[13rem]"
+            style={{ color: olive }}
+          >
             {averageRating.toFixed(1)}
-          </div>
-          <p className="text-2xl text-white/90 md:text-3xl">sur 5</p>
+          </span>
+          <span className="mb-5 text-3xl font-light text-[#6b5747] sm:mb-7 sm:text-4xl md:mb-9 md:text-5xl dark:text-[#bda68f]">
+            /5
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Star
+              key={i}
+              className="h-10 w-10 sm:h-11 sm:w-11 md:h-12 md:w-12"
+              fill={i < filled ? olive : "transparent"}
+              stroke={i < filled ? olive : "#d6b087"}
+              strokeWidth={1.5}
+              style={
+                i < filled
+                  ? { color: olive, ["--star-dark" as never]: oliveDark }
+                  : undefined
+              }
+            />
+          ))}
         </div>
       </div>
     </WrappedSlide>
