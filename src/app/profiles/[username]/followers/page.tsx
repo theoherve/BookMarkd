@@ -4,7 +4,6 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 
-import AppShell from "@/components/layout/app-shell";
 import { getPublicProfile } from "@/features/profile/server/get-public-profile";
 import { getFollowers } from "@/server/actions/follow";
 
@@ -46,7 +45,7 @@ const ProfileFollowersPage = async ({ params }: ProfileFollowersPageProps) => {
   const followers = await getFollowers(profile.id);
 
   return (
-    <AppShell>
+    <>
       <div className="space-y-6">
         <div className="flex flex-col gap-4">
           <Link
@@ -122,7 +121,7 @@ const ProfileFollowersPage = async ({ params }: ProfileFollowersPageProps) => {
           </ul>
         )}
       </div>
-    </AppShell>
+    </>
   );
 };
 

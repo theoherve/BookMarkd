@@ -1,24 +1,15 @@
 "use client";
 
-import { useEffect, useTransition, useState } from "react";
+import { useTransition } from "react";
 import Link from "next/link";
 import { Bell, BellRing } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { getUnreadCount } from "@/server/actions/notifications";
+import { useUnreadCount } from "@/hooks/use-unread-count";
 
 const NotificationBell = () => {
-  const [count, setCount] = useState<number>(0);
+  const count = useUnreadCount();
   const [isPending] = useTransition();
-
-  useEffect(() => {
-    void (async () => {
-      const result = await getUnreadCount();
-      if (result.success) {
-        setCount(result.count);
-      }
-    })();
-  }, []);
 
   return (
     <Button

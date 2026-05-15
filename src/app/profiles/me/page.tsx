@@ -4,7 +4,6 @@ import { unstable_noStore as noStore } from "next/cache";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 
-import AppShell from "@/components/layout/app-shell";
 import BackButton from "@/components/layout/back-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,7 +63,7 @@ const ProfilePage = async () => {
   const myListsHref = "/profiles/me/lists";
 
   return (
-    <AppShell>
+    <>
       <div className="space-y-10">
         <BackButton ariaLabel="Retour à la page précédente" />
 
@@ -231,7 +230,7 @@ const ProfilePage = async () => {
           <UserFeedbacksSection />
         </section>
       </div>
-    </AppShell>
+    </>
   );
 };
 

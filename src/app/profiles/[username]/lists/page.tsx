@@ -3,7 +3,6 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 
-import AppShell from "@/components/layout/app-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getPublicProfile } from "@/features/profile/server/get-public-profile";
 
@@ -37,7 +36,7 @@ const ProfileListsPage = async ({ params }: ProfileListsPageProps) => {
   const { displayName, publicLists } = profile;
 
   return (
-    <AppShell>
+    <>
       <div className="space-y-6">
         <div className="flex flex-col gap-4">
           <Link
@@ -93,7 +92,7 @@ const ProfileListsPage = async ({ params }: ProfileListsPageProps) => {
           </div>
         )}
       </div>
-    </AppShell>
+    </>
   );
 };
 

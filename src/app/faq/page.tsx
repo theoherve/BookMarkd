@@ -1,4 +1,3 @@
-import AppShell from "@/components/layout/app-shell";
 import BackButton from "@/components/layout/back-button";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { FaqJsonLd } from "@/components/seo/faq-json-ld";
@@ -42,7 +41,7 @@ export const metadata = {
 
 const FaqPage = () => {
   return (
-    <AppShell>
+    <>
       <FaqJsonLd
         items={FAQ_ITEMS.map((item) => ({
           question: item.question,
@@ -83,7 +82,7 @@ const FaqPage = () => {
           ))}
         </dl>
       </div>
-    </AppShell>
+    </>
   );
 };
 

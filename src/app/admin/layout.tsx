@@ -14,10 +14,11 @@ export const metadata: Metadata = {
 };
 
 const AdminLayout = async ({ children }: { children: React.ReactNode }) => {
-  const session = await getCurrentSession();
+  const [session, pendingEditorialCount] = await Promise.all([
+    getCurrentSession(),
+    getPendingEditorialListsCount(),
+  ]);
   if (!session?.user?.isAdmin) redirect("/");
-
-  const pendingEditorialCount = await getPendingEditorialListsCount();
 
   return (
     <AdminLayoutShell pendingEditorialCount={pendingEditorialCount}>

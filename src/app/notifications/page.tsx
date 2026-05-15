@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Bell } from "lucide-react";
 
-import AppShell from "@/components/layout/app-shell";
 import BackButton from "@/components/layout/back-button";
 import NotificationsList from "@/components/notifications/notifications-list";
 import WrappedAdminBanner from "@/components/wrapped/WrappedAdminBanner";
@@ -17,7 +16,7 @@ const NotificationsPage = async () => {
   const isAdmin = await getCurrentUserAdminStatus();
 
   return (
-    <AppShell>
+    <>
       <div className="mx-auto w-full max-w-2xl space-y-6">
         <BackButton ariaLabel="Retour à la page précédente" />
 
@@ -42,7 +41,7 @@ const NotificationsPage = async () => {
 
         <NotificationsList />
       </div>
-    </AppShell>
+    </>
   );
 };
 

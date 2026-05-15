@@ -9,6 +9,7 @@ import { OrganizationJsonLd } from "@/components/seo/organization-json-ld";
 import QueryProvider from "@/components/providers/query-provider";
 import { PageViewTracker } from "@/components/analytics/page-view-tracker";
 import { Analytics } from "@vercel/analytics/next";
+import AppShellGate from "@/components/layout/app-shell-gate";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -87,7 +88,9 @@ const RootLayout = ({ children }: RootLayoutProps) => {
         <AuthSessionProvider>
           <QueryProvider>
             <OrganizationJsonLd />
-            <ServiceWorkerProvider>{children}</ServiceWorkerProvider>
+            <ServiceWorkerProvider>
+              <AppShellGate>{children}</AppShellGate>
+            </ServiceWorkerProvider>
             <PageViewTracker />
           </QueryProvider>
         </AuthSessionProvider>

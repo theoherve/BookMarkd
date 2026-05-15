@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 
-import AppShell from "@/components/layout/app-shell";
 import BackButton from "@/components/layout/back-button";
 import FeedClient from "@/components/feed/feed-client";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +27,7 @@ const FeedPage = async () => {
   }
 
   return (
-    <AppShell>
+    <>
       <div className="space-y-8">
         <BackButton ariaLabel="Retour à la page précédente" />
         <header className="space-y-3">
@@ -44,7 +43,7 @@ const FeedPage = async () => {
 
         <FeedClient />
       </div>
-    </AppShell>
+    </>
   );
 };
 

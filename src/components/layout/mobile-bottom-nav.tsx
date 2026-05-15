@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Bookmark, Search, List, User } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getUnreadCount } from "@/server/actions/notifications";
+import { useUnreadCount } from "@/hooks/use-unread-count";
 
 type NavItem = {
   href: string;
@@ -23,16 +22,7 @@ const navItems: NavItem[] = [
 
 const MobileBottomNav = () => {
   const pathname = usePathname();
-  const [notificationCount, setNotificationCount] = useState<number>(0);
-
-  useEffect(() => {
-    void (async () => {
-      const result = await getUnreadCount();
-      if (result.success) {
-        setNotificationCount(result.count);
-      }
-    })();
-  }, []);
+  const notificationCount = useUnreadCount();
 
   return (
     <nav

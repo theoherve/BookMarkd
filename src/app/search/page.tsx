@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import AppShell from "@/components/layout/app-shell";
 import BackButton from "@/components/layout/back-button";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
 import SearchClient from "@/components/search/search-client";
@@ -21,7 +20,7 @@ export const metadata: Metadata = {
 
 const SearchPage = () => {
   return (
-    <AppShell>
+    <>
       <div className="space-y-8">
         <div className="flex flex-wrap items-center gap-4">
           <BackButton ariaLabel="Retour à la page précédente" />
@@ -48,7 +47,7 @@ const SearchPage = () => {
           <SearchClient />
         </Suspense>
       </div>
-    </AppShell>
+    </>
   );
 };
 

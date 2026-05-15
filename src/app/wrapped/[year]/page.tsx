@@ -6,7 +6,6 @@ import { resolveSessionUserId } from "@/lib/auth/user";
 import { getWrappedStats } from "@/features/wrapped/server/get-wrapped-stats";
 import { isValidYear } from "@/lib/wrapped/utils";
 import WrappedContainer from "@/components/wrapped/WrappedContainer";
-import AppShell from "@/components/layout/app-shell";
 import BackButton from "@/components/layout/back-button";
 
 type WrappedPageProps = {
@@ -38,7 +37,7 @@ const WrappedPage = async ({ params }: WrappedPageProps) => {
 
   if (!stats) {
     return (
-      <AppShell>
+      <>
         <div className="flex min-h-screen flex-col items-center justify-center gap-6">
           <BackButton ariaLabel="Retour à la page précédente" />
           <div className="text-center">
@@ -49,7 +48,7 @@ const WrappedPage = async ({ params }: WrappedPageProps) => {
             </p>
           </div>
         </div>
-      </AppShell>
+      </>
     );
   }
 

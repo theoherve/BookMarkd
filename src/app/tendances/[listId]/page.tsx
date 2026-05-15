@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
-import AppShell from "@/components/layout/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { EditorialBookRow } from "@/components/editorial/editorial-book-row";
 import { getPublishedEditorialListById } from "@/features/editorial/server/get-published-editorial-lists";
@@ -42,7 +41,7 @@ const EditorialListDetailPage = async ({ params }: Props) => {
   const isSemester = list.periodType === "semester";
 
   return (
-    <AppShell>
+    <>
       <div className="mx-auto max-w-2xl space-y-6 px-4 py-6">
         {/* Back */}
         <Link
@@ -84,7 +83,7 @@ const EditorialListDetailPage = async ({ params }: Props) => {
           ))}
         </div>
       </div>
-    </AppShell>
+    </>
   );
 };
 

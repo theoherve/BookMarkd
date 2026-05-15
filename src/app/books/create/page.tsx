@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 
-import AppShell from "@/components/layout/app-shell";
 import BackButton from "@/components/layout/back-button";
 import BookCreateForm from "@/components/books/book-create-form";
 
@@ -31,7 +30,7 @@ const CreateBookPage = async () => {
   }
 
   return (
-    <AppShell>
+    <>
       <div className="space-y-8">
         <BackButton ariaLabel="Retour à la page précédente" />
         <header className="space-y-3">
@@ -43,7 +42,7 @@ const CreateBookPage = async () => {
 
         <BookCreateForm />
       </div>
-    </AppShell>
+    </>
   );
 };
 

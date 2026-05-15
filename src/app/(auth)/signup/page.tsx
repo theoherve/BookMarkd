@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 
-import AppShell from "@/components/layout/app-shell";
 import SignUpForm from "@/components/auth/signup-form";
 
 export const metadata: Metadata = {
@@ -11,7 +10,7 @@ export const metadata: Metadata = {
 
 const SignUpPage = () => {
   return (
-    <AppShell>
+    <>
       <div className="flex min-h-[70vh] items-center justify-center">
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-12 lg:flex-row">
           <section className="w-full space-y-6 rounded-3xl border border-border bg-card/50 p-10 shadow-sm backdrop-blur lg:w-1/2">
@@ -41,7 +40,7 @@ const SignUpPage = () => {
           </section>
         </div>
       </div>
-    </AppShell>
+    </>
   );
 };
 

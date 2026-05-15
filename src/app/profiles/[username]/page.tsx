@@ -3,7 +3,6 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 
-import AppShell from "@/components/layout/app-shell";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -122,7 +121,7 @@ const PublicProfilePage = async ({ params }: ProfilePageProps) => {
       : null;
 
   return (
-    <AppShell>
+    <>
       <div className="mb-6">
         <Breadcrumb items={[
           { label: "Accueil", href: "/" },
@@ -331,7 +330,7 @@ const PublicProfilePage = async ({ params }: ProfilePageProps) => {
           </section>
         ) : null}
       </div>
-    </AppShell>
+    </>
   );
 };
 
