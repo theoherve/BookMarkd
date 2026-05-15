@@ -139,9 +139,11 @@ const WrappedContainer = ({ stats }: WrappedContainerProps) => {
 
   if (slides.length === 0) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-[60dvh] items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">Aucune donnée disponible</h1>
+          <h1 className="text-2xl font-bold text-foreground">
+            Aucune donnée disponible
+          </h1>
           <p className="mt-2 text-muted-foreground">
             Vous n&apos;avez pas encore de statistiques pour cette année.
           </p>
@@ -150,73 +152,39 @@ const WrappedContainer = ({ stats }: WrappedContainerProps) => {
     );
   }
 
+  const isLast = currentSlide === slides.length - 1;
+
   return (
-    <div className="relative">
-      {/* Slide actuelle */}
-      <div className="relative">{slides[currentSlide]?.component}</div>
-
-      {/* Navigation */}
-      <div className="fixed bottom-8 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4">
+    <div className="flex w-full flex-col gap-4">
+      {/* Top chrome — inline, above slide */}
+      <div className="flex items-center justify-between gap-3">
         <Button
-          variant="outline"
-          size="icon"
-          onClick={handlePrevious}
-          disabled={currentSlide === 0}
-          className="h-12 w-12 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30"
-          aria-label="Slide précédente"
-        >
-          <ChevronLeft className="h-6 w-6 text-white" />
-        </Button>
-
-        {/* Barre de progression */}
-        <div className="flex items-center gap-2">
-          {slides.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentSlide(index)}
-              className={`h-2 rounded-full transition-all ${
-                index === currentSlide
-                  ? "w-8 bg-white"
-                  : "w-2 bg-white/40 hover:bg-white/60"
-              }`}
-              aria-label={`Aller à la slide ${index + 1}`}
-            />
-          ))}
-        </div>
-
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={handleNext}
-          disabled={currentSlide === slides.length - 1}
-          className="h-12 w-12 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30"
-          aria-label="Slide suivante"
-        >
-          <ChevronRight className="h-6 w-6 text-white" />
-        </Button>
-      </div>
-
-      {/* Bouton de sortie */}
-      <div className="fixed top-8 left-8 z-50">
-        <Button
-          variant="outline"
+          variant="ghost"
           size="icon"
           onClick={handleExit}
-          className="h-12 w-12 rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/30"
+          className="h-10 w-10 rounded-full border border-[#d6b087]/40 bg-[#fdfaf5]/70 text-[#2f1c11] backdrop-blur-md hover:bg-[#fdfaf5] dark:border-[#c89a6f]/30 dark:bg-[#1a1410]/70 dark:text-[#f7f1ea] dark:hover:bg-[#1a1410]"
           aria-label="Quitter le wrapped"
         >
-          <X className="h-6 w-6 text-white" />
+          <X className="h-5 w-5" />
         </Button>
+
+        {slides.length > 1 ? (
+          <div className="rounded-full border border-[#d6b087]/40 bg-[#fdfaf5]/70 px-3.5 py-1.5 text-xs font-medium tracking-wide text-[#6b5747] backdrop-blur-md dark:border-[#c89a6f]/30 dark:bg-[#1a1410]/70 dark:text-[#bda68f]">
+            {currentSlide + 1} / {slides.length}
+          </div>
+        ) : (
+          <span aria-hidden className="h-10 w-10" />
+        )}
       </div>
 
-      {/* Indicateur de slide */}
-      <div className="fixed top-8 right-8 z-50 rounded-full bg-black/20 px-4 py-2 text-sm text-white backdrop-blur-sm">
-        {currentSlide + 1} / {slides.length}
+      {/* Slide — flex-1 fills remaining viewport */}
+      <div className="flex min-h-0 flex-1 flex-col">
+        {slides[currentSlide]?.component}
       </div>
 
-      {/* Partage à la dernière slide */}
-      {currentSlide === slides.length - 1 && (
-        <div className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2">
+      {/* Bottom chrome — inline, below slide */}
+      <div className="flex flex-col items-center gap-3">
+        {isLast && (
           <WrappedShare
             year={stats.year}
             stats={{
@@ -224,8 +192,51 @@ const WrappedContainer = ({ stats }: WrappedContainerProps) => {
               favoriteCategory: stats.favoriteCategory?.name || null,
             }}
           />
-        </div>
-      )}
+        )}
+
+        {slides.length > 1 && (
+          <div className="flex items-center gap-2 rounded-full border border-[#d6b087]/40 bg-[#fdfaf5]/70 p-1.5 backdrop-blur-md dark:border-[#c89a6f]/30 dark:bg-[#1a1410]/70">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handlePrevious}
+              disabled={currentSlide === 0}
+              className="h-9 gap-1 rounded-full px-3 text-[#2f1c11] hover:bg-[#efe6dc] disabled:opacity-30 dark:text-[#f7f1ea] dark:hover:bg-[#221b15]"
+              aria-label="Slide précédente"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <span className="hidden text-sm sm:inline">Précédent</span>
+            </Button>
+
+            <div className="flex items-center gap-1.5 px-2">
+              {slides.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentSlide(index)}
+                  className={`h-1.5 rounded-full transition-all ${
+                    index === currentSlide
+                      ? "w-6 bg-[#b66f4b] dark:bg-[#eaad7e]"
+                      : "w-1.5 bg-[#d6b087]/60 hover:bg-[#d6b087] dark:bg-[#c89a6f]/40 dark:hover:bg-[#c89a6f]"
+                  }`}
+                  aria-label={`Aller à la slide ${index + 1}`}
+                />
+              ))}
+            </div>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleNext}
+              disabled={currentSlide === slides.length - 1}
+              className="h-9 gap-1 rounded-full px-3 text-[#2f1c11] hover:bg-[#efe6dc] disabled:opacity-30 dark:text-[#f7f1ea] dark:hover:bg-[#221b15]"
+              aria-label="Slide suivante"
+            >
+              <span className="hidden text-sm sm:inline">Suivant</span>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

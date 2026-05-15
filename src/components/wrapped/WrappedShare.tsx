@@ -15,16 +15,18 @@ type WrappedShareProps = {
 const WrappedShare = ({ year, stats }: WrappedShareProps) => {
   const [copied, setCopied] = useState(false);
 
-  const shareText = `📚 Mon Bookmarkd Wrapped ${year} 📚\n\n` +
-    `J'ai lu ${stats.totalBooksRead} livre${stats.totalBooksRead > 1 ? "s" : ""} cette année !\n` +
+  const shareText =
+    `Mon Bookmarkd Wrapped ${year}\n\n` +
+    `J'ai lu ${stats.totalBooksRead} livre${stats.totalBooksRead > 1 ? "s" : ""} cette année.\n` +
     (stats.favoriteCategory
-      ? `Ma catégorie préférée : ${stats.favoriteCategory}\n`
+      ? `Genre favori : ${stats.favoriteCategory}\n`
       : "") +
-    `\nDécouvrez vos statistiques sur Bookmarkd !`;
+    `\nDécouvrez les vôtres sur Bookmarkd.`;
 
-  const shareUrl = typeof window !== "undefined" 
-    ? `${window.location.origin}/wrapped/${year}`
-    : "";
+  const shareUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/wrapped/${year}`
+      : "";
 
   const handleCopy = async () => {
     try {
@@ -45,11 +47,9 @@ const WrappedShare = ({ year, stats }: WrappedShareProps) => {
           url: shareUrl,
         });
       } catch (error) {
-        // User cancelled or error occurred
         console.error("Share failed:", error);
       }
     } else {
-      // Fallback to copy
       handleCopy();
     }
   };
@@ -57,12 +57,12 @@ const WrappedShare = ({ year, stats }: WrappedShareProps) => {
   const canShare = typeof navigator !== "undefined" && navigator.share;
 
   return (
-    <div className="flex flex-wrap items-center justify-center gap-4">
+    <div className="flex flex-wrap items-center justify-center gap-3">
       {canShare && (
         <Button
           onClick={handleShare}
-          className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
           size="lg"
+          className="bg-[#2f1c11] text-[#fdfaf5] shadow-sm hover:bg-[#1f140d] dark:bg-[#c89a6f] dark:text-[#130c08] dark:hover:bg-[#b9885d]"
         >
           <Share2 className="mr-2 h-4 w-4" />
           Partager
@@ -72,12 +72,12 @@ const WrappedShare = ({ year, stats }: WrappedShareProps) => {
         onClick={handleCopy}
         variant="outline"
         size="lg"
-        className="bg-white/20 backdrop-blur-sm hover:bg-white/30"
+        className="border-[#d6b087] bg-[#fdfaf5]/80 text-[#2f1c11] backdrop-blur-sm hover:bg-[#efe6dc] dark:border-[#c89a6f]/40 dark:bg-[#1a1410]/80 dark:text-[#f7f1ea] dark:hover:bg-[#221b15]"
       >
         {copied ? (
           <>
             <Check className="mr-2 h-4 w-4" />
-            Copié !
+            Copié
           </>
         ) : (
           <>
