@@ -47,7 +47,7 @@ export const getProfileDashboard = async (
     // Étape 1 : Données utilisateur (critique, doit être récupéré en premier)
     const { data: userRow, error: userError } = await db.client
       .from("users")
-      .select("display_name, email, bio, avatar_url")
+      .select("username, display_name, email, bio, avatar_url")
       .eq("id", userId)
       .maybeSingle();
 
@@ -59,6 +59,7 @@ export const getProfileDashboard = async (
       throw new Error("Utilisateur introuvable.");
     }
     const user = db.toCamel<{
+      username: string | null;
       displayName: string | null;
       email: string | null;
       bio: string | null;
@@ -68,25 +69,40 @@ export const getProfileDashboard = async (
     // Résoudre l'URL de l'avatar avec priorité Supabase Storage
     const resolvedAvatarUrl = await getUserAvatarUrl(userId, user.avatarUrl);
 
-    // Étape 2 : Statistiques de base (3 requêtes en parallèle)
-    const [ownedListsCount, collaborativeListsCount, recommendationsCount] =
-      await Promise.all([
-        db.client
-          .from("lists")
-          .select("id", { count: "exact", head: true })
-          .eq("owner_id", userId)
-          .then((r) => r.count ?? 0),
-        db.client
-          .from("list_collaborators")
-          .select("user_id", { count: "exact", head: true })
-          .eq("user_id", userId)
-          .then((r) => r.count ?? 0),
-        db.client
-          .from("recommendations")
-          .select("user_id", { count: "exact", head: true })
-          .eq("user_id", userId)
-          .then((r) => r.count ?? 0),
-      ]);
+    // Étape 2 : Statistiques de base (5 requêtes en parallèle)
+    const [
+      ownedListsCount,
+      collaborativeListsCount,
+      recommendationsCount,
+      followersCount,
+      followingCount,
+    ] = await Promise.all([
+      db.client
+        .from("lists")
+        .select("id", { count: "exact", head: true })
+        .eq("owner_id", userId)
+        .then((r) => r.count ?? 0),
+      db.client
+        .from("list_collaborators")
+        .select("user_id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .then((r) => r.count ?? 0),
+      db.client
+        .from("recommendations")
+        .select("user_id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .then((r) => r.count ?? 0),
+      db.client
+        .from("follows")
+        .select("following_id", { count: "exact", head: true })
+        .eq("following_id", userId)
+        .then((r) => r.count ?? 0),
+      db.client
+        .from("follows")
+        .select("follower_id", { count: "exact", head: true })
+        .eq("follower_id", userId)
+        .then((r) => r.count ?? 0),
+    ]);
 
     // Étape 3 : Données de lecture (2 requêtes en parallèle)
     const [readingRows, topBooksData] = await Promise.all([
@@ -689,6 +705,8 @@ export const getProfileDashboard = async (
       }));
 
     return {
+      userId,
+      username: user.username ?? null,
       displayName: user.displayName ?? "Utilisateur·rice",
       email: user.email ?? "",
       bio: user.bio ?? null,
@@ -696,6 +714,8 @@ export const getProfileDashboard = async (
       ownedLists: ownedListsCount,
       collaborativeLists: collaborativeListsCount,
       recommendationsCount,
+      followersCount,
+      followingCount,
       readingStats,
       topBooks,
       recentActivities,

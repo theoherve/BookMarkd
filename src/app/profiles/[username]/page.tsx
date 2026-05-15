@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -19,6 +19,7 @@ import { getProfileSuggestions } from "@/features/profile/server/get-profile-sug
 import FollowRequestButton from "@/components/profile/follow-request-button";
 import ProfileCompatibilityCard from "@/components/profile/profile-compatibility-card";
 import ProfileSuggestionsSection from "@/components/profile/profile-suggestions-section";
+import ProfileHeaderStats from "@/components/profile/profile-header-stats";
 import { getFollowStatus } from "@/server/actions/follow";
 import { getCurrentSession } from "@/lib/auth/session";
 import { resolveSessionUserId } from "@/lib/auth/user";
@@ -96,9 +97,8 @@ const PublicProfilePage = async ({ params }: ProfilePageProps) => {
     notFound();
   }
 
-  // Ne pas afficher le profil si c'est le viewer lui-même (rediriger vers /profiles/me)
   if (viewerId === profile.id) {
-    return null; // Sera géré par un redirect dans le layout ou middleware
+    redirect("/profiles/me");
   }
 
   const avatarInitials = fallbackAvatarText(profile.displayName);
@@ -136,36 +136,54 @@ const PublicProfilePage = async ({ params }: ProfilePageProps) => {
         image={profile.avatarUrl}
       />
       <div className="space-y-10">
-        <header className="flex flex-col gap-6 rounded-2xl border border-border/60 bg-card/80 p-8 shadow-sm">
-          <div className="flex flex-col gap-6 md:flex-row md:items-center">
-            <div className="relative h-24 w-24 overflow-hidden rounded-full border-2 border-border bg-muted">
-              {profile.avatarUrl ? (
-                <Image
-                  src={profile.avatarUrl}
-                  alt={profile.displayName}
-                  fill
-                  className="object-cover"
-                  sizes="96px"
-                  unoptimized
-                />
-              ) : (
-                <span className="flex h-full w-full items-center justify-center text-2xl font-semibold text-foreground">
-                  {avatarInitials}
-                </span>
-              )}
+        <header className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/80 p-6 shadow-sm sm:p-8">
+          <div className="flex flex-col gap-6 md:flex-row md:items-start md:gap-8">
+            <div className="flex shrink-0 justify-center md:justify-start">
+              <div className="relative h-24 w-24 overflow-hidden rounded-full border-2 border-border bg-muted sm:h-28 sm:w-28">
+                {profile.avatarUrl ? (
+                  <Image
+                    src={profile.avatarUrl}
+                    alt={profile.displayName}
+                    fill
+                    className="object-cover"
+                    sizes="(min-width: 640px) 112px, 96px"
+                    unoptimized
+                  />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center text-2xl font-semibold text-foreground">
+                    {avatarInitials}
+                  </span>
+                )}
+              </div>
             </div>
-            <div className="flex-1 space-y-3">
-              <div>
-                <h1 className="text-3xl font-semibold text-foreground">{profile.displayName}</h1>
+
+            <div className="flex min-w-0 flex-1 flex-col gap-5">
+              <div className="space-y-1">
+                <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                  {profile.displayName}
+                </h1>
                 {profile.username ? (
                   <p className="text-sm text-muted-foreground">@{profile.username}</p>
                 ) : null}
               </div>
-              <p className="max-w-3xl text-sm text-muted-foreground">
+
+              <ProfileHeaderStats
+                userId={profile.id}
+                username={profile.username}
+                booksReadCount={profile.stats.booksRead}
+                followersCount={profile.stats.followers}
+                followingCount={profile.stats.following}
+                toReadCount={profile.stats.booksToRead}
+                readingCount={profile.stats.booksReading}
+                booksHref={`/profiles/${username}/books`}
+              />
+
+              <p className="max-w-2xl text-sm leading-relaxed text-foreground/80">
                 {profile.bio ?? "Aucune bio disponible."}
               </p>
+
               {viewerId && viewerId !== profile.id ? (
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-2">
                   <FollowRequestButton
                     targetUserId={profile.id}
                     initialStatus={followStatus}
@@ -179,61 +197,23 @@ const PublicProfilePage = async ({ params }: ProfilePageProps) => {
         <section
           className={
             profileSuggestions
-              ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
-              : "grid gap-4 md:grid-cols-3"
+              ? "grid gap-4 md:grid-cols-2"
+              : "grid gap-4"
           }
         >
           <Link
-            href={`/profiles/${username}/books`}
-            className="block transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg"
-            aria-label={`Voir les ${profile.stats.booksRead} livre${profile.stats.booksRead > 1 ? "s" : ""} lus`}
-          >
-            <Card className="border-border/60 bg-card/80 backdrop-blur cursor-pointer h-full transition-shadow hover:shadow-md">
-              <CardHeader>
-                <CardTitle className="text-sm font-semibold uppercase text-muted-foreground">
-                  Livres lus
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <p className="text-4xl font-semibold text-foreground">{profile.stats.booksRead}</p>
-                <CardDescription className="text-sm text-muted-foreground">
-                  Lectures terminées
-                </CardDescription>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link
-            href={`/profiles/${username}/followers`}
-            className="block transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg"
-            aria-label={`Voir les ${profile.stats.followers} abonné${profile.stats.followers > 1 ? "s" : ""}`}
-          >
-            <Card className="border-border/60 bg-card/80 backdrop-blur cursor-pointer h-full transition-shadow hover:shadow-md">
-              <CardHeader>
-                <CardTitle className="text-sm font-semibold uppercase text-muted-foreground">
-                  Abonnés
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <p className="text-4xl font-semibold text-foreground">{profile.stats.followers}</p>
-                <CardDescription className="text-sm text-muted-foreground">
-                  Personnes qui suivent ce profil
-                </CardDescription>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link
             href={`/profiles/${username}/lists`}
-            className="block transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg"
+            className="group block cursor-pointer rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             aria-label={`Voir les ${profile.stats.listsOwned} liste${profile.stats.listsOwned > 1 ? "s" : ""} publiques`}
           >
-            <Card className="border-border/60 bg-card/80 backdrop-blur cursor-pointer h-full transition-shadow hover:shadow-md">
+            <Card className="h-full cursor-pointer border-border/60 bg-card/80 backdrop-blur transition-all group-hover:-translate-y-0.5 group-hover:shadow-md">
               <CardHeader>
-                <CardTitle className="text-sm font-semibold uppercase text-muted-foreground">
+                <CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                   Listes publiques
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <p className="text-4xl font-semibold text-foreground">{profile.stats.listsOwned}</p>
+                <p className="text-4xl font-semibold tabular-nums text-foreground">{profile.stats.listsOwned}</p>
                 <CardDescription className="text-sm text-muted-foreground">
                   Collections partagées
                 </CardDescription>
