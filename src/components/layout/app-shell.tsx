@@ -42,6 +42,7 @@ const headerNavLinks: NavigationLink[] = [
   { href: "/", label: "Accueil", ariaLabel: "Retourner à l'accueil" },
   { href: "/blog", label: "Blog", ariaLabel: "Voir le blog BookMarkd" },
   { href: "/search", label: "Recherche", ariaLabel: "Ouvrir la recherche" },
+  { href: "/discover", label: "Découvrir", ariaLabel: "Découvrir des livres" },
   { href: "/lists", label: "Listes", ariaLabel: "Consulter vos listes" },
 
 ];
