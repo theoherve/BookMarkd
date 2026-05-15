@@ -3,9 +3,37 @@ name: PWA Tests & Lighthouse
 on:
   pull_request:
     branches: [main, develop]
+    paths:
+      - "public/manifest.webmanifest"
+      - "public/sw.js"
+      - "public/workbox-*.js"
+      - "tests/e2e/pwa-*.spec.ts"
+      - "next.config.*"
+      - "playwright.config.ts"
+      - "scripts/lighthouse-pwa.ts"
+      - "scripts/generate-pwa-icons.ts"
+      - ".github/workflows/pwa-tests.yml"
+      - "package.json"
+      - "pnpm-lock.yaml"
   push:
     branches: [main, develop]
+    paths:
+      - "public/manifest.webmanifest"
+      - "public/sw.js"
+      - "public/workbox-*.js"
+      - "tests/e2e/pwa-*.spec.ts"
+      - "next.config.*"
+      - "playwright.config.ts"
+      - "scripts/lighthouse-pwa.ts"
+      - "scripts/generate-pwa-icons.ts"
+      - ".github/workflows/pwa-tests.yml"
+      - "package.json"
+      - "pnpm-lock.yaml"
   workflow_dispatch:
+
+concurrency:
+  group: pwa-tests-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lighthouse:
@@ -101,8 +129,26 @@ jobs:
         run: pnpm install --frozen-lockfile
         continue-on-error: false
 
+      - name: Get Playwright version
+        id: playwright-version
+        run: |
+          version=$(node -p "require('./node_modules/@playwright/test/package.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
       - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: pnpm playwright:install --with-deps
+
+      - name: Install Playwright system deps (cache hit)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps
 
       - name: Build application
         run: pnpm build
