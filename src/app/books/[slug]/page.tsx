@@ -512,7 +512,7 @@ const BookPage = async ({ params }: BookPageProps) => {
   const reviews = mapReviews(book.reviews, viewerId, viewerFollowingIds);
   const [readers, similarBooks] = await Promise.all([
     getBookReaders(book.id),
-    getSimilarBooks(book.id, 6),
+    getSimilarBooks(book.id, 6, viewerId),
   ]);
 
   // Récupérer les feelings avec les followingIds corrects

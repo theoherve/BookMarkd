@@ -14,12 +14,27 @@ const DEFAULT_LIMIT = 6;
 /**
  * Récupère les livres similaires au livre donné, présents dans la bibliothèque Bookmarkd.
  * Critères : tags en commun (prioritaire), puis même auteur pour compléter.
+ * Si viewerId fourni, exclut les livres avec lesquels le viewer a déjà une relation (user_books).
  */
 export const getSimilarBooks = async (
   bookId: string,
   limit: number = DEFAULT_LIMIT,
+  viewerId?: string | null,
 ): Promise<SimilarBook[]> => {
   try {
+    let viewerBookIds = new Set<string>();
+    if (viewerId) {
+      const { data: viewerBooks } = await db.client
+        .from("user_books")
+        .select("book_id")
+        .eq("user_id", viewerId);
+      viewerBookIds = new Set(
+        (viewerBooks ?? [])
+          .map((r) => (r as { book_id: string | null }).book_id)
+          .filter((id): id is string => Boolean(id)),
+      );
+    }
+
     // 1. Infos du livre courant (auteur) et ses tags
     const { data: bookRow, error: bookErr } = await db.client
       .from("books")
@@ -75,6 +90,7 @@ export const getSimilarBooks = async (
           (rel: { book_id?: string | null; tag?: unknown }) => {
             const otherBookId = rel.book_id;
             if (!otherBookId || otherBookId === bookId) return;
+            if (viewerBookIds.has(otherBookId)) return;
 
             const tagName = getTagName(rel.tag);
             if (!tagName) return;
@@ -112,12 +128,13 @@ export const getSimilarBooks = async (
         .select("id")
         .eq("author", author)
         .neq("id", bookId)
-        .limit(limit);
+        .limit(limit + viewerBookIds.size);
 
       if (!authorErr && sameAuthorRows) {
         const existingSet = new Set(similarBookIds);
         for (const row of sameAuthorRows as Array<{ id: string }>) {
           if (existingSet.has(row.id)) continue;
+          if (viewerBookIds.has(row.id)) continue;
           similarBookIds.push(row.id);
           if (!scoreMap.has(row.id)) {
             scoreMap.set(row.id, { score: 0, matchingTags: [] });
