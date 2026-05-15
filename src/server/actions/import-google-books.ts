@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import db from "@/lib/supabase/db";
 import { fetchGoogleBooksDetails } from "@/lib/google-books";
 import { incrementGoogleBooksQuota, canUseGoogleBooks } from "@/lib/google-books/quota-tracker";
+import { generateBookSlug } from "@/lib/slug";
 
 type ImportPayload = {
   googleBooksId: string;
@@ -68,15 +69,65 @@ export const importGoogleBooksBook = async (
         .select("id")
         .eq("isbn", payload.isbn)
         .maybeSingle();
-      
+
       if (existingByIsbn?.id) {
         // Mettre à jour avec le google_books_id si pas déjà présent
         await db.client
           .from("books")
           .update({ google_books_id: payload.googleBooksId })
           .eq("id", existingByIsbn.id);
-        
+
         return { success: true, bookId: existingByIsbn.id as string };
+      }
+    }
+
+    // Vérifier par slug (titre + auteur normalisés) pour attraper les doublons
+    // sans ISBN partagé et sans google_books_id identique (cas fréquent quand
+    // Google Books renvoie deux volumes distincts pour la même œuvre).
+    // Le slug en DB est maintenu par le trigger book_compute_slug, qui doit
+    // produire la même valeur que generateBookSlug côté JS.
+    const computedSlug = generateBookSlug(payload.title, payload.author);
+    if (computedSlug && computedSlug !== "-par-") {
+      const { data: existingBySlug } = await db.client
+        .from("books")
+        .select("id, isbn, google_books_id, cover_url, summary, publisher, language, publication_year")
+        .eq("slug", computedSlug)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (existingBySlug?.id) {
+        // Back-fill metadata manquant sur le livre existant.
+        const updates: Record<string, unknown> = {};
+        if (!existingBySlug.google_books_id) {
+          updates.google_books_id = payload.googleBooksId;
+        }
+        if (!existingBySlug.isbn && payload.isbn) {
+          updates.isbn = payload.isbn;
+        }
+        if (!existingBySlug.cover_url && payload.coverUrl) {
+          updates.cover_url = payload.coverUrl;
+        }
+        if (!existingBySlug.summary && payload.summary) {
+          updates.summary = payload.summary;
+        }
+        if (!existingBySlug.publisher && payload.publisher) {
+          updates.publisher = payload.publisher;
+        }
+        if (!existingBySlug.language && payload.language) {
+          updates.language = payload.language;
+        }
+        if (!existingBySlug.publication_year && payload.publicationYear) {
+          updates.publication_year = payload.publicationYear;
+        }
+        if (Object.keys(updates).length > 0) {
+          await db.client
+            .from("books")
+            .update(updates)
+            .eq("id", existingBySlug.id);
+        }
+
+        return { success: true, bookId: existingBySlug.id as string };
       }
     }
 
