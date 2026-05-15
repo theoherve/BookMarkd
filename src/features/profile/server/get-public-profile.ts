@@ -240,14 +240,14 @@ export type PublicProfileBookRead = {
 };
 
 export const getPublicProfileBooksRead = async (
-  username: string,
+  usernameOrId: string,
 ): Promise<{ displayName: string; books: PublicProfileBookRead[] } | null> => {
   try {
-    const { data: userRow, error: userError } = await db.client
-      .from("users")
-      .select("id, display_name")
-      .eq("username", username)
-      .maybeSingle();
+    const query = db.client.from("users").select("id, display_name");
+    const { data: userRow, error: userError } = await (isUuid(usernameOrId)
+      ? query.eq("id", usernameOrId.trim())
+      : query.eq("username", usernameOrId)
+    ).maybeSingle();
     if (userError || !userRow) return null;
 
     const user = db.toCamel<{ id: string; displayName: string }>(userRow);

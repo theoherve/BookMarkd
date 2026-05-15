@@ -57,6 +57,8 @@ export type ReadListBook = {
 };
 
 export type ProfileDashboard = {
+  userId: string;
+  username: string | null;
   displayName: string;
   email: string;
   bio: string | null;
@@ -64,6 +66,8 @@ export type ProfileDashboard = {
   ownedLists: number;
   collaborativeLists: number;
   recommendationsCount: number;
+  followersCount: number;
+  followingCount: number;
   readingStats: ReadingStats;
   topBooks: TopBook[];
   recentActivities: RecentActivity[];
