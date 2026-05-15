@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Bookmark, Search, List, User } from "lucide-react";
+import { Bookmark, Search, Sparkles, List, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUnreadCount } from "@/hooks/use-unread-count";
 
@@ -16,6 +16,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { href: "/", label: "Accueil", icon: Bookmark, ariaLabel: "Retourner à l'accueil" },
   { href: "/search", label: "Recherche", icon: Search, ariaLabel: "Ouvrir la recherche" },
+  { href: "/discover", label: "Découvrir", icon: Sparkles, ariaLabel: "Découvrir des livres" },
   { href: "/lists", label: "Listes", icon: List, ariaLabel: "Consulter vos listes" },
   { href: "/profiles/me", label: "Profil", icon: User, ariaLabel: "Voir votre profil" },
 ];
