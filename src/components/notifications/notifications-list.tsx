@@ -71,13 +71,14 @@ const renderNotification = (n: UiNotification) => {
 
   if (n.type === "review_like") {
     const bookTitle = (n.payload.bookTitle as string) ?? "un livre";
+    const likerName = (n.payload.likerName as string) ?? "Quelqu'un";
     return (
       <>
         <CardTitle className="text-sm font-medium">
           Nouveau like sur votre review
         </CardTitle>
         <CardDescription className="text-sm">
-          Quelqu&apos;un a liké votre review sur « {bookTitle} ».
+          {likerName} a liké votre review sur « {bookTitle} ».
         </CardDescription>
         {common}
       </>
@@ -357,7 +358,7 @@ const NotificationsList = () => {
       </div>
       <div className="space-y-3">
         {notifications.map((n) => {
-          // Construire l'URL du profil pour follow et follow_request
+          // Construire l'URL cliquable pour la carte (follow, follow_request, review_like)
           let profileUrl: string | null = null;
           let profileName: string | null = null;
 
@@ -375,6 +376,17 @@ const NotificationsList = () => {
             profileUrl = requesterId
               ? `/profiles/${requesterUsername ?? requesterId}`
               : null;
+          } else if (n.type === "review_like") {
+            const bookTitle = (n.payload.bookTitle as string) ?? "";
+            const bookAuthor = (n.payload.bookAuthor as string) ?? "";
+            const reviewId = (n.payload.reviewId as string) ?? "";
+            profileName = (n.payload.bookTitle as string) ?? null;
+            if (bookTitle && bookAuthor) {
+              const slug = generateBookSlug(bookTitle, bookAuthor);
+              profileUrl = reviewId
+                ? `/books/${slug}#review-${reviewId}`
+                : `/books/${slug}#reviews`;
+            }
           }
 
           const isAccepted = acceptedRequests[n.id];
@@ -495,14 +507,17 @@ const NotificationsList = () => {
             </Card>
           );
 
-          // Si la carte a une URL de profil et qu'on n'est PAS en état "accepté" (pour ne pas interférer avec les boutons)
+          // Si la carte a une URL cliquable et qu'on n'est PAS en état "accepté" (pour ne pas interférer avec les boutons)
           if (profileUrl && !isAccepted) {
+            const ariaLabel = n.type === "review_like"
+              ? `Voir votre review sur ${profileName ?? "ce livre"}`
+              : `Voir le profil de ${profileName ?? "l'utilisateur"}`;
             return (
               <Link
                 key={n.id}
                 href={profileUrl}
                 className="block"
-                aria-label={`Voir le profil de ${profileName ?? "l'utilisateur"}`}
+                aria-label={ariaLabel}
                 onClick={(e) => {
                   const target = e.target as HTMLElement;
                   if (target.closest("button")) {

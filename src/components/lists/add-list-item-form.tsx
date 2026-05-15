@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 import { addBookToList } from "@/server/actions/lists";
 import { importGoogleBooksBook } from "@/server/actions/import-google-books";
@@ -15,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { formatRating } from "@/lib/utils";
+import { generateBookSlug } from "@/lib/slug";
 
 type AddListItemFormProps = {
   listId: string;
@@ -166,6 +168,10 @@ const AddListItemForm = ({
             <div className="space-y-2 max-h-[400px] overflow-y-auto">
               {books.map((book) => {
                 const isAdding = addingBookId === book.id;
+                const bookHref =
+                  book.source === "supabase"
+                    ? `/books/${generateBookSlug(book.title, book.author)}`
+                    : null;
                 return (
                   <div
                     key={book.id}
@@ -189,7 +195,19 @@ const AddListItemForm = ({
                     <div className="flex flex-1 flex-col gap-2">
                       <div>
                         <h4 className="font-semibold text-sm text-foreground">
-                          {book.title}
+                          {bookHref ? (
+                            <Link
+                              href={bookHref}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-accent rounded-sm"
+                              aria-label={`Voir la fiche de ${book.title}`}
+                            >
+                              {book.title}
+                            </Link>
+                          ) : (
+                            book.title
+                          )}
                         </h4>
                         <p className="text-xs text-muted-foreground">
                           {book.author}

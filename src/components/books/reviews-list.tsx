@@ -287,7 +287,7 @@ const ReviewItem = ({
   if (isDeleted) return null;
 
   return (
-    <article className="space-y-4 rounded-3xl border border-border/50 bg-card/70 p-6">
+    <article id={`review-${review.id}`} className="space-y-4 scroll-mt-24 rounded-3xl border border-border/50 bg-card/70 p-6">
       <header className="flex items-start gap-4">
         <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-border/50 bg-muted">
           {review.user.avatarUrl ? (
