@@ -40,34 +40,44 @@ export const getPublicLists = async (
     }>(row),
   );
 
-  const summaries: PublicListSummary[] = [];
+  const listIds = lists.filter((l) => l.owner).map((l) => l.id);
+  if (listIds.length === 0) return [];
 
-  for (const list of lists) {
-    if (!list.owner) continue;
+  // Une seule query pour tous les list_items, group côté JS
+  const { data: itemRows } = await db.client
+    .from("list_items")
+    .select("list_id")
+    .in("list_id", listIds);
 
-    const { count } = await db.client
-      .from("list_items")
-      .select("id", { count: "exact", head: true })
-      .eq("list_id", list.id);
-
-    const resolvedAvatarUrl = await getUserAvatarUrl(
-      list.owner.id,
-      list.owner.avatarUrl,
-    );
-
-    summaries.push({
-      id: list.id,
-      title: list.title,
-      description: list.description,
-      itemCount: count ?? 0,
-      updatedAt: list.updatedAt,
-      owner: {
-        id: list.owner.id,
-        displayName: list.owner.displayName,
-        avatarUrl: resolvedAvatarUrl,
-      },
-    });
+  const countsByListId = new Map<string, number>();
+  for (const row of (itemRows ?? []) as Array<{ list_id: string }>) {
+    countsByListId.set(row.list_id, (countsByListId.get(row.list_id) ?? 0) + 1);
   }
+
+  // Resolve avatars en parallèle
+  const summaries = await Promise.all(
+    lists
+      .filter((l) => l.owner)
+      .map(async (list) => {
+        const owner = list.owner!;
+        const resolvedAvatarUrl = await getUserAvatarUrl(
+          owner.id,
+          owner.avatarUrl,
+        );
+        return {
+          id: list.id,
+          title: list.title,
+          description: list.description,
+          itemCount: countsByListId.get(list.id) ?? 0,
+          updatedAt: list.updatedAt,
+          owner: {
+            id: owner.id,
+            displayName: owner.displayName,
+            avatarUrl: resolvedAvatarUrl,
+          },
+        } satisfies PublicListSummary;
+      }),
+  );
 
   return summaries;
 };

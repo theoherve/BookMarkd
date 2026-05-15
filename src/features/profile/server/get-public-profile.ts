@@ -75,29 +75,66 @@ export const getPublicProfile = async (
       bio: string | null;
     }>(userRow);
 
-    // Résoudre l'URL de l'avatar avec priorité Supabase Storage
-    const resolvedAvatarUrl = await getUserAvatarUrl(user.id, user.avatarUrl);
-
-    // 2) Tous les user_books avec jointure book (pour stats correctes et affichage de tous les livres)
-    const { data: userBooksRows, error: userBooksError } = await db.client
-      .from("user_books")
-      .select(
-        `
-        status,
-        rating,
-        updated_at,
-        book:book_id (
-          id,
-          title,
-          author,
-          cover_url
+    // Sections 2-6 en parallèle (toutes indépendantes du user.id fetch ci-dessus)
+    const [
+      resolvedAvatarUrl,
+      userBooksResult,
+      topBooksResult,
+      listsResult,
+      followersResult,
+      followingResult,
+      publicReviewsResult,
+    ] = await Promise.all([
+      getUserAvatarUrl(user.id, user.avatarUrl),
+      db.client
+        .from("user_books")
+        .select(
+          `
+          status,
+          rating,
+          updated_at,
+          book:book_id (
+            id,
+            title,
+            author,
+            cover_url
+          )
+        `,
         )
-      `,
-      )
-      .eq("user_id", user.id)
-      .order("updated_at", { ascending: false });
-    if (userBooksError) throw userBooksError;
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false }),
+      db.client
+        .from("user_top_books")
+        .select(
+          `
+          position,
+          book:book_id (
+            id,
+            title,
+            author,
+            cover_url
+          )
+        `,
+        )
+        .eq("user_id", user.id)
+        .order("position", { ascending: true }),
+      db.client
+        .from("lists")
+        .select("id, title, description")
+        .eq("owner_id", user.id)
+        .eq("visibility", "public")
+        .limit(10),
+      db.client.from("follows").select("following_id", { count: "exact", head: true }).eq("following_id", user.id),
+      db.client.from("follows").select("follower_id", { count: "exact", head: true }).eq("follower_id", user.id),
+      db.client
+        .from("reviews")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("visibility", "public"),
+    ]);
 
+    const { data: userBooksRows, error: userBooksError } = userBooksResult;
+    if (userBooksError) throw userBooksError;
     const userBooks = (userBooksRows ?? []).map((row) =>
       db.toCamel<{
         status: "to_read" | "reading" | "finished";
@@ -107,22 +144,7 @@ export const getPublicProfile = async (
       }>(row),
     );
 
-    // 3) Top books
-    const { data: topBooksRows, error: topBooksError } = await db.client
-      .from("user_top_books")
-      .select(
-        `
-        position,
-        book:book_id (
-          id,
-          title,
-          author,
-          cover_url
-        )
-      `,
-      )
-      .eq("user_id", user.id)
-      .order("position", { ascending: true });
+    const { data: topBooksRows, error: topBooksError } = topBooksResult;
     if (topBooksError) throw topBooksError;
 
     const topBooks = (topBooksRows ?? [])
@@ -141,20 +163,12 @@ export const getPublicProfile = async (
         position: r.position,
       }));
 
-    // 4) Public lists owned
-    const { data: listsRows, error: listsError } = await db.client
-      .from("lists")
-      .select("id, title, description")
-      .eq("owner_id", user.id)
-      .eq("visibility", "public")
-      .limit(10);
+    const { data: listsRows, error: listsError } = listsResult;
     if (listsError) throw listsError;
-
     const lists = db.toCamel<Array<{ id: string; title: string; description: string | null }>>(
       listsRows ?? [],
     );
 
-    // Count items per list
     const listIds = lists.map((l) => l.id);
     const itemsCountByList = new Map<string, number>();
     if (listIds.length > 0) {
@@ -169,22 +183,9 @@ export const getPublicProfile = async (
       }
     }
 
-    // 5) Followers / Following counts
-    const [{ data: followersRows }, { data: followingRows }] = await Promise.all([
-      db.client.from("follows").select("following_id").eq("following_id", user.id),
-      db.client.from("follows").select("follower_id").eq("follower_id", user.id),
-    ]);
-    const followers = followersRows?.length ?? 0;
-    const following = followingRows?.length ?? 0;
-
-    // 6) Public reviews count
-    const { data: publicReviewsRows, error: reviewsError } = await db.client
-      .from("reviews")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("visibility", "public");
-    if (reviewsError) throw reviewsError;
-    const publicReviewsCount = publicReviewsRows?.length ?? 0;
+    const followers = followersResult.count ?? 0;
+    const following = followingResult.count ?? 0;
+    const publicReviewsCount = publicReviewsResult.count ?? 0;
 
     const booksRead = userBooks.filter((ub) => ub.status === "finished").length;
     const booksReading = userBooks.filter((ub) => ub.status === "reading").length;

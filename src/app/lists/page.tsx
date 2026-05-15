@@ -1,7 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 
-import AppShell from "@/components/layout/app-shell";
 import BackButton from "@/components/layout/back-button";
 import PublicListCard from "@/components/lists/public-list-card";
 
@@ -20,7 +19,7 @@ const ListsPage = async () => {
   const publicLists = await getPublicLists();
 
   return (
-    <AppShell>
+    <>
       <div className="space-y-8">
         <BackButton ariaLabel="Retour à la page précédente" />
         <header className="flex flex-col gap-3">
@@ -55,7 +54,7 @@ const ListsPage = async () => {
           </div>
         )}
       </div>
-    </AppShell>
+    </>
   );
 };
 

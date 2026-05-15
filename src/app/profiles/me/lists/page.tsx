@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { ArrowLeft, Globe, Lock, Users } from "lucide-react";
 import type { Metadata } from "next";
 
-import AppShell from "@/components/layout/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,7 +49,7 @@ const MyListsPage = async () => {
   const collaboratorLists = lists.filter((l) => l.viewerRole !== "owner");
 
   return (
-    <AppShell>
+    <>
       <div className="space-y-8">
         <div className="flex flex-col gap-4">
           <Link
@@ -193,7 +192,7 @@ const MyListsPage = async () => {
           </section>
         ) : null}
       </div>
-    </AppShell>
+    </>
   );
 };
 

@@ -1,15 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import { usePathname } from "next/navigation";
 
 type ServiceWorkerProviderProps = {
   children: React.ReactNode;
 };
 
 const ServiceWorkerProvider = ({ children }: ServiceWorkerProviderProps) => {
-  const pathname = usePathname();
-
   useEffect(() => {
     const isPWAEnabled =
       process.env.NEXT_PUBLIC_ENABLE_PWA === "true" ||
@@ -57,7 +54,7 @@ const ServiceWorkerProvider = ({ children }: ServiceWorkerProviderProps) => {
 
       void registerServiceWorker();
     }
-  }, [pathname]);
+  }, []);
 
   return <>{children}</>;
 };

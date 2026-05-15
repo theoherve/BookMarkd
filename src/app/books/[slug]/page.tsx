@@ -1,8 +1,8 @@
+import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import Image from "next/image";
 
-import AppShell from "@/components/layout/app-shell";
 import BackButton from "@/components/layout/back-button";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
 import db from "@/lib/supabase/db";
@@ -187,17 +187,19 @@ const getBookDetail = async (
       // Recherche par ID (rétrocompatibilité)
       targetBookId = bookId;
     } else {
-      // Recherche par slug (titre + auteur)
-      const { data: allBooks, error: booksError } = await db.client
+      // Lookup direct par slug indexé (rempli par trigger SQL)
+      const { data: slugMatch, error: slugError } = await db.client
         .from("books")
-        .select("id, title, author")
-        .limit(10000);
-      
-      if (booksError) {
-        throw booksError;
+        .select("id")
+        .eq("slug", slug)
+        .limit(1)
+        .maybeSingle();
+
+      if (slugError) {
+        throw slugError;
       }
 
-      if (!allBooks || allBooks.length === 0) {
+      if (!slugMatch) {
         return {
           book: null,
           viewer: {
@@ -207,23 +209,7 @@ const getBookDetail = async (
         };
       }
 
-      // Trouver le livre dont le slug correspond
-      const matchingBook = allBooks.find((book: { id: string; title: string; author: string }) => {
-        const bookSlug = generateBookSlug(book.title, book.author);
-        return bookSlug === slug;
-      });
-
-      if (!matchingBook) {
-        return {
-          book: null,
-          viewer: {
-            status: null,
-            rating: null,
-          },
-        };
-      }
-
-      targetBookId = matchingBook.id;
+      targetBookId = slugMatch.id;
     }
 
     if (!targetBookId) {
@@ -453,12 +439,127 @@ export const generateMetadata = async ({
   };
 };
 
+type ReadersSlotProps = { bookId: string };
+
+const ReadersSlot = async ({ bookId }: ReadersSlotProps) => {
+  const readers = await getBookReaders(bookId);
+  return <BookReadersList readers={readers} />;
+};
+
+type FeelingsSlotProps = {
+  bookId: string;
+  viewerId: string | null;
+};
+
+const computeViewerFollowingIds = async (
+  bookId: string,
+  viewerId: string,
+  reviewAuthorIds: string[],
+): Promise<Set<string>> => {
+  const authorIds = new Set<string>(reviewAuthorIds);
+  const allFeelingsTemp = await getBookFeelings(bookId, viewerId, undefined);
+  allFeelingsTemp.forEach((f) => authorIds.add(f.userId));
+  if (authorIds.size === 0) return new Set();
+  const { data: followsRows } = await db.client
+    .from("follows")
+    .select("following_id")
+    .eq("follower_id", viewerId)
+    .in("following_id", Array.from(authorIds));
+  return new Set((followsRows ?? []).map((row: { following_id: string }) => row.following_id));
+};
+
+const FeelingsSlot = async ({ bookId, viewerId }: FeelingsSlotProps) => {
+  let viewerFollowingIds: Set<string> | undefined;
+  if (viewerId) {
+    viewerFollowingIds = await computeViewerFollowingIds(bookId, viewerId, []);
+  }
+  const [availableKeywords, allFeelings, viewerFeelingsData] = await Promise.all([
+    getAllFeelingKeywords(),
+    getBookFeelings(bookId, viewerId, viewerFollowingIds),
+    viewerId
+      ? getViewerFeelings(bookId, viewerId)
+      : Promise.resolve({ keywordIds: [], visibility: "public" as const }),
+  ]);
+  return (
+    <BookFeelingsSection
+      bookId={bookId}
+      availableKeywords={availableKeywords}
+      viewerFeelings={viewerFeelingsData.keywordIds}
+      viewerFeelingsVisibility={viewerFeelingsData.visibility}
+      allFeelings={allFeelings}
+      viewerId={viewerId}
+    />
+  );
+};
+
+type SimilarSlotProps = { bookId: string; bookTitle: string; viewerId: string | null };
+
+const SimilarSlot = async ({ bookId, bookTitle, viewerId }: SimilarSlotProps) => {
+  const similarBooks = await getSimilarBooks(bookId, 6, viewerId);
+  if (similarBooks.length === 0) return null;
+  return (
+    <section className="space-y-6">
+      <SimilarBooksSection books={similarBooks} currentBookTitle={bookTitle} />
+    </section>
+  );
+};
+
+type ReviewsSlotProps = {
+  bookId: string;
+  reviews: RawBook["reviews"];
+  viewerId: string | null;
+};
+
+const ReviewsSlot = async ({ bookId, reviews, viewerId }: ReviewsSlotProps) => {
+  let viewerFollowingIds: Set<string> | undefined;
+  if (viewerId) {
+    const reviewAuthorIds = (reviews ?? [])
+      .map((r) => r.user?.[0]?.id)
+      .filter((id): id is string => Boolean(id));
+    viewerFollowingIds = await computeViewerFollowingIds(bookId, viewerId, reviewAuthorIds);
+  }
+  const mapped = mapReviews(reviews, viewerId, viewerFollowingIds);
+  return (
+    <>
+      <ReviewForm bookId={bookId} />
+      <ReviewsList bookId={bookId} reviews={mapped} viewerId={viewerId} />
+    </>
+  );
+};
+
+type SuggestSlotProps = {
+  viewerId: string;
+  book: { id: string; title: string; author: string };
+};
+
+const SuggestSlot = async ({ viewerId, book }: SuggestSlotProps) => {
+  const following = await getFollowing(viewerId);
+  return (
+    <SuggestBookToFriendButton
+      book={book}
+      followingList={following}
+      showLabel
+      className="min-w-0 flex-1"
+    />
+  );
+};
+
+const SectionSkeleton = ({ label }: { label?: string }) => (
+  <div className="space-y-3" aria-label={label}>
+    <div className="h-6 w-1/3 animate-pulse rounded-md bg-muted/70" />
+    <div className="h-24 animate-pulse rounded-xl bg-muted/40" />
+  </div>
+);
+
 const BookPage = async ({ params }: BookPageProps) => {
   const { slug } = await params;
   const session = await getCurrentSession();
   const viewerId = session?.user?.id ? String(session.user.id) : null;
 
-  const { book, viewer } = await getBookDetail(slug, viewerId);
+  const [{ book, viewer }, isAdmin] = await Promise.all([
+    getBookDetail(slug, viewerId),
+    isUserAdmin(viewerId),
+  ]);
 
   if (!book) {
     notFound();
@@ -475,64 +576,12 @@ const BookPage = async ({ params }: BookPageProps) => {
 
   const tags =
     book.book_tags?.map((relation) => relation.tag).filter(Boolean) ?? [];
-  
-  // Préparer l'ensemble des auteurs (reviews + feelings) pour vérifier les relations de suivi
-  let viewerFollowingIds: Set<string> | undefined = undefined;
-  if (viewerId) {
-    const authorIds = new Set<string>();
-    
-    // Ajouter les auteurs des reviews
-    if (Array.isArray(book.reviews) && book.reviews.length > 0) {
-      book.reviews.forEach((r) => {
-        const id = r.user?.[0]?.id;
-        if (id) authorIds.add(id);
-      });
-    }
-    
-    // Récupérer les feelings pour obtenir aussi leurs auteurs
-    const allFeelingsTemp = await getBookFeelings(book.id, viewerId, undefined);
-    allFeelingsTemp.forEach((f) => {
-      authorIds.add(f.userId);
-    });
-    
-    if (authorIds.size > 0) {
-      const { data: followsRows } = await db.client
-        .from("follows")
-        .select("following_id")
-        .eq("follower_id", viewerId)
-        .in("following_id", Array.from(authorIds));
-      const ids =
-        (followsRows ?? []).map(
-          (row: { following_id: string }) => row.following_id,
-        ) ?? [];
-      viewerFollowingIds = new Set(ids);
-    }
-  }
-  
-  const reviews = mapReviews(book.reviews, viewerId, viewerFollowingIds);
-  const [readers, similarBooks] = await Promise.all([
-    getBookReaders(book.id),
-    getSimilarBooks(book.id, 6, viewerId),
-  ]);
-
-  // Récupérer les feelings avec les followingIds corrects
-  const [availableKeywords, allFeelings, viewerFeelingsData, followingForRecommend] = await Promise.all([
-    getAllFeelingKeywords(),
-    getBookFeelings(book.id, viewerId, viewerFollowingIds),
-    viewerId ? getViewerFeelings(book.id, viewerId) : Promise.resolve({ keywordIds: [], visibility: "public" as const }),
-    viewerId ? getFollowing(viewerId) : Promise.resolve([]),
-  ]);
-
-  const viewerFeelings = viewerFeelingsData.keywordIds;
-  const viewerFeelingsVisibility = viewerFeelingsData.visibility;
-
-  const isAdmin = await isUserAdmin(viewerId);
 
   const canonicalSlug = generateBookSlug(book.title, book.author);
   const canonicalUrl = `https://bookmarkd.app/books/${canonicalSlug}`;
 
   return (
-    <AppShell>
+    <>
       <BookJsonLd
         name={book.title}
         author={book.author}
@@ -606,12 +655,16 @@ const BookPage = async ({ params }: BookPageProps) => {
               {viewerId ? (
                 <div className="flex w-full min-w-0 gap-2">
                   <AddToListButton bookId={book.id} className="min-w-0 flex-1" />
-                  <SuggestBookToFriendButton
-                    book={{ id: book.id, title: book.title, author: book.author }}
-                    followingList={followingForRecommend}
-                    showLabel
-                    className="min-w-0 flex-1"
-                  />
+                  <Suspense
+                    fallback={
+                      <div className="h-9 min-w-0 flex-1 animate-pulse rounded-md bg-muted/50" />
+                    }
+                  >
+                    <SuggestSlot
+                      viewerId={viewerId}
+                      book={{ id: book.id, title: book.title, author: book.author }}
+                    />
+                  </Suspense>
                 </div>
               ) : null}
             </div>
@@ -661,33 +714,37 @@ const BookPage = async ({ params }: BookPageProps) => {
           </section>
 
           <section className="space-y-6">
-            <BookReadersList readers={readers} />
+            <Suspense fallback={<SectionSkeleton label="Lecteurs" />}>
+              <ReadersSlot bookId={book.id} />
+            </Suspense>
           </section>
 
           <section className="space-y-6">
-            <BookFeelingsSection
+            <Suspense fallback={<SectionSkeleton label="Ressentis" />}>
+              <FeelingsSlot bookId={book.id} viewerId={viewerId} />
+            </Suspense>
+          </section>
+
+          <section className="space-y-6">
+            <Suspense fallback={<SectionSkeleton label="Avis" />}>
+              <ReviewsSlot
+                bookId={book.id}
+                reviews={book.reviews}
+                viewerId={viewerId}
+              />
+            </Suspense>
+          </section>
+
+          <Suspense fallback={null}>
+            <SimilarSlot
               bookId={book.id}
-              availableKeywords={availableKeywords}
-              viewerFeelings={viewerFeelings}
-              viewerFeelingsVisibility={viewerFeelingsVisibility}
-              allFeelings={allFeelings}
+              bookTitle={book.title}
               viewerId={viewerId}
             />
-          </section>
-
-          <section className="space-y-6">
-            <ReviewForm bookId={book.id} />
-            <ReviewsList bookId={book.id} reviews={reviews} viewerId={viewerId} />
-          </section>
-
-          {similarBooks.length > 0 ? (
-            <section className="space-y-6">
-              <SimilarBooksSection books={similarBooks} currentBookTitle={book.title} />
-            </section>
-          ) : null}
+          </Suspense>
         </div>
       </div>
-    </AppShell>
+    </>
   );
 };
 

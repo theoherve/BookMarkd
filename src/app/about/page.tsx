@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import AppShell from "@/components/layout/app-shell";
 import BackButton from "@/components/layout/back-button";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
 
@@ -20,7 +19,7 @@ export const metadata = {
 
 const AboutPage = () => {
   return (
-    <AppShell>
+    <>
       <div className="space-y-10">
         <div className="flex flex-wrap items-center gap-4">
           <BackButton ariaLabel="Retour à la page précédente" />
@@ -74,7 +73,7 @@ const AboutPage = () => {
           </p>
         </div>
       </div>
-    </AppShell>
+    </>
   );
 };
 

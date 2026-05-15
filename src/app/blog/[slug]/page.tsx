@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
-import AppShell from "@/components/layout/app-shell";
 import { BlogBody } from "@/components/blog/blog-body";
 import BackLink from "@/components/layout/back-link";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
@@ -66,7 +65,7 @@ const BlogPostPage = async ({ params }: BlogPostPageProps) => {
   const url = `${BASE_URL}/blog/${post.slug}`;
 
   return (
-    <AppShell>
+    <>
       <ArticleJsonLd
         headline={post.title}
         description={post.description}
@@ -131,7 +130,7 @@ const BlogPostPage = async ({ params }: BlogPostPageProps) => {
           </div>
         </section>
       </div>
-    </AppShell>
+    </>
   );
 };
 

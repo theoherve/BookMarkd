@@ -66,17 +66,90 @@ export const getProfileDashboard = async (
       avatarUrl: string | null;
     }>(userRow);
 
-    // Résoudre l'URL de l'avatar avec priorité Supabase Storage
-    const resolvedAvatarUrl = await getUserAvatarUrl(userId, user.avatarUrl);
+    // Étapes 2-8 fusionnées en un seul Promise.all parallèle (sauf listItems qui dépend de listIds)
+    const ownedListsIdsPromise = db.client
+      .from("lists")
+      .select("id, title, created_at")
+      .eq("owner_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(50)
+      .then((r) =>
+        db.toCamel<Array<{ id: string; title: string; createdAt: string }>>(
+          r.data ?? []
+        )
+      );
 
-    // Étape 2 : Statistiques de base (5 requêtes en parallèle)
+    const collaboratorListsIdsPromise = db.client
+      .from("list_collaborators")
+      .select("list_id")
+      .eq("user_id", userId)
+      .then((r) => db.toCamel<Array<{ listId: string }>>(r.data ?? []));
+
+    const listItemsPromise = Promise.all([
+      ownedListsIdsPromise,
+      collaboratorListsIdsPromise,
+    ]).then(([ownedListsIds, collaboratorListsIds]) => {
+      const listIds = [
+        ...ownedListsIds.map((l) => l.id),
+        ...collaboratorListsIds.map((c) => c.listId),
+      ];
+      if (listIds.length === 0) {
+        return [] as Array<{
+          id: string;
+          note: string | null;
+          createdAt: string;
+          book?: { id: string; title: string; author: string };
+          list?: { title: string; ownerId: string };
+        }>;
+      }
+      return db.client
+        .from("list_items")
+        .select(
+          `
+          id,
+          note,
+          created_at,
+          book:book_id ( id, title, author ),
+          list:list_id ( title, owner_id )
+        `
+        )
+        .in("list_id", listIds)
+        .order("created_at", { ascending: false })
+        .limit(50)
+        .then((r) =>
+          db.toCamel<
+            Array<{
+              id: string;
+              note: string | null;
+              createdAt: string;
+              book?: { id: string; title: string; author: string };
+              list?: { title: string; ownerId: string };
+            }>
+          >(r.data ?? [])
+        );
+    });
+
     const [
+      resolvedAvatarUrl,
       ownedListsCount,
       collaborativeListsCount,
       recommendationsCount,
       followersCount,
       followingCount,
+      readingRows,
+      topBooksData,
+      ownedListsIds,
+      oldActivities,
+      userBooks,
+      reviews,
+      reviewComments,
+      listItems,
+      reviewLikes,
+      follows,
+      topBooksUpdates,
+      readListData,
     ] = await Promise.all([
+      getUserAvatarUrl(userId, user.avatarUrl),
       db.client
         .from("lists")
         .select("id", { count: "exact", head: true })
@@ -102,10 +175,6 @@ export const getProfileDashboard = async (
         .select("follower_id", { count: "exact", head: true })
         .eq("follower_id", userId)
         .then((r) => r.count ?? 0),
-    ]);
-
-    // Étape 3 : Données de lecture (2 requêtes en parallèle)
-    const [readingRows, topBooksData] = await Promise.all([
       db.client
         .from("user_books")
         .select("status")
@@ -143,36 +212,7 @@ export const getProfileDashboard = async (
             }>
           >(r.data ?? [])
         ),
-    ]);
-
-    // Étape 4 : Données des listes (2 requêtes en parallèle)
-    const [ownedListsIds, collaboratorListsIds] = await Promise.all([
-      db.client
-        .from("lists")
-        .select("id, title, created_at")
-        .eq("owner_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(50)
-        .then((r) =>
-          db.toCamel<Array<{ id: string; title: string; createdAt: string }>>(
-            r.data ?? []
-          )
-        ),
-      db.client
-        .from("list_collaborators")
-        .select("list_id")
-        .eq("user_id", userId)
-        .then((r) => db.toCamel<Array<{ listId: string }>>(r.data ?? [])),
-    ]);
-
-    const listIds = [
-      ...ownedListsIds.map((l) => l.id),
-      ...collaboratorListsIds.map((c) => c.listId),
-    ];
-    const listsForActivities = ownedListsIds;
-
-    // Étape 5 : Activités - groupe 1 (3 requêtes en parallèle)
-    const [oldActivities, userBooks, reviews] = await Promise.all([
+      ownedListsIdsPromise,
       db.client
         .from("activities")
         .select("id, type, payload, created_at")
@@ -245,10 +285,6 @@ export const getProfileDashboard = async (
             }>
           >(r.data ?? [])
         ),
-    ]);
-
-    // Étape 6 : Activités - groupe 2 (2 requêtes en parallèle)
-    const [reviewComments, listItems] = await Promise.all([
       db.client
         .from("review_comments")
         .select(
@@ -274,45 +310,7 @@ export const getProfileDashboard = async (
             }>
           >(r.data ?? [])
         ),
-      listIds.length > 0
-        ? db.client
-            .from("list_items")
-            .select(
-              `
-              id,
-              note,
-              created_at,
-              book:book_id ( id, title, author ),
-              list:list_id ( title, owner_id )
-            `
-            )
-            .in("list_id", listIds)
-            .order("created_at", { ascending: false })
-            .limit(50)
-            .then((r) =>
-              db.toCamel<
-                Array<{
-                  id: string;
-                  note: string | null;
-                  createdAt: string;
-                  book?: { id: string; title: string; author: string };
-                  list?: { title: string; ownerId: string };
-                }>
-              >(r.data ?? [])
-            )
-        : Promise.resolve(
-            [] as Array<{
-              id: string;
-              note: string | null;
-              createdAt: string;
-              book?: { id: string; title: string; author: string };
-              list?: { title: string; ownerId: string };
-            }>
-          ),
-    ]);
-
-    // Étape 7 : Activités - groupe 3 (3 requêtes en parallèle)
-    const [reviewLikes, follows, topBooksUpdates] = await Promise.all([
+      listItemsPromise,
       db.client
         .from("review_likes")
         .select(
@@ -382,40 +380,40 @@ export const getProfileDashboard = async (
             }>
           >(r.data ?? [])
         ),
+      db.client
+        .from("user_books")
+        .select(
+          `
+          id,
+          book_id,
+          status,
+          rating,
+          updated_at,
+          book:book_id ( id, title, author, cover_url )
+        `
+        )
+        .eq("user_id", userId)
+        .order("updated_at", { ascending: false })
+        .then((r) =>
+          db.toCamel<
+            Array<{
+              id: string;
+              bookId: string;
+              status: string | null;
+              rating: number | null;
+              updatedAt: string;
+              book?: {
+                id: string;
+                title: string;
+                author: string;
+                coverUrl: string | null;
+              };
+            }>
+          >(r.data ?? [])
+        ),
     ]);
 
-    // Étape 8 : Récupérer toute la read list (tous les livres de l'utilisateur)
-    const readListData = await db.client
-      .from("user_books")
-      .select(
-        `
-        id,
-        book_id,
-        status,
-        rating,
-        updated_at,
-        book:book_id ( id, title, author, cover_url )
-      `
-      )
-      .eq("user_id", userId)
-      .order("updated_at", { ascending: false })
-      .then((r) =>
-        db.toCamel<
-          Array<{
-            id: string;
-            bookId: string;
-            status: string | null;
-            rating: number | null;
-            updatedAt: string;
-            book?: {
-              id: string;
-              title: string;
-              author: string;
-              coverUrl: string | null;
-            };
-          }>
-        >(r.data ?? [])
-      );
+    const listsForActivities = ownedListsIds;
 
     const readingStats = buildReadingStats(readingRows);
 

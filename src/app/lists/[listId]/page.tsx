@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
-import AppShell from "@/components/layout/app-shell";
 import BackLink from "@/components/layout/back-link";
 import { Breadcrumb } from "@/components/layout/breadcrumb";
 import AddListItemForm from "@/components/lists/add-list-item-form";
@@ -77,7 +76,7 @@ const ListDetailPage = async ({ params }: ListDetailPageProps) => {
   const canEdit = detail.viewerRole === "owner" || detail.viewerRole === "editor";
 
   return (
-    <AppShell>
+    <>
       <div className="space-y-8">
         <div className="flex flex-wrap items-center gap-4">
           <BackLink
@@ -161,7 +160,7 @@ const ListDetailPage = async ({ params }: ListDetailPageProps) => {
           </div>
         </section>
       </div>
-    </AppShell>
+    </>
   );
 };
 
