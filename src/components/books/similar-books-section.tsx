@@ -69,6 +69,40 @@ const SimilarBooksSection = ({ books, currentBookTitle }: SimilarBooksSectionPro
                   <p className="line-clamp-1 text-xs text-muted-foreground">
                     {book.author}
                   </p>
+                  <div className="flex flex-wrap items-center gap-1 pt-1">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge
+                          variant="secondary"
+                          className="rounded-full bg-accent/20 px-2 py-0.5 text-[10px] font-medium text-accent-foreground dark:text-foreground"
+                        >
+                          {book.compatibilityScore}%
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        <p>
+                          Compatibilité : tags en commun, notes de tes amis et popularité.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                    {book.friendsCount > 0 && book.friendsAvgRating !== null ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge
+                            variant="outline"
+                            className="rounded-full px-2 py-0.5 text-[10px] font-normal"
+                          >
+                            {book.friendsCount} ami{book.friendsCount > 1 ? "s" : ""} · {book.friendsAvgRating.toFixed(1)}/5
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <p>
+                            Note moyenne de tes amis qui ont noté ce livre.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : null}
+                  </div>
                   <div className="flex min-w-0 flex-wrap gap-1 overflow-hidden pt-1">
                     {book.matchingTags.slice(0, 3).map((tag) => (
                       <Tooltip key={`${book.id}-${tag}`}>

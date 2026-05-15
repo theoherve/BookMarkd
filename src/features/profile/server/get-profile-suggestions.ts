@@ -1,5 +1,7 @@
 import db from "@/lib/supabase/db";
 import { getBookCoverUrl } from "@/lib/storage/covers";
+import { computeCompatibilityScore } from "@/features/recommendations/compatibility-score";
+import { getFriendsRatingScore } from "@/features/recommendations/server/get-friends-rating-score";
 
 export type UserCompatibility = {
   score: number;
@@ -27,6 +29,8 @@ export type ProfileSuggestion = {
   matchingTags: string[];
   viewerHasInReadlist: boolean;
   readers: BookReaderPreview[];
+  friendsCount: number;
+  friendsAvgRating: number | null;
 };
 
 export type ProfileSuggestionsResult = {
@@ -41,8 +45,6 @@ const STATUS_WEIGHT = {
 } as const;
 
 const BOOK_SUGGESTIONS_LIMIT = 6;
-const USER_SCORE_WEIGHT = 0.4;
-const BOOK_SCORE_WEIGHT = 0.6;
 
 const getTagName = (tag: unknown): string | null => {
   if (!tag || typeof tag !== "object") return null;
@@ -234,7 +236,14 @@ export const getProfileSuggestions = async (
       }
     });
 
-    // 6. Score combiné : pondération livre + user, avec bonus pour rating élevé du profil
+    // 6. Notes des amis du viewer sur les livres candidats
+    const friendsRatings = await getFriendsRatingScore(
+      viewerId,
+      candidateBookIds,
+    );
+
+    // 7. Score combiné : tags (50%) + amis (30%) + popularité profil (20%)
+    //    Le rating du profil visité sert de signal "popularité" (note d'une personne affine).
     const allBookScores = Array.from(bookScores.values()).map((s) => s.score);
     const maxBookScore = Math.max(...allBookScores, 1);
     const minBookScore = Math.min(...allBookScores, 0);
@@ -243,23 +252,29 @@ export const getProfileSuggestions = async (
     const combinedScores = candidateBookIds.map((bookId) => {
       const bookData = bookScores.get(bookId);
       const rawBookScore = bookData?.score ?? 0;
-      const bookScoreNorm =
+      const tagScore =
         bookScoreRange > 0
           ? Math.round(((rawBookScore - minBookScore) / bookScoreRange) * 100)
           : 50;
 
-      const rating = profileBookRatingMap.get(bookId);
-      const ratingBonus = typeof rating === "number" && rating >= 4 ? 10 : 0;
+      const profileRating = profileBookRatingMap.get(bookId);
+      const popularityScore =
+        typeof profileRating === "number" ? profileRating * 20 : null;
 
-      const combined =
-        bookScoreNorm * BOOK_SCORE_WEIGHT +
-        userCompatibilityScore * USER_SCORE_WEIGHT +
-        ratingBonus;
+      const friends = friendsRatings.get(bookId) ?? null;
+
+      const score = computeCompatibilityScore({
+        tagScore,
+        friendsAvgRating: friends?.avgRating ?? null,
+        popularityScore,
+      });
 
       return {
         bookId,
-        score: Math.min(100, Math.round(combined)),
+        score,
         matchingTags: bookData?.matchingTags ?? [],
+        friendsCount: friends?.friendCount ?? 0,
+        friendsAvgRating: friends?.avgRating ?? null,
       };
     });
 
@@ -403,11 +418,18 @@ export const getProfileSuggestions = async (
       const scoreData = scoreMap.get(id);
       const matchingTags = scoreData?.matchingTags ?? [];
       const score = scoreData?.score ?? 50;
+      const friendsCount = scoreData?.friendsCount ?? 0;
+      const friendsAvgRating = scoreData?.friendsAvgRating ?? null;
 
       const reasonParts: string[] = [];
       if (matchingTags.length > 0) {
         reasonParts.push(
           `Tags : ${matchingTags.slice(0, 3).join(", ")}`,
+        );
+      }
+      if (friendsCount > 0 && friendsAvgRating !== null) {
+        reasonParts.push(
+          `${friendsCount} ami${friendsCount > 1 ? "s" : ""} (${friendsAvgRating.toFixed(1)}/5)`,
         );
       }
       reasonParts.push(`Affinité avec ${profileDisplayName} : ${userCompatibilityScore}%`);
@@ -427,6 +449,8 @@ export const getProfileSuggestions = async (
         matchingTags,
         viewerHasInReadlist: viewerHasBookIds.has(id),
         readers: readersForBook,
+        friendsCount,
+        friendsAvgRating,
       });
     }
 

@@ -1,5 +1,7 @@
 import db from "@/lib/supabase/db";
 import { getBookCoverUrl } from "@/lib/storage/covers";
+import { computeCompatibilityScore } from "@/features/recommendations/compatibility-score";
+import { getFriendsRatingScore } from "@/features/recommendations/server/get-friends-rating-score";
 
 export type SimilarBook = {
   id: string;
@@ -7,6 +9,9 @@ export type SimilarBook = {
   author: string;
   coverUrl: string | null;
   matchingTags: string[];
+  compatibilityScore: number;
+  friendsCount: number;
+  friendsAvgRating: number | null;
 };
 
 const DEFAULT_LIMIT = 6;
@@ -148,39 +153,62 @@ export const getSimilarBooks = async (
       return [];
     }
 
-    // 5. Récupérer les détails des livres (id, title, author, cover_url)
+    // 5. Récupérer les détails des livres (id, title, author, cover_url, average_rating)
     const { data: booksData, error: booksErr } = await db.client
       .from("books")
-      .select("id, title, author, cover_url")
+      .select("id, title, author, cover_url, average_rating")
       .in("id", similarBookIds);
 
     if (booksErr || !booksData || booksData.length === 0) {
       return [];
     }
 
-    // Garder l'ordre de similarBookIds
-    const orderIndex = new Map(similarBookIds.map((id, i) => [id, i]));
-    const sorted = [...booksData].sort((a, b) => {
-      const aIdx = orderIndex.get((a as { id: string }).id) ?? 999;
-      const bIdx = orderIndex.get((b as { id: string }).id) ?? 999;
-      return aIdx - bIdx;
+    // 6. Notes des amis sur ces livres
+    const friendsRatings = viewerId
+      ? await getFriendsRatingScore(viewerId, similarBookIds)
+      : new Map<string, { avgRating: number; friendCount: number }>();
+
+    // 7. Normaliser tagScore (max possible = nb tags du livre courant)
+    const maxTagOverlap = currentTagIds.length || 1;
+
+    // 8. Calculer score combiné + trier par compatibilité
+    const enriched = booksData.map((book) => {
+      const id = (book as { id: string }).id;
+      const tagData = scoreMap.get(id) ?? { score: 0, matchingTags: [] };
+      const tagScore = Math.round((tagData.score / maxTagOverlap) * 100);
+      const friends = friendsRatings.get(id) ?? null;
+      const avgRating = (book as { average_rating?: number | null }).average_rating;
+      const popularityScore =
+        typeof avgRating === "number" ? Math.round(avgRating * 20) : null;
+
+      const compatibilityScore = computeCompatibilityScore({
+        tagScore,
+        friendsAvgRating: friends?.avgRating ?? null,
+        popularityScore,
+      });
+
+      return { book, compatibilityScore, tagData, friends };
     });
 
-    // 6. Résoudre les URLs de couverture et formater
+    enriched.sort((a, b) => b.compatibilityScore - a.compatibilityScore);
+
+    // 9. Résoudre URLs et formater
     const result: SimilarBook[] = [];
-    for (const book of sorted) {
+    for (const { book, compatibilityScore, tagData, friends } of enriched) {
       const id = (book as { id: string }).id;
       const coverUrl = await getBookCoverUrl(
         id,
         (book as { cover_url?: string | null }).cover_url,
       );
-      const { matchingTags } = scoreMap.get(id) ?? { matchingTags: [] };
       result.push({
         id,
         title: (book as { title: string }).title,
         author: (book as { author: string }).author,
         coverUrl,
-        matchingTags,
+        matchingTags: tagData.matchingTags,
+        compatibilityScore,
+        friendsCount: friends?.friendCount ?? 0,
+        friendsAvgRating: friends?.avgRating ?? null,
       });
     }
 
