@@ -78,7 +78,27 @@ export const likeReview = async (reviewId: string): Promise<ActionResult> => {
       .maybeSingle();
     const reviewOwnerId = (reviewOwnerRow as { user_id?: string } | null)?.user_id ?? null;
     if (reviewOwnerId && reviewOwnerId !== userId) {
-      void createNotification(reviewOwnerId, "review_like", {});
+      const [{ data: liker }, { data: bookRow }] = await Promise.all([
+        db.client
+          .from("users")
+          .select("display_name, username")
+          .eq("id", userId)
+          .maybeSingle(),
+        db.client
+          .from("books")
+          .select("title, author")
+          .eq("id", review.book_id)
+          .maybeSingle(),
+      ]);
+      void createNotification(reviewOwnerId, "review_like", {
+        reviewId,
+        bookId: review.book_id,
+        bookTitle: (bookRow as { title?: string } | null)?.title ?? null,
+        bookAuthor: (bookRow as { author?: string } | null)?.author ?? null,
+        likerId: userId,
+        likerName: (liker as { display_name?: string } | null)?.display_name ?? null,
+        likerUsername: (liker as { username?: string } | null)?.username ?? null,
+      });
     }
 
     revalidatePath(`/books/${review.book_id}`);
