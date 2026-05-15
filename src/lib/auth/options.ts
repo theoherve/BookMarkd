@@ -7,9 +7,31 @@ import {
 } from "@/lib/auth/credentials";
 import db from "@/lib/supabase/db";
 
+const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
+
 export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
+    maxAge: ONE_YEAR_SECONDS,
+    updateAge: 60 * 60 * 24,
+  },
+  jwt: {
+    maxAge: ONE_YEAR_SECONDS,
+  },
+  cookies: {
+    sessionToken: {
+      name:
+        process.env.NODE_ENV === "production"
+          ? "__Secure-next-auth.session-token"
+          : "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: ONE_YEAR_SECONDS,
+      },
+    },
   },
   secret: process.env.NEXTAUTH_SECRET,
   pages: {
