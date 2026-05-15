@@ -13,7 +13,7 @@
     "test:coverage": "vitest run --coverage",
     "test:ui": "playwright test",
     "test:pwa": "playwright test tests/e2e/pwa-*.spec.ts",
-    "playwright:install": "playwright install --with-deps",
+    "playwright:install": "playwright install --with-deps chromium",
     "icons:pwa": "tsx scripts/generate-pwa-icons.ts",
     "lighthouse:pwa": "tsx scripts/lighthouse-pwa.ts",
     "db:reset": "tsx scripts/reset-db.ts",
