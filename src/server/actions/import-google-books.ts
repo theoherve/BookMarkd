@@ -6,6 +6,8 @@ import db from "@/lib/supabase/db";
 import { fetchGoogleBooksDetails } from "@/lib/google-books";
 import { incrementGoogleBooksQuota, canUseGoogleBooks } from "@/lib/google-books/quota-tracker";
 import { generateBookSlug } from "@/lib/slug";
+import { isMissingOrPlaceholderCover } from "@/lib/covers/placeholder-detect";
+import { findAndUploadMissingCover } from "@/lib/covers/find-missing-cover";
 
 type ImportPayload = {
   googleBooksId: string;
@@ -172,6 +174,34 @@ export const importGoogleBooksBook = async (
       .select("id")
       .single();
     if (insertError) throw insertError;
+
+    if (isMissingOrPlaceholderCover(coverUrl)) {
+      try {
+        const coverResult = await Promise.race([
+          findAndUploadMissingCover({
+            bookId: newBook.id as string,
+            title: payload.title,
+            author: payload.author,
+            isbn,
+            googleBooksId: payload.googleBooksId,
+            currentCoverUrl: coverUrl,
+          }),
+          new Promise<{ success: false; reason: string }>((resolve) =>
+            setTimeout(
+              () => resolve({ success: false, reason: "timeout" }),
+              3500,
+            ),
+          ),
+        ]);
+        if (!coverResult.success) {
+          console.warn(
+            `[import-google-books] cover lookup failed for ${newBook.id}: ${coverResult.reason}`,
+          );
+        }
+      } catch (coverError) {
+        console.error("[import-google-books] cover lookup error:", coverError);
+      }
+    }
 
     // Traiter les catégories comme tags
     const categories = volumeDetails.categories ?? [];

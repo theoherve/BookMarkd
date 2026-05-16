@@ -44,7 +44,7 @@ const ProfileHeaderStats = ({
   return (
     <>
       <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
           <Link
             href={booksHref}
             className="group inline-flex cursor-pointer items-baseline gap-1.5 rounded-md px-1 py-0.5 transition-colors hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
