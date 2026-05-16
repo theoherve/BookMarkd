@@ -25,11 +25,14 @@ const ProfileEditButton = ({
     <>
       <Button
         variant="outline"
+        size="icon"
         onClick={() => setIsOpen(true)}
         aria-label="Modifier mon profil"
+        title="Modifier mon profil"
+        className="sm:size-auto sm:px-3 sm:py-2"
       >
         <Settings className="h-4 w-4" />
-        Modifier mon profil
+        <span className="sr-only sm:not-sr-only">Modifier mon profil</span>
       </Button>
       <ProfileEditModal
         initialDisplayName={initialDisplayName}

@@ -1,9 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { X, LayoutGrid, List } from "lucide-react";
+
+import {
+  READLIST_SECTION_ID,
+  READLIST_STATUS_PARAM,
+} from "@/components/profile/profile-header-stats";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -44,10 +50,24 @@ const statusLabels: Record<ReadListBook["status"], string> = {
 
 type FilterStatus = ReadListBook["status"] | "all";
 
+const isValidStatus = (v: string | null): v is ReadListBook["status"] =>
+  v === "to_read" || v === "reading" || v === "finished";
+
 const ReadListSection = ({ readList }: ReadListSectionProps) => {
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
+  const searchParams = useSearchParams();
+  const initialStatus = searchParams?.get(READLIST_STATUS_PARAM) ?? null;
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>(
+    isValidStatus(initialStatus) ? initialStatus : "all",
+  );
   const [viewMode, setViewMode] = useState<ViewMode>(() => getStoredViewMode());
   const [removingBookIds, setRemovingBookIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const value = searchParams?.get(READLIST_STATUS_PARAM) ?? null;
+    if (isValidStatus(value)) {
+      setFilterStatus(value);
+    }
+  }, [searchParams]);
 
   const handleFilterChange = (status: FilterStatus) => {
     setFilterStatus(status);
@@ -79,7 +99,7 @@ const ReadListSection = ({ readList }: ReadListSectionProps) => {
 
   if (readList.length === 0) {
     return (
-      <Card className="border-border/60 bg-card/80 backdrop-blur">
+      <Card id={READLIST_SECTION_ID} className="border-border/60 bg-card/80 backdrop-blur scroll-mt-24">
         <CardHeader>
           <CardTitle className="text-xl font-semibold text-foreground">
             Ma read list
@@ -101,7 +121,7 @@ const ReadListSection = ({ readList }: ReadListSectionProps) => {
   }
 
   return (
-    <Card className="border-border/60 bg-card/80 backdrop-blur overflow-hidden max-w-full flex flex-col h-full">
+    <Card id={READLIST_SECTION_ID} className="border-border/60 bg-card/80 backdrop-blur overflow-hidden max-w-full flex flex-col h-full scroll-mt-24">
       <CardHeader>
         <CardTitle className="text-xl font-semibold text-foreground">
           Ma read list

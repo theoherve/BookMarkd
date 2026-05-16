@@ -119,16 +119,16 @@ const TopBooksSelector = ({ initialTopBooks }: TopBooksSelectorProps) => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 md:grid-cols-3">
           {[1, 2, 3].map((position) => {
             const topBook = getBookForPosition(position);
             return (
               <div
                 key={position}
-                className="space-y-2 rounded-lg border border-border/50 bg-background/60 p-4"
+                className="group relative flex flex-col gap-2 rounded-lg border border-border/50 bg-background/60 p-2 md:p-4"
               >
                 <div className="flex items-center justify-between">
-                  <Badge variant="secondary" className="text-xs font-semibold">
+                  <Badge variant="secondary" className="text-[10px] font-semibold md:text-xs">
                     #{position}
                   </Badge>
                   {topBook?.book ? (
@@ -144,34 +144,40 @@ const TopBooksSelector = ({ initialTopBooks }: TopBooksSelectorProps) => {
                   ) : null}
                 </div>
                 {topBook?.book ? (
-                  <div className="space-y-2">
-                    <div className="relative h-32 w-24 overflow-hidden rounded-md border border-border/40 bg-muted">
+                  <div className="flex flex-col gap-2">
+                    <div
+                      className="relative w-full overflow-hidden rounded-md border border-border/40 bg-muted md:h-32 md:w-24"
+                      style={{ aspectRatio: "3 / 4" }}
+                    >
                       {topBook.book.coverUrl ? (
                         <Image
                           src={topBook.book.coverUrl}
                           alt={topBook.book.title}
                           fill
-                          sizes="96px"
+                          sizes="(max-width: 768px) 33vw, 96px"
                           className="object-cover"
                         />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
-                          Pas de couverture
+                        <div className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground md:text-xs">
+                          —
                         </div>
                       )}
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground line-clamp-2">
+                    <div className="min-w-0">
+                      <p className="line-clamp-2 text-xs font-semibold text-foreground md:text-sm">
                         {topBook.book.title}
                       </p>
-                      <p className="text-xs text-muted-foreground line-clamp-1">
+                      <p className="line-clamp-1 text-[10px] text-muted-foreground md:text-xs">
                         {topBook.book.author}
                       </p>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
-                    Aucun livre sélectionné
+                  <div
+                    className="flex w-full items-center justify-center rounded-md border border-dashed border-border/60 bg-muted/40 text-[10px] text-muted-foreground md:h-32 md:w-24 md:text-sm"
+                    style={{ aspectRatio: "3 / 4" }}
+                  >
+                    Vide
                   </div>
                 )}
               </div>
@@ -181,19 +187,29 @@ const TopBooksSelector = ({ initialTopBooks }: TopBooksSelectorProps) => {
 
         <div className="space-y-4">
           <form onSubmit={handleSearch} className="space-y-2">
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Search
+                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden
+                />
                 <Input
                   type="text"
                   placeholder="Rechercher un livre..."
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
-                  className="pl-9"
+                  className="h-9 pl-9"
                 />
               </div>
-              <Button type="submit" disabled={!searchQuery.trim()}>
-                Rechercher
+              <Button
+                type="submit"
+                size="sm"
+                disabled={!searchQuery.trim()}
+                className="h-9 shrink-0"
+              >
+                <Search className="h-4 w-4 sm:hidden" aria-hidden />
+                <span className="hidden sm:inline">Rechercher</span>
+                <span className="sr-only sm:hidden">Rechercher</span>
               </Button>
             </div>
           </form>
