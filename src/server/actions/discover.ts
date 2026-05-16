@@ -6,6 +6,8 @@ import { getCurrentSession } from "@/lib/auth/session";
 import { resolveSessionUserId } from "@/lib/auth/user";
 import db from "@/lib/supabase/db";
 import { recommendBookToUser } from "@/server/actions/recommend";
+import { getDiscoverCandidates } from "@/features/discover/server/get-discover-candidates";
+import type { DiscoverCandidate } from "@/features/discover/types";
 
 type ActionResult =
   | { success: true }
@@ -19,6 +21,23 @@ const requireSession = async (): Promise<string> => {
   const userId = await resolveSessionUserId(session);
   if (!userId) throw new Error("AUTH_REQUIRED");
   return userId;
+};
+
+/**
+ * Charge un lot supplémentaire de candidats pour le deck Discover.
+ * Exclut les livres déjà servis dans la session courante (`excludeIds`).
+ */
+export const loadMoreDiscoverCandidates = async (
+  excludeIds: string[] = [],
+  limit: number = 10,
+): Promise<DiscoverCandidate[]> => {
+  try {
+    const userId = await requireSession();
+    return await getDiscoverCandidates(userId, limit, excludeIds);
+  } catch (err) {
+    console.error("[discover] loadMoreDiscoverCandidates error:", err);
+    return [];
+  }
 };
 
 export const addToDiscoverWishlist = async (

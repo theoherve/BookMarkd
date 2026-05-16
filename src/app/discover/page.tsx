@@ -61,8 +61,10 @@ const DiscoverPage = async () => {
     redirect("/login?callbackUrl=/discover");
   }
 
+  // Initial batch volontairement petit: la page s'affiche vite et le deck
+  // prefetch les suivants via loadMoreDiscoverCandidates quand queue <= 2.
   const [candidates, follows, wishlistCount] = await Promise.all([
-    getDiscoverCandidates(userId, 25),
+    getDiscoverCandidates(userId, 5),
     getFollowOptions(userId),
     getDiscoverWishlistCount(userId),
   ]);

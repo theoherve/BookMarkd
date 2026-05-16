@@ -1,4 +1,4 @@
-import { getCoverPublicUrl, coverExistsInStorage } from "./storage";
+import { resolveCoverPublicUrl } from "./storage";
 
 type GoogleBooksImageLinks = {
   thumbnail?: string;
@@ -47,12 +47,10 @@ export const getBookCoverUrl = async (
   const normalizedGoogleUrl = googleBooksCoverUrl ?? null;
 
   // 1. Si une cover existe dans Supabase Storage, utiliser l'URL correcte (résout les chemins erronés)
-  const existsInStorage = await coverExistsInStorage(bookId);
-  if (existsInStorage) {
-    const storageUrl = await getCoverPublicUrl(bookId);
-    if (storageUrl) {
-      return storageUrl;
-    }
+  //    1 round-trip au lieu de 2 (exists + getUrl listaient deux fois le même fichier).
+  const storageUrl = await resolveCoverPublicUrl(bookId);
+  if (storageUrl) {
+    return storageUrl;
   }
 
   // 2. Fallback sur l'URL de la DB (Supabase Storage ou externe type Google Books)

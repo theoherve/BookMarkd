@@ -103,6 +103,32 @@ export const getAvatarPublicUrl = async (userId: string): Promise<string | null>
 };
 
 /**
+ * Résout l'URL publique d'une cover en UN seul aller-retour storage.list().
+ * Renvoie null si absente. Préférer cette fonction à coverExistsInStorage + getCoverPublicUrl
+ * qui font deux fois le même list().
+ */
+export const resolveCoverPublicUrl = async (bookId: string): Promise<string | null> => {
+  try {
+    const { data: files, error } = await supabase.storage
+      .from(STORAGE_BUCKETS.COVERS)
+      .list("", { search: bookId });
+
+    if (error || !files || files.length === 0) return null;
+
+    const coverFile = files.find((file) => file.name.startsWith(`${bookId}.`));
+    if (!coverFile) return null;
+
+    const { data } = supabase.storage
+      .from(STORAGE_BUCKETS.COVERS)
+      .getPublicUrl(coverFile.name);
+
+    return data.publicUrl;
+  } catch {
+    return null;
+  }
+};
+
+/**
  * Vérifie si une cover existe dans Supabase Storage
  */
 export const coverExistsInStorage = async (bookId: string): Promise<boolean> => {

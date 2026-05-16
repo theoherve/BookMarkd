@@ -179,10 +179,12 @@ const buildContributions = async (
  * Récupère les candidats de la feature /discover.
  * Score pondéré: tags + auteur + popularité + amis.
  * Exclut tout livre déjà lié à l'utilisateur (user_books, reviews, wishlist, recommendations).
+ * `extraExcludeIds`: livres déjà servis à cette session (pour pagination loadMore).
  */
 export const getDiscoverCandidates = async (
   userId: string,
   limit: number = DEFAULT_LIMIT,
+  extraExcludeIds: string[] = [],
 ): Promise<DiscoverCandidate[]> => {
   if (!userId) return [];
 
@@ -191,6 +193,8 @@ export const getDiscoverCandidates = async (
       getUserProfile(userId),
       getExcludedBookIds(userId),
     ]);
+
+    for (const id of extraExcludeIds) excluded.add(id);
 
     const candidateIds = new Set<string>();
 
@@ -290,59 +294,61 @@ export const getDiscoverCandidates = async (
     enriched.sort((a, b) => b.compatibilityScore - a.compatibilityScore);
     const top = enriched.slice(0, limit);
 
-    // 9) Format final (résolution cover async)
-    const result: DiscoverCandidate[] = [];
-    for (const { book, contrib, compatibilityScore, friends } of top) {
-      const coverUrl = await getBookCoverUrl(book.id, book.cover_url);
+    // 9) Format final — résolution des covers en parallèle (sinon N round-trips Supabase Storage en série)
+    const coverUrls = await Promise.all(
+      top.map(({ book }) => getBookCoverUrl(book.id, book.cover_url)),
+    );
 
-      const matchReasons: DiscoverMatchReason[] = [];
-      if (contrib.authorMatch) {
-        matchReasons.push({ kind: "author", label: `Même auteur · ${book.author}` });
-      }
-      for (const tag of contrib.matchingTagNames.slice(0, 3)) {
-        matchReasons.push({ kind: "tag", label: tag });
-      }
-      if (friends && friends.friendCount > 0) {
-        const avg = friends.avgRating.toFixed(1);
-        matchReasons.push({
-          kind: "friends",
-          label: `${friends.friendCount} ami${friends.friendCount > 1 ? "s" : ""} · ${avg}/5`,
-        });
-      }
-      if (
-        matchReasons.length === 0 &&
-        typeof book.average_rating === "number" &&
-        book.average_rating >= 4
-      ) {
-        matchReasons.push({
-          kind: "popular",
-          label: `Apprécié · ${book.average_rating.toFixed(1)}/5`,
-        });
-      }
+    const result: DiscoverCandidate[] = top.map(
+      ({ book, contrib, compatibilityScore, friends }, i) => {
+        const matchReasons: DiscoverMatchReason[] = [];
+        if (contrib.authorMatch) {
+          matchReasons.push({ kind: "author", label: `Même auteur · ${book.author}` });
+        }
+        for (const tag of contrib.matchingTagNames.slice(0, 3)) {
+          matchReasons.push({ kind: "tag", label: tag });
+        }
+        if (friends && friends.friendCount > 0) {
+          const avg = friends.avgRating.toFixed(1);
+          matchReasons.push({
+            kind: "friends",
+            label: `${friends.friendCount} ami${friends.friendCount > 1 ? "s" : ""} · ${avg}/5`,
+          });
+        }
+        if (
+          matchReasons.length === 0 &&
+          typeof book.average_rating === "number" &&
+          book.average_rating >= 4
+        ) {
+          matchReasons.push({
+            kind: "popular",
+            label: `Apprécié · ${book.average_rating.toFixed(1)}/5`,
+          });
+        }
 
-      // Tags affichables (top 4)
-      const displayTags = contrib.matchingTagNames.slice(0, 4).map((name, i) => ({
-        id: `${book.id}-tag-${i}`,
-        name,
-      }));
+        const displayTags = contrib.matchingTagNames.slice(0, 4).map((name, j) => ({
+          id: `${book.id}-tag-${j}`,
+          name,
+        }));
 
-      result.push({
-        id: book.id,
-        slug: book.slug,
-        title: book.title,
-        author: book.author,
-        coverUrl,
-        summary: book.summary,
-        publicationYear: book.publication_year,
-        averageRating: book.average_rating,
-        ratingsCount: book.ratings_count ?? 0,
-        tags: displayTags,
-        compatibilityScore,
-        matchReasons,
-        friendsCount: friends?.friendCount ?? 0,
-        friendsAvgRating: friends?.avgRating ?? null,
-      });
-    }
+        return {
+          id: book.id,
+          slug: book.slug,
+          title: book.title,
+          author: book.author,
+          coverUrl: coverUrls[i],
+          summary: book.summary,
+          publicationYear: book.publication_year,
+          averageRating: book.average_rating,
+          ratingsCount: book.ratings_count ?? 0,
+          tags: displayTags,
+          compatibilityScore,
+          matchReasons,
+          friendsCount: friends?.friendCount ?? 0,
+          friendsAvgRating: friends?.avgRating ?? null,
+        };
+      },
+    );
 
     return result;
   } catch (err) {
