@@ -3,7 +3,22 @@
 import { ReactNode, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Plus, Menu, LayoutDashboard } from "lucide-react";
+import {
+  Plus,
+  Menu,
+  LayoutDashboard,
+  Home,
+  Search,
+  Sparkles,
+  List,
+  BookOpen,
+  MessageSquare,
+  Info,
+  HelpCircle,
+  ChevronRight,
+  LogOut,
+  type LucideIcon,
+} from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
@@ -34,6 +49,11 @@ type NavigationLink = {
   ariaLabel: string;
 };
 
+type MobileNavItem = NavigationLink & {
+  icon: LucideIcon;
+  hint?: string;
+};
+
 type AppShellProps = {
   children: ReactNode;
 };
@@ -53,7 +73,19 @@ const footerLinks: NavigationLink[] = [
   { href: "/faq", label: "FAQ", ariaLabel: "Foire aux questions" },
 ];
 
-const mobileMenuLinks: NavigationLink[] = [...headerNavLinks, ...footerLinks];
+const mobilePrimaryNav: MobileNavItem[] = [
+  { href: "/", label: "Accueil", icon: Home, ariaLabel: "Retourner à l'accueil" },
+  { href: "/search", label: "Recherche", icon: Search, ariaLabel: "Ouvrir la recherche" },
+  { href: "/discover", label: "Découvrir", icon: Sparkles, ariaLabel: "Découvrir des livres", hint: "Swipe deck" },
+  { href: "/lists", label: "Listes", icon: List, ariaLabel: "Consulter vos listes" },
+  { href: "/blog", label: "Blog", icon: BookOpen, ariaLabel: "Voir le blog BookMarkd" },
+];
+
+const mobileSecondaryNav: MobileNavItem[] = [
+  { href: "/feedback", label: "Feedback", icon: MessageSquare, ariaLabel: "Suggérer une fonctionnalité ou rapporter une erreur" },
+  { href: "/about", label: "À propos", icon: Info, ariaLabel: "À propos de BookMarkd" },
+  { href: "/faq", label: "FAQ", icon: HelpCircle, ariaLabel: "Foire aux questions" },
+];
 
 const getInitials = (name: string | null): string => {
   if (!name?.trim()) return "?";
@@ -75,6 +107,46 @@ const HeaderNavList = ({ onLinkClick }: { onLinkClick?: () => void }) => {
         </li>
       ))}
     </ul>
+  );
+};
+
+const MobileNavRow = ({
+  item,
+  onClick,
+  index,
+}: {
+  item: MobileNavItem;
+  onClick: () => void;
+  index: number;
+}) => {
+  const Icon = item.icon;
+  return (
+    <Link
+      href={item.href}
+      aria-label={item.ariaLabel}
+      onClick={onClick}
+      style={{ animationDelay: `${index * 35}ms` }}
+      className="group relative flex min-h-12 items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium text-foreground transition motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-left-2 motion-safe:duration-300 hover:bg-accent/15 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+    >
+      <span
+        className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary text-foreground transition group-hover:bg-accent group-hover:text-accent-foreground"
+        aria-hidden
+      >
+        <Icon className="size-[18px]" />
+      </span>
+      <span className="flex-1 min-w-0">
+        <span className="block truncate">{item.label}</span>
+        {item.hint ? (
+          <span className="block truncate text-xs text-muted-foreground">
+            {item.hint}
+          </span>
+        ) : null}
+      </span>
+      <ChevronRight
+        className="size-4 shrink-0 text-muted-foreground/60 transition group-hover:translate-x-0.5 group-hover:text-foreground"
+        aria-hidden
+      />
+    </Link>
   );
 };
 
@@ -118,23 +190,165 @@ const AppShell = ({ children }: AppShellProps) => {
                   <Menu className="size-5" aria-hidden />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-[min(20rem,85vw)]">
-                <SheetHeader>
-                  <SheetTitle className="sr-only">Menu</SheetTitle>
+              <SheetContent
+                side="left"
+                className="w-[min(22rem,88vw)] gap-0 border-r border-border bg-[linear-gradient(180deg,var(--card)_0%,var(--background)_100%)] p-0"
+              >
+                <SheetHeader className="border-b border-border/60 px-6 pt-7 pb-5">
+                  <SheetTitle className="sr-only">Menu BookMarkd</SheetTitle>
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-display text-2xl font-semibold tracking-tight text-foreground">
+                      BookMarkd
+                    </span>
+                  </div>
+                  <p className="font-display text-sm italic text-muted-foreground">
+                    Votre bibliothèque, partagée.
+                  </p>
                 </SheetHeader>
-                <nav aria-label="Navigation mobile" className="flex flex-col gap-1 pt-4">
-                  {mobileMenuLinks.map((item) => (
+
+                <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-4 py-5">
+                  {session?.user ? (
                     <Link
-                      key={item.href}
-                      href={item.href}
-                      aria-label={item.ariaLabel}
+                      href="/profiles/me"
                       onClick={handleMobileLinkClick}
-                      className="block rounded-lg px-3 py-2.5 text-sm font-medium text-foreground transition hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                      aria-label="Voir mon profil"
+                      className="group flex items-center gap-3 rounded-2xl border border-border/70 bg-card/70 p-3 shadow-sm transition hover:border-accent hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                     >
-                      {item.label}
+                      {session.user.image ? (
+                        <Image
+                          src={session.user.image}
+                          alt="Photo de profil"
+                          width={44}
+                          height={44}
+                          className="size-11 rounded-full object-cover ring-2 ring-border"
+                        />
+                      ) : (
+                        <span
+                          className="flex size-11 items-center justify-center rounded-full bg-accent text-base font-semibold text-accent-foreground ring-2 ring-border"
+                          aria-hidden
+                        >
+                          {getInitials(session.user.name ?? null)}
+                        </span>
+                      )}
+                      <span className="flex-1 min-w-0">
+                        <span className="block truncate text-sm font-semibold text-foreground">
+                          {session.user.name ?? "Lecteur·rice"}
+                        </span>
+                        <span className="block truncate text-xs text-muted-foreground">
+                          Voir mon profil
+                        </span>
+                      </span>
+                      <ChevronRight
+                        className="size-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-foreground"
+                        aria-hidden
+                      />
                     </Link>
-                  ))}
-                </nav>
+                  ) : (
+                    <div className="flex flex-col gap-2 rounded-2xl border border-border/70 bg-card/70 p-4 shadow-sm">
+                      <p className="font-display text-sm italic text-foreground">
+                        Rejoins la communauté de lecteur·rice·s.
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90"
+                          asChild
+                        >
+                          <Link href="/signup" onClick={handleMobileLinkClick}>
+                            S&apos;inscrire
+                          </Link>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          asChild
+                        >
+                          <Link href="/login" onClick={handleMobileLinkClick}>
+                            Connexion
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  <nav aria-label="Navigation mobile" className="flex flex-col gap-6">
+                    <section className="flex flex-col gap-1">
+                      <div className="flex items-center gap-3 px-3 pb-1">
+                        <span className="h-px flex-1 bg-border" aria-hidden />
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                          Naviguer
+                        </span>
+                        <span className="h-px flex-1 bg-border" aria-hidden />
+                      </div>
+                      {mobilePrimaryNav.map((item, index) => (
+                        <MobileNavRow
+                          key={item.href}
+                          item={item}
+                          onClick={handleMobileLinkClick}
+                          index={index}
+                        />
+                      ))}
+                    </section>
+
+                    <section className="flex flex-col gap-1">
+                      <div className="flex items-center gap-3 px-3 pb-1">
+                        <span className="h-px flex-1 bg-border" aria-hidden />
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                          Aide & info
+                        </span>
+                        <span className="h-px flex-1 bg-border" aria-hidden />
+                      </div>
+                      {mobileSecondaryNav.map((item, index) => (
+                        <MobileNavRow
+                          key={item.href}
+                          item={item}
+                          onClick={handleMobileLinkClick}
+                          index={mobilePrimaryNav.length + index}
+                        />
+                      ))}
+                    </section>
+
+                    {session?.user?.isAdmin ? (
+                      <section className="flex flex-col gap-1">
+                        <div className="flex items-center gap-3 px-3 pb-1">
+                          <span className="h-px flex-1 bg-border" aria-hidden />
+                          <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                            Admin
+                          </span>
+                          <span className="h-px flex-1 bg-border" aria-hidden />
+                        </div>
+                        <MobileNavRow
+                          item={{
+                            href: "/admin",
+                            label: "Dashboard",
+                            icon: LayoutDashboard,
+                            ariaLabel: "Accéder au dashboard admin",
+                          }}
+                          onClick={handleMobileLinkClick}
+                          index={0}
+                        />
+                      </section>
+                    ) : null}
+                  </nav>
+                </div>
+
+                {session?.user ? (
+                  <div className="border-t border-border/60 px-4 py-4 safe-area-inset-bottom">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        void handleSignOut();
+                      }}
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-destructive transition hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
+                    >
+                      <LogOut className="size-4" aria-hidden />
+                      Se déconnecter
+                    </button>
+                  </div>
+                ) : null}
               </SheetContent>
             </Sheet>
             <Link
