@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef } from "react";
-import { Search, X, Filter, ScanBarcode, FileText, User, BookOpen } from "lucide-react";
+import { Search, X, Filter, ScanBarcode, FileText, User, BookOpen, ArrowRight } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -11,12 +12,20 @@ import { Badge } from "@/components/ui/badge";
 import { useBookSearch } from "@/features/search/api/use-book-search";
 import { useUserSearch } from "@/features/search/api/use-user-search";
 import { useBlogSearch } from "@/features/search/api/use-blog-search";
+import { useSearchSuggestions } from "@/features/search/api/use-search-suggestions";
 import { useTagsQuery } from "@/features/search/api/use-tags-query";
 import SearchResultCard from "@/components/search/search-result-card";
 import UserResultCard from "@/components/search/user-result-card";
 import { BookLoader } from "@/components/ui/book-loader";
 import ScanFlow from "@/components/scan/scan-flow";
-import type { BlogSuggestion } from "@/features/search/types";
+import { generateBookSlug } from "@/lib/slug";
+import type { BlogSuggestion, SearchBook, SearchUser } from "@/features/search/types";
+
+type SuggestionItem =
+  | { type: "book"; data: SearchBook }
+  | { type: "user"; data: SearchUser }
+  | { type: "blog"; data: BlogSuggestion }
+  | { type: "all" };
 
 const SearchClient = () => {
   const router = useRouter();
@@ -56,6 +65,85 @@ const SearchClient = () => {
   const [includeExternal, setIncludeExternal] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
   const [isScanActive, setIsScanActive] = useState(false);
+
+  const [isSuggestOpen, setIsSuggestOpen] = useState(false);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+  const suggestContainerRef = useRef<HTMLDivElement>(null);
+
+  const { data: suggestions, isFetching: isFetchingSuggestions } =
+    useSearchSuggestions(query);
+
+  const hasSuggestionResults =
+    (suggestions?.books.length ?? 0) > 0 ||
+    (suggestions?.users.length ?? 0) > 0 ||
+    (suggestions?.blog.length ?? 0) > 0;
+
+  const shouldShowSuggestDropdown =
+    isSuggestOpen && query.trim().length >= 2;
+
+  const flatSuggestItems: SuggestionItem[] = useMemo(
+    () => [
+      ...(suggestions?.books.map((b) => ({ type: "book" as const, data: b })) ?? []),
+      ...(suggestions?.users.map((u) => ({ type: "user" as const, data: u })) ?? []),
+      ...(suggestions?.blog.map((b) => ({ type: "blog" as const, data: b })) ?? []),
+      ...(hasSuggestionResults || isFetchingSuggestions
+        ? [{ type: "all" as const }]
+        : []),
+    ],
+    [suggestions, hasSuggestionResults, isFetchingSuggestions],
+  );
+
+  const navigateToSuggestion = (item: SuggestionItem) => {
+    setIsSuggestOpen(false);
+    setFocusedIndex(-1);
+    if (item.type === "book") {
+      router.push(`/books/${generateBookSlug(item.data.title, item.data.author)}`);
+    } else if (item.type === "user") {
+      router.push(`/profiles/${item.data.username ?? item.data.id}`);
+    } else if (item.type === "blog") {
+      router.push(`/blog/${item.data.slug}`);
+    } else {
+      const trimmed = query.trim();
+      setSubmittedQuery(trimmed);
+      router.push(`/search?q=${encodeURIComponent(trimmed)}`, { scroll: false });
+    }
+  };
+
+  const handleSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!shouldShowSuggestDropdown) return;
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setFocusedIndex((prev) => Math.min(prev + 1, flatSuggestItems.length - 1));
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setFocusedIndex((prev) => Math.max(prev - 1, -1));
+    } else if (event.key === "Enter" && focusedIndex >= 0) {
+      event.preventDefault();
+      const item = flatSuggestItems[focusedIndex];
+      if (item) navigateToSuggestion(item);
+    } else if (event.key === "Escape") {
+      setIsSuggestOpen(false);
+      setFocusedIndex(-1);
+    }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        suggestContainerRef.current &&
+        !suggestContainerRef.current.contains(event.target as Node)
+      ) {
+        setIsSuggestOpen(false);
+        setFocusedIndex(-1);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    setFocusedIndex(-1);
+  }, [suggestions]);
 
   const { data: tagsData } = useTagsQuery();
 
@@ -101,6 +189,8 @@ const SearchClient = () => {
     event.preventDefault();
     const trimmed = query.trim();
     setSubmittedQuery(trimmed);
+    setIsSuggestOpen(false);
+    setFocusedIndex(-1);
     if (trimmed) {
       router.push(`/search?q=${encodeURIComponent(trimmed)}`, { scroll: false });
     }
@@ -109,6 +199,8 @@ const SearchClient = () => {
   const handleClear = () => {
     setQuery("");
     setSubmittedQuery("");
+    setIsSuggestOpen(false);
+    setFocusedIndex(-1);
     router.push("/search", { scroll: false });
   };
 
@@ -146,6 +238,7 @@ const SearchClient = () => {
   return (
     <div className="space-y-8">
       {/* Barre de recherche */}
+      <div ref={suggestContainerRef} className="relative">
       <form
         onSubmit={handleSubmit}
         className="flex flex-col rounded-3xl border border-border bg-card/60 p-6 shadow-sm backdrop-blur mb-1"
@@ -256,9 +349,16 @@ const SearchClient = () => {
             <Search className="h-5 w-5 text-muted-foreground" aria-hidden />
             <Input
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setIsSuggestOpen(true);
+              }}
+              onFocus={() => query.trim().length >= 2 && setIsSuggestOpen(true)}
+              onKeyDown={handleSearchKeyDown}
               placeholder="Rechercher un titre, un auteur, un utilisateur..."
               aria-label="Rechercher"
+              aria-autocomplete="list"
+              aria-expanded={shouldShowSuggestDropdown}
               className="flex-1"
             />
             {query ? (
@@ -301,6 +401,175 @@ const SearchClient = () => {
           </Button>
         </div>
       </form>
+
+      {/* Dropdown suggestions */}
+      {shouldShowSuggestDropdown ? (
+        <div
+          className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-border bg-card shadow-lg"
+          role="listbox"
+        >
+          {isFetchingSuggestions && !hasSuggestionResults ? (
+            <div className="px-4 py-3 text-sm text-muted-foreground">
+              Recherche en cours…
+            </div>
+          ) : !hasSuggestionResults ? (
+            <div className="px-4 py-3 text-sm text-muted-foreground">
+              Aucun résultat pour « {query} »
+            </div>
+          ) : (
+            (() => {
+              let flatIdx = -1;
+              return (
+                <>
+                  {(suggestions?.books.length ?? 0) > 0 ? (
+                    <div>
+                      <div className="flex items-center gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        <BookOpen className="h-3 w-3" />
+                        Livres
+                      </div>
+                      {suggestions!.books.map((book) => {
+                        flatIdx++;
+                        const idx = flatIdx;
+                        return (
+                          <button
+                            key={`book-${book.id}`}
+                            type="button"
+                            role="option"
+                            aria-selected={focusedIndex === idx}
+                            onClick={() => navigateToSuggestion({ type: "book", data: book })}
+                            className={`flex w-full items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-muted/60 ${
+                              focusedIndex === idx ? "bg-muted/60" : ""
+                            }`}
+                          >
+                            {book.coverUrl ? (
+                              <Image
+                                src={book.coverUrl}
+                                alt=""
+                                width={28}
+                                height={40}
+                                className="h-10 w-7 shrink-0 rounded object-cover"
+                              />
+                            ) : (
+                              <div className="h-10 w-7 shrink-0 rounded bg-muted" />
+                            )}
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium">{book.title}</p>
+                              <p className="truncate text-xs text-muted-foreground">
+                                {book.author}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+
+                  {(suggestions?.users.length ?? 0) > 0 ? (
+                    <div>
+                      <div className="flex items-center gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        <User className="h-3 w-3" />
+                        Utilisateurs
+                      </div>
+                      {suggestions!.users.map((user) => {
+                        flatIdx++;
+                        const idx = flatIdx;
+                        return (
+                          <button
+                            key={`user-${user.id}`}
+                            type="button"
+                            role="option"
+                            aria-selected={focusedIndex === idx}
+                            onClick={() => navigateToSuggestion({ type: "user", data: user })}
+                            className={`flex w-full items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-muted/60 ${
+                              focusedIndex === idx ? "bg-muted/60" : ""
+                            }`}
+                          >
+                            {user.avatarUrl ? (
+                              <Image
+                                src={user.avatarUrl}
+                                alt=""
+                                width={28}
+                                height={28}
+                                className="h-7 w-7 shrink-0 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="h-7 w-7 shrink-0 rounded-full bg-muted" />
+                            )}
+                            <p className="truncate text-sm font-medium">
+                              {user.displayName}
+                              {user.username ? (
+                                <span className="ml-1 font-normal text-muted-foreground">
+                                  @{user.username}
+                                </span>
+                              ) : null}
+                            </p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+
+                  {(suggestions?.blog.length ?? 0) > 0 ? (
+                    <div>
+                      <div className="flex items-center gap-2 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        <FileText className="h-3 w-3" />
+                        Blog
+                      </div>
+                      {suggestions!.blog.map((article) => {
+                        flatIdx++;
+                        const idx = flatIdx;
+                        return (
+                          <button
+                            key={`blog-${article.slug}`}
+                            type="button"
+                            role="option"
+                            aria-selected={focusedIndex === idx}
+                            onClick={() => navigateToSuggestion({ type: "blog", data: article })}
+                            className={`flex w-full items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-muted/60 ${
+                              focusedIndex === idx ? "bg-muted/60" : ""
+                            }`}
+                          >
+                            <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium">{article.title}</p>
+                              <p className="truncate text-xs text-muted-foreground">
+                                {article.description}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+
+                  {(() => {
+                    flatIdx++;
+                    const idx = flatIdx;
+                    return (
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={focusedIndex === idx}
+                        onClick={() => navigateToSuggestion({ type: "all" })}
+                        className={`flex w-full items-center justify-between border-t border-border px-4 py-3 text-sm font-medium transition-colors hover:bg-muted/60 ${
+                          focusedIndex === idx ? "bg-muted/60" : ""
+                        }`}
+                      >
+                        <span>
+                          Voir tous les résultats pour «{" "}
+                          <span className="text-primary">{query.trim()}</span> »
+                        </span>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                    );
+                  })()}
+                </>
+              );
+            })()
+          )}
+        </div>
+      ) : null}
+      </div>
 
       {/* Filtres actifs */}
       {activeFilters.length > 0 ? (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   ArrowDown,
@@ -16,6 +16,7 @@ import { DiscoverActionsSheet } from "./discover-actions-sheet";
 import { DiscoverEmpty } from "./discover-empty";
 import {
   addToDiscoverWishlist,
+  loadMoreDiscoverCandidates,
   removeFromDiscoverWishlist,
 } from "@/server/actions/discover";
 
@@ -31,6 +32,8 @@ type Props = {
 };
 
 const VISIBLE_STACK = 3;
+const LOAD_MORE_THRESHOLD = 2;
+const LOAD_MORE_BATCH = 10;
 
 // Durée d'animation de fermeture du SheetContent (Radix Dialog).
 // Doit rester aligné avec `data-[state=closed]:duration-300` dans components/ui/sheet.tsx
@@ -51,7 +54,45 @@ export const DiscoverDeck = ({ initialCandidates, follows }: Props) => {
   const [isPending, startTransition] = useTransition();
   const reduceMotion = useReducedMotion();
 
+  // Suivi des IDs déjà servis (évite doublons côté serveur lors de loadMore).
+  const servedIdsRef = useRef<Set<string>>(
+    new Set(initialCandidates.map((c) => c.id)),
+  );
+  const isFetchingMoreRef = useRef(false);
+  const [isExhausted, setIsExhausted] = useState(false);
+
   const top = queue[0];
+
+  // Prefetch incrémental: quand la queue se vide, on demande un nouveau batch.
+  useEffect(() => {
+    if (isExhausted) return;
+    if (isFetchingMoreRef.current) return;
+    if (queue.length > LOAD_MORE_THRESHOLD) return;
+
+    isFetchingMoreRef.current = true;
+    const excludeIds = Array.from(servedIdsRef.current);
+
+    loadMoreDiscoverCandidates(excludeIds, LOAD_MORE_BATCH)
+      .then((next) => {
+        if (next.length === 0) {
+          setIsExhausted(true);
+          return;
+        }
+        const fresh = next.filter((c) => !servedIdsRef.current.has(c.id));
+        if (fresh.length === 0) {
+          setIsExhausted(true);
+          return;
+        }
+        for (const c of fresh) servedIdsRef.current.add(c.id);
+        setQueue((q) => [...q, ...fresh]);
+      })
+      .catch((err) => {
+        console.error("[discover] loadMore failed", err);
+      })
+      .finally(() => {
+        isFetchingMoreRef.current = false;
+      });
+  }, [queue.length, isExhausted]);
 
   const advance = useCallback(() => {
     setQueue((q) => q.slice(1));
@@ -137,7 +178,16 @@ export const DiscoverDeck = ({ initialCandidates, follows }: Props) => {
   }, [toast]);
 
   if (queue.length === 0) {
-    return <DiscoverEmpty />;
+    // Queue vide + plus rien à charger: vrai état "fini".
+    // Sinon: un loadMore est en cours, on affiche un skeleton léger.
+    if (isExhausted) {
+      return <DiscoverEmpty />;
+    }
+    return (
+      <div className="flex flex-1 items-center justify-center">
+        <div className="aspect-[3/4.2] h-full max-h-[80%] w-auto animate-pulse rounded-2xl bg-[#e9e1d4] dark:bg-[#1a1612]" />
+      </div>
+    );
   }
 
   const visibleStack = queue.slice(0, VISIBLE_STACK);
