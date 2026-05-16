@@ -14,6 +14,7 @@ import ReadListSection from "@/components/profile/read-list-section";
 import ProfileEditButton from "@/components/profile/profile-edit-button";
 import UserFeedbacksSection from "@/components/profile/user-feedbacks-section";
 import ProfileHeaderStats from "@/components/profile/profile-header-stats";
+import { EnviesProfileSection } from "@/features/discover/components/envies-profile-section";
 
 import { getCurrentSession } from "@/lib/auth/session";
 import { resolveSessionUserId } from "@/lib/auth/user";
@@ -224,6 +225,13 @@ const ProfilePage = async () => {
 
         <section className="space-y-6">
           <ReadListSection readList={dashboard.readList} />
+        </section>
+
+        <section className="space-y-6">
+          <EnviesProfileSection
+            preview={dashboard.wishlistPreview}
+            total={dashboard.wishlistTotal}
+          />
         </section>
 
         <section className="space-y-6">

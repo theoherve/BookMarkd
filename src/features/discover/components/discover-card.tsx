@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import {
+  animate,
   motion,
   useMotionValue,
   useTransform,
@@ -26,6 +27,7 @@ type Props = {
 
 const SWIPE_THRESHOLD = 90;
 const SWIPE_VELOCITY = 600;
+const RESET_SPRING = { type: "spring" as const, stiffness: 300, damping: 30 };
 
 const directionLabels: Record<
   SwipeDirection,
@@ -54,8 +56,17 @@ export const DiscoverCard = ({
   const opacityUp = useTransform(y, [-130, -20], [1, 0]);
   const opacityDown = useTransform(y, [20, 130], [0, 1]);
 
-  const [localExit, setLocalExit] = useState<SwipeDirection | null>(null);
-  const exiting = exitDirection ?? localExit;
+  // Seul left/right sortent la carte; up/down ouvrent un panel mais la carte reste.
+  const isExitingAway = exitDirection === "left" || exitDirection === "right";
+
+  const resetCardPosition = useCallback(() => {
+    animate(x, 0, RESET_SPRING);
+    animate(y, 0, RESET_SPRING);
+  }, [x, y]);
+
+  useEffect(() => {
+    if (!isExitingAway) resetCardPosition();
+  }, [isExitingAway, resetCardPosition]);
 
   const handleDragEnd = (
     _e: MouseEvent | TouchEvent | PointerEvent,
@@ -69,37 +80,26 @@ export const DiscoverCard = ({
     const absVx = Math.abs(velocity.x);
     const absVy = Math.abs(velocity.y);
 
-    // Horizontal dominant
     if (absX > absY) {
       if (absX > SWIPE_THRESHOLD || absVx > SWIPE_VELOCITY) {
-        const dir: SwipeDirection = offset.x > 0 ? "right" : "left";
-        setLocalExit(dir);
-        onSwipe(dir);
+        onSwipe(offset.x > 0 ? "right" : "left");
         return;
       }
-    } else {
-      if (absY > SWIPE_THRESHOLD || absVy > SWIPE_VELOCITY) {
-        const dir: SwipeDirection = offset.y > 0 ? "down" : "up";
-        setLocalExit(dir);
-        onSwipe(dir);
-        return;
-      }
+    } else if (absY > SWIPE_THRESHOLD || absVy > SWIPE_VELOCITY) {
+      onSwipe(offset.y > 0 ? "down" : "up");
+      resetCardPosition();
+      return;
     }
+
+    resetCardPosition();
   };
 
   const exitTarget = useMemo(() => {
-    if (!exiting) return null;
-    switch (exiting) {
-      case "right":
-        return { x: 800, y: 0, rotate: 25 };
-      case "left":
-        return { x: -800, y: 0, rotate: -25 };
-      case "up":
-        return { x: 0, y: -900, rotate: 0 };
-      case "down":
-        return { x: 0, y: 900, rotate: 0 };
-    }
-  }, [exiting]);
+    if (!isExitingAway) return null;
+    if (exitDirection === "right") return { x: 800, y: 0, rotate: 25 };
+    if (exitDirection === "left") return { x: -800, y: 0, rotate: -25 };
+    return null;
+  }, [isExitingAway, exitDirection]);
 
   const baseTransform = useMemo(() => {
     if (stackIndex === 0) return { scale: 1, y: 0 };
@@ -116,7 +116,7 @@ export const DiscoverCard = ({
         rotate: isTop ? rotate : 0,
         zIndex: 10 - stackIndex,
       }}
-      drag={isTop && !exiting ? true : false}
+      drag={isTop && !isExitingAway}
       dragElastic={0.65}
       dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
       onDragEnd={handleDragEnd}
@@ -222,9 +222,9 @@ export const DiscoverCard = ({
           {/* Reasons */}
           {book.matchReasons.length > 0 ? (
             <div className="mt-1.5 flex shrink-0 flex-wrap justify-center gap-1">
-              {book.matchReasons.slice(0, 2).map((reason, idx) => (
+              {book.matchReasons.slice(0, 2).map((reason) => (
                 <span
-                  key={`${book.id}-reason-${idx}`}
+                  key={`${reason.kind}-${reason.label}`}
                   className="rounded-full border border-amber-900/15 dark:border-amber-100/10 bg-[#fdfaf5]/60 dark:bg-[#0f0c0a]/50 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-amber-900/75 dark:text-amber-100/70 truncate max-w-[50%]"
                 >
                   {reason.label}

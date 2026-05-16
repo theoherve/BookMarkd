@@ -1,11 +1,14 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
+import Link from "next/link";
+import { Heart } from "lucide-react";
 
 import { getCurrentSession } from "@/lib/auth/session";
 import { resolveSessionUserId } from "@/lib/auth/user";
 import db from "@/lib/supabase/db";
 
 import { getDiscoverCandidates } from "@/features/discover/server/get-discover-candidates";
+import { getDiscoverWishlistCount } from "@/features/discover/server/get-discover-wishlist-count";
 import { DiscoverDeck } from "@/features/discover/components/discover-deck";
 
 export const dynamic = "force-dynamic";
@@ -58,9 +61,10 @@ const DiscoverPage = async () => {
     redirect("/login?callbackUrl=/discover");
   }
 
-  const [candidates, follows] = await Promise.all([
+  const [candidates, follows, wishlistCount] = await Promise.all([
     getDiscoverCandidates(userId, 25),
     getFollowOptions(userId),
+    getDiscoverWishlistCount(userId),
   ]);
 
   return (
@@ -75,10 +79,18 @@ const DiscoverPage = async () => {
       />
 
       <div className="mx-auto flex h-full w-full max-w-md flex-col">
-        <header className="shrink-0 text-center">
-          <h1 className="font-display text-lg font-medium italic leading-tight text-[#1f140d] dark:text-[#f7f1ea] sm:text-xl">
+        <header className="relative shrink-0">
+          <h1 className="text-center font-display text-lg font-medium italic leading-tight text-[#1f140d] dark:text-[#f7f1ea] sm:text-xl">
             Votre prochaine lecture
           </h1>
+          <Link
+            href="/discover/envies"
+            aria-label={`Mes envies (${wishlistCount})`}
+            className="absolute right-0 top-1/2 inline-flex -translate-y-1/2 items-center gap-1.5 rounded-full border border-rose-700/30 bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-900 transition hover:bg-rose-100 dark:border-rose-300/30 dark:bg-rose-900/30 dark:text-rose-100 dark:hover:bg-rose-900/50"
+          >
+            <Heart className="size-3.5 fill-current" />
+            {wishlistCount > 0 ? wishlistCount : null}
+          </Link>
         </header>
 
         <DiscoverDeck initialCandidates={candidates} follows={follows} />

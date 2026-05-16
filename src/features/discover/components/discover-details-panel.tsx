@@ -125,9 +125,9 @@ export const DiscoverDetailsPanel = ({
                     Pourquoi ce livre
                   </h3>
                   <ul className="flex flex-wrap gap-1.5">
-                    {book.matchReasons.slice(0, 4).map((reason, idx) => (
+                    {book.matchReasons.slice(0, 4).map((reason) => (
                       <li
-                        key={`reason-${idx}`}
+                        key={`${reason.kind}-${reason.label}`}
                         className="inline-flex items-center gap-1 rounded-full border border-amber-900/15 bg-[#fdfaf5] px-2.5 py-1 text-xs text-[#1f140d]/80 dark:border-amber-100/15 dark:bg-[#1a1612] dark:text-[#f7f1ea]/75"
                       >
                         <span className="size-1 rounded-full bg-orange-600" />
@@ -143,7 +143,7 @@ export const DiscoverDetailsPanel = ({
                 <button
                   type="button"
                   onClick={() => onOpenActions(book)}
-                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[#1f140d] px-5 py-2.5 text-sm font-medium text-amber-50 transition hover:bg-[#2f1c11] dark:bg-[#f7f1ea] dark:text-[#1f140d] dark:hover:bg-amber-50"
+                  className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-full bg-[#1f140d] px-5 py-2.5 text-sm font-medium text-[#fdfaf5] transition hover:bg-[#2f1c11] dark:bg-[#f7f1ea] dark:text-[#1f140d] dark:hover:bg-amber-50"
                 >
                   <ArrowDown className="size-4" />
                   Ranger ce livre
@@ -151,7 +151,7 @@ export const DiscoverDetailsPanel = ({
                 {book.slug ? (
                   <Link
                     href={`/books/${book.slug}`}
-                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-amber-900/30 px-5 py-2.5 text-sm font-medium text-[#1f140d] transition hover:bg-amber-900/5 dark:border-amber-100/25 dark:text-[#f7f1ea] dark:hover:bg-amber-100/5"
+                    className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-full border border-amber-900/30 px-5 py-2.5 text-sm font-medium text-[#1f140d] transition hover:bg-amber-900/5 dark:border-amber-100/25 dark:text-[#f7f1ea] dark:hover:bg-amber-100/5"
                   >
                     Page complète
                     <ArrowRight className="size-4" />
@@ -163,7 +163,7 @@ export const DiscoverDetailsPanel = ({
             <button
               type="button"
               onClick={onClose}
-              className="absolute right-3 top-3 inline-flex size-8 items-center justify-center rounded-full border border-amber-900/15 bg-[#fdfaf5]/80 text-amber-900 backdrop-blur transition hover:bg-amber-900/10 dark:border-amber-100/15 dark:bg-[#0f0c0a]/70 dark:text-amber-100"
+              className="absolute right-3 top-3 inline-flex size-8 cursor-pointer items-center justify-center rounded-full border border-amber-900/15 bg-[#fdfaf5]/80 text-amber-900 backdrop-blur transition hover:bg-amber-900/10 dark:border-amber-100/15 dark:bg-[#0f0c0a]/70 dark:text-amber-100"
               aria-label="Fermer les détails"
             >
               <X className="size-4" />
