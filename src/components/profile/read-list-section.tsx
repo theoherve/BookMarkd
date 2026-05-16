@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -56,19 +56,19 @@ const isValidStatus = (v: string | null): v is ReadListBook["status"] =>
 
 const ReadListSection = ({ readList }: ReadListSectionProps) => {
   const searchParams = useSearchParams();
-  const initialStatus = searchParams?.get(READLIST_STATUS_PARAM) ?? null;
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>(
-    isValidStatus(initialStatus) ? initialStatus : "all",
-  );
+  const urlStatus = searchParams?.get(READLIST_STATUS_PARAM) ?? null;
+  const urlFilterStatus: FilterStatus = isValidStatus(urlStatus) ? urlStatus : "all";
+
+  const [lastUrlStatus, setLastUrlStatus] = useState<FilterStatus>(urlFilterStatus);
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>(urlFilterStatus);
+
+  if (lastUrlStatus !== urlFilterStatus) {
+    setLastUrlStatus(urlFilterStatus);
+    setFilterStatus(urlFilterStatus);
+  }
+
   const [viewMode, setViewMode] = useState<ViewMode>(() => getStoredViewMode());
   const [removingBookIds, setRemovingBookIds] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    const value = searchParams?.get(READLIST_STATUS_PARAM) ?? null;
-    if (isValidStatus(value)) {
-      setFilterStatus(value);
-    }
-  }, [searchParams]);
 
   const handleFilterChange = (status: FilterStatus) => {
     setFilterStatus(status);
