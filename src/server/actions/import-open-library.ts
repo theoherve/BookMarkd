@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 
 import db from "@/lib/supabase/db";
 import { fetchOpenLibraryWorkDetails } from "@/lib/open-library";
+import { isMissingOrPlaceholderCover } from "@/lib/covers/placeholder-detect";
+import { findAndUploadMissingCover } from "@/lib/covers/find-missing-cover";
 
 type ImportPayload = {
   openLibraryId: string;
@@ -73,6 +75,31 @@ export const importOpenLibraryBook = async (
       .select("id")
       .single();
     if (insertError) throw insertError;
+
+    if (isMissingOrPlaceholderCover(coverUrl)) {
+      try {
+        const coverResult = await Promise.race([
+          findAndUploadMissingCover({
+            bookId: newBook.id as string,
+            title: payload.title,
+            author: payload.author,
+          }),
+          new Promise<{ success: false; reason: string }>((resolve) =>
+            setTimeout(
+              () => resolve({ success: false, reason: "timeout" }),
+              3500,
+            ),
+          ),
+        ]);
+        if (!coverResult.success) {
+          console.warn(
+            `[import-open-library] cover lookup failed for ${newBook.id}: ${coverResult.reason}`,
+          );
+        }
+      } catch (coverError) {
+        console.error("[import-open-library] cover lookup error:", coverError);
+      }
+    }
 
     const subjects = workDetails.subjects ?? [];
     if (subjects.length > 0) {
