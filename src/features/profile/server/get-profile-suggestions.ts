@@ -15,7 +15,7 @@ export type BookReaderPreview = {
   username: string | null;
   displayName: string;
   avatarUrl: string | null;
-  status: "to_read" | "reading" | "finished";
+  status: "to_read" | "reading" | "finished" | "dnf";
 };
 
 export type ProfileSuggestion = {
@@ -42,6 +42,7 @@ const STATUS_WEIGHT = {
   finished: 3,
   reading: 2,
   to_read: 1,
+  dnf: -2,
 } as const;
 
 const BOOK_SUGGESTIONS_LIMIT = 6;
@@ -68,7 +69,7 @@ export const getProfileSuggestions = async (
       .from("user_books")
       .select("book_id, status")
       .eq("user_id", viewerId)
-      .in("status", ["finished", "reading", "to_read"]);
+      .in("status", ["finished", "reading", "to_read", "dnf"]);
 
     if (viewerBooksErr || !viewerBooks || viewerBooks.length === 0) {
       return null;
@@ -110,7 +111,7 @@ export const getProfileSuggestions = async (
       .from("user_books")
       .select("book_id, status, rating")
       .eq("user_id", profileUserId)
-      .in("status", ["finished", "reading", "to_read"]);
+      .in("status", ["finished", "reading", "to_read", "dnf"]);
 
     if (profileBooksErr || !profileBooks || profileBooks.length === 0) {
       return null;
@@ -348,7 +349,7 @@ export const getProfileSuggestions = async (
       const userBooks = db.toCamel<
         Array<{
           bookId: string;
-          status: "to_read" | "reading" | "finished";
+          status: "to_read" | "reading" | "finished" | "dnf";
           userId: string;
           user?: {
             id: string;

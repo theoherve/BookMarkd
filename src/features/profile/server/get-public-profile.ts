@@ -11,6 +11,7 @@ export type PublicProfile = {
     booksRead: number;
     booksReading: number;
     booksToRead: number;
+    booksDnf: number;
     followers: number;
     following: number;
     listsOwned: number;
@@ -28,7 +29,7 @@ export type PublicProfile = {
     title: string;
     author: string;
     coverUrl: string | null;
-    status: "to_read" | "reading" | "finished";
+    status: "to_read" | "reading" | "finished" | "dnf";
     rating: number | null;
     updatedAt: string;
   }>;
@@ -137,7 +138,7 @@ export const getPublicProfile = async (
     if (userBooksError) throw userBooksError;
     const userBooks = (userBooksRows ?? []).map((row) =>
       db.toCamel<{
-        status: "to_read" | "reading" | "finished";
+        status: "to_read" | "reading" | "finished" | "dnf";
         rating: number | null;
         updatedAt: string;
         book?: { id: string; title: string; author: string; coverUrl: string | null };
@@ -190,6 +191,7 @@ export const getPublicProfile = async (
     const booksRead = userBooks.filter((ub) => ub.status === "finished").length;
     const booksReading = userBooks.filter((ub) => ub.status === "reading").length;
     const booksToRead = userBooks.filter((ub) => ub.status === "to_read").length;
+    const booksDnf = userBooks.filter((ub) => ub.status === "dnf").length;
 
     return {
       id: user.id,
@@ -201,6 +203,7 @@ export const getPublicProfile = async (
         booksRead,
         booksReading,
         booksToRead,
+        booksDnf,
         followers,
         following,
         listsOwned: lists.length,

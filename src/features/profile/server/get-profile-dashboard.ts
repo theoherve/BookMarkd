@@ -19,6 +19,7 @@ const buildReadingStats = (
     toRead: 0,
     reading: 0,
     finished: 0,
+    dnf: 0,
   };
 
   return rows.reduce((accumulator, row) => {
@@ -36,6 +37,10 @@ const buildReadingStats = (
 
     if (row.status === "finished") {
       accumulator.finished += 1;
+    }
+
+    if (row.status === "dnf") {
+      accumulator.dnf += 1;
     }
 
     return accumulator;
@@ -524,7 +529,7 @@ export const getProfileDashboard = async (
           listTitle: null,
           note: userBook.notePrivate ?? null,
           rating: null,
-          status: userBook.status as "to_read" | "reading" | "finished" | null,
+          status: userBook.status as "to_read" | "reading" | "finished" | "dnf" | null,
           occurredAt: userBook.createdAt,
         });
       }
@@ -543,7 +548,7 @@ export const getProfileDashboard = async (
           listTitle: null,
           note: userBook.notePrivate ?? null,
           rating: userBook.rating ? Number(userBook.rating) : null,
-          status: userBook.status as "to_read" | "reading" | "finished" | null,
+          status: userBook.status as "to_read" | "reading" | "finished" | "dnf" | null,
           occurredAt: userBook.ratedAt!,
         });
       }
@@ -565,7 +570,7 @@ export const getProfileDashboard = async (
           listTitle: null,
           note: userBook.notePrivate ?? null,
           rating: userBook.rating ? Number(userBook.rating) : null,
-          status: userBook.status as "to_read" | "reading" | "finished" | null,
+          status: userBook.status as "to_read" | "reading" | "finished" | "dnf" | null,
           occurredAt: userBook.updatedAt,
         });
       }
@@ -722,7 +727,7 @@ export const getProfileDashboard = async (
       .map((item) => ({
         id: item.id,
         bookId: item.bookId,
-        status: item.status as "to_read" | "reading" | "finished",
+        status: item.status as "to_read" | "reading" | "finished" | "dnf",
         rating: item.rating ? Number(item.rating) : null,
         book: {
           id: item.book!.id,

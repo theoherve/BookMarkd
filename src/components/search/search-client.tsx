@@ -59,7 +59,7 @@ const SearchClient = () => {
   const [selectedGenre, setSelectedGenre] = useState<string | undefined>();
   const [minRating, setMinRating] = useState<number | undefined>();
   const [readingStatus, setReadingStatus] = useState<
-    "to_read" | "reading" | "finished" | undefined
+    "to_read" | "reading" | "finished" | "dnf" | undefined
   >();
   const [author, setAuthor] = useState<string>("");
   const [includeExternal, setIncludeExternal] = useState(true);
@@ -218,6 +218,7 @@ const SearchClient = () => {
         to_read: "À lire",
         reading: "En cours",
         finished: "Terminé",
+        dnf: "Abandonné",
       };
       filters.push(`État: ${statusLabels[readingStatus]}`);
     }
@@ -321,7 +322,7 @@ const SearchClient = () => {
                 value={readingStatus ?? ""}
                 onChange={(e) =>
                   setReadingStatus(
-                    (e.target.value as "to_read" | "reading" | "finished" | undefined) ||
+                    (e.target.value as "to_read" | "reading" | "finished" | "dnf" | undefined) ||
                       undefined,
                   )
                 }
@@ -330,6 +331,7 @@ const SearchClient = () => {
                 <option value="to_read">À lire</option>
                 <option value="reading">En cours</option>
                 <option value="finished">Terminé</option>
+                <option value="dnf">Abandonné</option>
               </select>
             </div>
 

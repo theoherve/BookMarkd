@@ -28,7 +28,7 @@ const revalidateBook = (bookId: string) => {
 
 export const updateReadingStatus = async (
   bookId: string,
-  status: "to_read" | "reading" | "finished",
+  status: "to_read" | "reading" | "finished" | "dnf",
 ): Promise<ActionResult> => {
   try {
     const userId = await requireSession();
@@ -80,6 +80,7 @@ export const updateReadingStatus = async (
         to_read: "a ajouté à sa liste de lecture",
         reading: "a commencé à lire",
         finished: "a terminé",
+        dnf: "a abandonné",
       };
       const statusNote = statusLabels[status] || "a mis à jour son statut";
       
@@ -132,7 +133,7 @@ export const rateBook = async (
       throw existingError;
     }
 
-    const previousStatus = existing?.status as "to_read" | "reading" | "finished" | undefined;
+    const previousStatus = existing?.status as "to_read" | "reading" | "finished" | "dnf" | undefined;
     
     // Lorsqu'on note un livre, il passe automatiquement en "terminé"
     const newStatus = "finished";

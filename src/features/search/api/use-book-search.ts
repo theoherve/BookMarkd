@@ -8,7 +8,7 @@ type SearchParams = {
   q: string;
   genre?: string;
   minRating?: number;
-  readingStatus?: "to_read" | "reading" | "finished";
+  readingStatus?: "to_read" | "reading" | "finished" | "dnf";
   author?: string;
   includeExternal?: boolean;
 };

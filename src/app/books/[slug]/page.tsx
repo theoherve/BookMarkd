@@ -95,7 +95,7 @@ type RawBook = {
 };
 
 type ViewerInfo = {
-  status?: "to_read" | "reading" | "finished" | null;
+  status?: "to_read" | "reading" | "finished" | "dnf" | null;
   rating?: number | null;
 };
 
@@ -383,7 +383,7 @@ const getBookDetail = async (
     return {
       book: rawBook,
       viewer: {
-        status: (userBook?.status as "to_read" | "reading" | "finished") ?? null,
+        status: (userBook?.status as "to_read" | "reading" | "finished" | "dnf") ?? null,
         rating: typeof userBook?.rating === "number" ? userBook.rating : null,
       },
     };

@@ -54,7 +54,7 @@ create table if not exists public.user_books (
   id uuid primary key default uuid_generate_v4(),
   user_id uuid not null references public.users(id) on delete cascade,
   book_id uuid not null references public.books(id) on delete cascade,
-  status text not null check (status in ('to_read', 'reading', 'finished')),
+  status text not null check (status in ('to_read', 'reading', 'finished', 'dnf')),
   rating numeric(2, 1),
   rated_at timestamptz,
   note_private text,

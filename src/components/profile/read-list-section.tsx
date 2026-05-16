@@ -46,12 +46,13 @@ const statusLabels: Record<ReadListBook["status"], string> = {
   to_read: "À lire",
   reading: "En cours",
   finished: "Lu",
+  dnf: "Abandonné",
 };
 
 type FilterStatus = ReadListBook["status"] | "all";
 
 const isValidStatus = (v: string | null): v is ReadListBook["status"] =>
-  v === "to_read" || v === "reading" || v === "finished";
+  v === "to_read" || v === "reading" || v === "finished" || v === "dnf";
 
 const ReadListSection = ({ readList }: ReadListSectionProps) => {
   const searchParams = useSearchParams();
@@ -164,6 +165,14 @@ const ReadListSection = ({ readList }: ReadListSectionProps) => {
               aria-label="Afficher les livres lus"
             >
               Lu
+            </Button>
+            <Button
+              variant={filterStatus === "dnf" ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleFilterChange("dnf")}
+              aria-label="Afficher les livres abandonnés"
+            >
+              Abandonné
             </Button>
           </div>
           <Button

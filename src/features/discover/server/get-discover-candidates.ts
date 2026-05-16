@@ -8,7 +8,7 @@ const DEFAULT_LIMIT = 20;
 const CANDIDATE_POOL_SIZE = 120;
 const TOP_PROFILE_AUTHORS = 5;
 const TOP_PROFILE_TAGS = 10;
-const POSITIVE_STATUS = ["reading", "finished"] as const;
+const SIGNAL_STATUS = ["reading", "finished", "dnf"] as const;
 
 type BookRow = {
   id: string;
@@ -55,7 +55,7 @@ const getUserProfile = async (userId: string): Promise<UserProfile> => {
     .from("user_books")
     .select("book_id, status, rating")
     .eq("user_id", userId)
-    .in("status", POSITIVE_STATUS as unknown as string[]);
+    .in("status", SIGNAL_STATUS as unknown as string[]);
 
   const bookIds: string[] = [];
   const bookWeight = new Map<string, number>();
@@ -66,7 +66,14 @@ const getUserProfile = async (userId: string): Promise<UserProfile> => {
   }>) {
     if (!row.book_id) continue;
     const rating = typeof row.rating === "number" ? row.rating : null;
-    let weight = row.status === "finished" ? 1.5 : 1;
+    let weight: number;
+    if (row.status === "dnf") {
+      weight = -1.5;
+    } else if (row.status === "finished") {
+      weight = 1.5;
+    } else {
+      weight = 1;
+    }
     if (rating !== null) weight += Math.max(0, (rating - 3) / 2);
     bookIds.push(row.book_id);
     bookWeight.set(row.book_id, weight);

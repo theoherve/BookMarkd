@@ -118,6 +118,7 @@ const ProfilePage = async () => {
                 followingCount={dashboard.followingCount}
                 toReadCount={dashboard.readingStats.toRead}
                 readingCount={dashboard.readingStats.reading}
+                dnfCount={dashboard.readingStats.dnf}
                 booksHref={booksReadHref}
               />
 

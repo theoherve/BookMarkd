@@ -13,7 +13,7 @@ type ActionResult =
   | { success: true }
   | { success: false; message: string };
 
-type ReadingStatus = "to_read" | "reading" | "finished";
+type ReadingStatus = "to_read" | "reading" | "finished" | "dnf";
 type ReviewVisibility = "public" | "friends" | "private";
 
 const requireSession = async (): Promise<string> => {

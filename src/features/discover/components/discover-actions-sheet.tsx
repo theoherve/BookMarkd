@@ -33,13 +33,14 @@ type Props = {
   onSaved: (book: DiscoverCandidate) => void;
 };
 
-type ReadingStatus = "to_read" | "reading" | "finished";
+type ReadingStatus = "to_read" | "reading" | "finished" | "dnf";
 type ReviewVisibility = "public" | "friends" | "private";
 
 const statusOptions: Array<{ value: ReadingStatus; label: string; help: string }> = [
   { value: "to_read", label: "À lire", help: "Dans ma pile" },
   { value: "reading", label: "En cours", help: "Je le lis" },
   { value: "finished", label: "Lu", help: "Terminé" },
+  { value: "dnf", label: "Abandonné", help: "Pas fini" },
 ];
 
 const visibilityOptions: Array<{ value: ReviewVisibility; label: string }> = [

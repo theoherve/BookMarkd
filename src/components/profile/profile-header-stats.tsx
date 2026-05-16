@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpen, BookOpenCheck, Bookmark } from "lucide-react";
+import { BookOpen, BookOpenCheck, Bookmark, BookX } from "lucide-react";
 
 import FollowListModal from "@/components/profile/follow-list-modal";
 
@@ -18,6 +18,7 @@ type ProfileHeaderStatsProps = {
   followingCount: number;
   toReadCount: number;
   readingCount: number;
+  dnfCount: number;
   booksHref: string;
 };
 
@@ -35,6 +36,7 @@ const ProfileHeaderStats = ({
   followingCount,
   toReadCount,
   readingCount,
+  dnfCount,
   booksHref,
 }: ProfileHeaderStatsProps) => {
   const [openModal, setOpenModal] = useState<"followers" | "following" | null>(
@@ -47,7 +49,7 @@ const ProfileHeaderStats = ({
   const followersHref = `/profiles/${usernameOrId}/followers`;
   const followingHref = `/profiles/${usernameOrId}/following`;
 
-  const goToReadList = (status: "to_read" | "reading" | "finished") => {
+  const goToReadList = (status: "to_read" | "reading" | "finished" | "dnf") => {
     if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
     url.searchParams.set(READLIST_STATUS_PARAM, status);
@@ -141,6 +143,16 @@ const ProfileHeaderStats = ({
             <BookOpenCheck className="h-3 w-3" aria-hidden />
             <span className="font-semibold tabular-nums text-foreground">{booksReadCount}</span>
             <span>terminé{booksReadCount > 1 ? "s" : ""}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => goToReadList("dnf")}
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-border/60 bg-background/60 px-2.5 py-1 text-muted-foreground transition-colors hover:border-border hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={`Voir les ${dnfCount} livre${dnfCount > 1 ? "s" : ""} abandonné${dnfCount > 1 ? "s" : ""}`}
+          >
+            <BookX className="h-3 w-3" aria-hidden />
+            <span className="font-semibold tabular-nums text-foreground">{dnfCount}</span>
+            <span>abandonné{dnfCount > 1 ? "s" : ""}</span>
           </button>
         </div>
       </div>

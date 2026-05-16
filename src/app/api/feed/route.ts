@@ -255,7 +255,7 @@ export async function GET(request: Request) {
         .from("user_books")
         .select("book_id, status")
         .eq("user_id", viewerId)
-        .in("status", ["finished", "reading", "to_read"]);
+        .in("status", ["finished", "reading", "to_read", "dnf"]);
 
       if (userBooksErr) throw userBooksErr;
       if (!userBooks || userBooks.length === 0) return [];
@@ -295,7 +295,14 @@ export async function GET(request: Request) {
         if (!bookId || !tagName) return;
 
         const status = userBookStatusMap.get(bookId) ?? "to_read";
-        const weight = status === "finished" ? 3 : status === "reading" ? 2 : 1;
+        const weight =
+          status === "finished"
+            ? 3
+            : status === "reading"
+              ? 2
+              : status === "dnf"
+                ? -2
+                : 1;
         tagWeights.set(tagName, (tagWeights.get(tagName) ?? 0) + weight);
       });
 
@@ -555,7 +562,7 @@ export async function GET(request: Request) {
     // ── Lecteurs par livre ─────────────────────────────────────────────────
     const readersByBook = new Map<string, Array<{
       id: string; username: string | null; displayName: string; avatarUrl: string | null;
-      status: "to_read" | "reading" | "finished";
+      status: "to_read" | "reading" | "finished" | "dnf";
     }>>();
     if (allEnrichmentBookIds.length > 0) {
       const { data: bookReadersData, error: readersErr } = await db.client
@@ -571,7 +578,7 @@ export async function GET(request: Request) {
       if (bookReadersData && bookReadersData.length > 0) {
         const userBooks = db.toCamel<Array<{
           bookId: string;
-          status: "to_read" | "reading" | "finished";
+          status: "to_read" | "reading" | "finished" | "dnf";
           userId: string;
           user?: { id: string; username: string | null; displayName: string; avatarUrl: string | null };
         }>>(bookReadersData ?? []);
@@ -682,7 +689,7 @@ export async function GET(request: Request) {
       author: item.book?.author ?? "",
       coverUrl: item.book?.coverUrl ?? null,
       averageRating: typeof item.book?.averageRating === "number" ? item.book!.averageRating! : null,
-      status: item.status as "to_read" | "reading" | "finished",
+      status: item.status as "to_read" | "reading" | "finished" | "dnf",
       updatedAt: item.updatedAt,
       readerName: item.user?.displayName ?? "Lectrice anonyme",
       readerAvatarUrl: item.user?.avatarUrl ?? null,
