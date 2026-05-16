@@ -41,7 +41,7 @@ export const addBookToReadlist = async (
     }
 
     const statusToSet =
-      (existing?.status as "to_read" | "reading" | "finished" | undefined) ??
+      (existing?.status as "to_read" | "reading" | "finished" | "dnf" | undefined) ??
       "to_read";
 
     const { error: upsertError } = await db.client

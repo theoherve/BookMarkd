@@ -5,7 +5,7 @@ export type BookReader = {
   username: string | null;
   displayName: string;
   avatarUrl: string | null;
-  status: "to_read" | "reading" | "finished";
+  status: "to_read" | "reading" | "finished" | "dnf";
   rating: number | null;
   hasReview: boolean;
 };
@@ -41,7 +41,7 @@ export const getBookReaders = async (bookId: string): Promise<BookReader[]> => {
     const userBooks = db.toCamel<
       Array<{
         userId: string;
-        status: "to_read" | "reading" | "finished";
+        status: "to_read" | "reading" | "finished" | "dnf";
         rating: number | null;
         user?: {
           id: string;
@@ -60,7 +60,7 @@ export const getBookReaders = async (bookId: string): Promise<BookReader[]> => {
       username: ub.user?.username ?? null,
       displayName: ub.user?.displayName ?? "Utilisateur·rice",
       avatarUrl: ub.user?.avatarUrl ?? null,
-      status: ub.status as "to_read" | "reading" | "finished",
+      status: ub.status as "to_read" | "reading" | "finished" | "dnf",
       rating: typeof ub.rating === "number" ? ub.rating : null,
       hasReview: reviewersSet.has(ub.userId),
     }));

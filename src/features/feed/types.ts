@@ -20,7 +20,7 @@ export type FeedFriendBook = {
   author: string;
   coverUrl?: string | null;
   averageRating?: number | null;
-  status: "to_read" | "reading" | "finished";
+  status: "to_read" | "reading" | "finished" | "dnf";
   updatedAt: string;
   readerName: string;
   readerAvatarUrl?: string | null;
@@ -31,7 +31,7 @@ export type BookReaderPreview = {
   username: string | null;
   displayName: string;
   avatarUrl: string | null;
-  status: "to_read" | "reading" | "finished";
+  status: "to_read" | "reading" | "finished" | "dnf";
 };
 
 export type FeedRecommendation = {

@@ -3,7 +3,13 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { X, LayoutGrid, List } from "lucide-react";
+
+import {
+  READLIST_SECTION_ID,
+  READLIST_STATUS_PARAM,
+} from "@/components/profile/profile-header-stats";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -40,12 +46,27 @@ const statusLabels: Record<ReadListBook["status"], string> = {
   to_read: "À lire",
   reading: "En cours",
   finished: "Lu",
+  dnf: "Abandonné",
 };
 
 type FilterStatus = ReadListBook["status"] | "all";
 
+const isValidStatus = (v: string | null): v is ReadListBook["status"] =>
+  v === "to_read" || v === "reading" || v === "finished" || v === "dnf";
+
 const ReadListSection = ({ readList }: ReadListSectionProps) => {
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
+  const searchParams = useSearchParams();
+  const urlStatus = searchParams?.get(READLIST_STATUS_PARAM) ?? null;
+  const urlFilterStatus: FilterStatus = isValidStatus(urlStatus) ? urlStatus : "all";
+
+  const [lastUrlStatus, setLastUrlStatus] = useState<FilterStatus>(urlFilterStatus);
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>(urlFilterStatus);
+
+  if (lastUrlStatus !== urlFilterStatus) {
+    setLastUrlStatus(urlFilterStatus);
+    setFilterStatus(urlFilterStatus);
+  }
+
   const [viewMode, setViewMode] = useState<ViewMode>(() => getStoredViewMode());
   const [removingBookIds, setRemovingBookIds] = useState<Set<string>>(new Set());
 
@@ -79,7 +100,7 @@ const ReadListSection = ({ readList }: ReadListSectionProps) => {
 
   if (readList.length === 0) {
     return (
-      <Card className="border-border/60 bg-card/80 backdrop-blur">
+      <Card id={READLIST_SECTION_ID} className="border-border/60 bg-card/80 backdrop-blur scroll-mt-24">
         <CardHeader>
           <CardTitle className="text-xl font-semibold text-foreground">
             Ma read list
@@ -101,7 +122,7 @@ const ReadListSection = ({ readList }: ReadListSectionProps) => {
   }
 
   return (
-    <Card className="border-border/60 bg-card/80 backdrop-blur overflow-hidden max-w-full flex flex-col h-full">
+    <Card id={READLIST_SECTION_ID} className="border-border/60 bg-card/80 backdrop-blur overflow-hidden max-w-full flex flex-col h-full scroll-mt-24">
       <CardHeader>
         <CardTitle className="text-xl font-semibold text-foreground">
           Ma read list
@@ -144,6 +165,14 @@ const ReadListSection = ({ readList }: ReadListSectionProps) => {
               aria-label="Afficher les livres lus"
             >
               Lu
+            </Button>
+            <Button
+              variant={filterStatus === "dnf" ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleFilterChange("dnf")}
+              aria-label="Afficher les livres abandonnés"
+            >
+              Abandonné
             </Button>
           </div>
           <Button

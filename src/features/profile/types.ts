@@ -2,6 +2,7 @@ export type ReadingStats = {
   toRead: number;
   reading: number;
   finished: number;
+  dnf: number;
 };
 
 export type TopBook = {
@@ -35,7 +36,7 @@ export type RecentActivity = {
   listTitle: string | null;
   note: string | null;
   rating: number | null;
-  status: "to_read" | "reading" | "finished" | null;
+  status: "to_read" | "reading" | "finished" | "dnf" | null;
   occurredAt: string;
   // Pour les activités de type "follow"
   followedUserId?: string | null;
@@ -45,7 +46,7 @@ export type RecentActivity = {
 export type ReadListBook = {
   id: string;
   bookId: string;
-  status: "to_read" | "reading" | "finished";
+  status: "to_read" | "reading" | "finished" | "dnf";
   rating: number | null;
   book: {
     id: string;

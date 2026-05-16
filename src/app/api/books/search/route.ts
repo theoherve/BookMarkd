@@ -37,6 +37,7 @@ export async function GET(request: Request) {
     | "to_read"
     | "reading"
     | "finished"
+    | "dnf"
     | null;
   const author = url.searchParams.get("author") ?? "";
   const includeExternal =

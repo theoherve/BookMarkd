@@ -35,10 +35,11 @@ type ProfileRecentBooksSectionProps = {
   books: PublicProfile["recentBooks"];
 };
 
-const statusLabels: Record<"to_read" | "reading" | "finished", string> = {
+const statusLabels: Record<"to_read" | "reading" | "finished" | "dnf", string> = {
   to_read: "À lire",
   reading: "En cours",
   finished: "Terminé",
+  dnf: "Abandonné",
 };
 
 const ProfileRecentBooksSection = ({ books }: ProfileRecentBooksSectionProps) => {

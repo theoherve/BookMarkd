@@ -10,7 +10,7 @@ export type OfflineActionType =
 export type OfflineActionPayload =
   | { type: "likeReview"; reviewId: string }
   | { type: "unlikeReview"; reviewId: string }
-  | { type: "updateReadingStatus"; bookId: string; status: "to_read" | "reading" | "finished" }
+  | { type: "updateReadingStatus"; bookId: string; status: "to_read" | "reading" | "finished" | "dnf" }
   | { type: "rateBook"; bookId: string; rating: number }
   | {
       type: "createReview";

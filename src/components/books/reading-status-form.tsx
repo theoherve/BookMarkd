@@ -5,7 +5,7 @@ import { useState, useTransition, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { useOfflineQueue } from "@/hooks/use-offline-queue";
 
-type ReadingStatus = "to_read" | "reading" | "finished";
+type ReadingStatus = "to_read" | "reading" | "finished" | "dnf";
 
 type ReadingStatusFormProps = {
   bookId: string;
@@ -16,6 +16,7 @@ const statusOptions: Array<{ value: ReadingStatus; label: string }> = [
   { value: "to_read", label: "À lire" },
   { value: "reading", label: "En cours" },
   { value: "finished", label: "Terminé" },
+  { value: "dnf", label: "Abandonné" },
 ];
 
 const ReadingStatusForm = ({

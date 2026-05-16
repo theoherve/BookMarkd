@@ -44,6 +44,7 @@ const statusLabels: Record<FeedFriendBook["status"], string> = {
   to_read: "Dans la liste à lire",
   reading: "Lecture en cours",
   finished: "Lecture terminée",
+  dnf: "Abandonné",
 };
 
 const BookFeedCard = ({ item }: BookFeedCardProps) => {

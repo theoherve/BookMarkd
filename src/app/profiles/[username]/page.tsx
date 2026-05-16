@@ -174,6 +174,7 @@ const PublicProfilePage = async ({ params }: ProfilePageProps) => {
                 followingCount={profile.stats.following}
                 toReadCount={profile.stats.booksToRead}
                 readingCount={profile.stats.booksReading}
+                dnfCount={profile.stats.booksDnf}
                 booksHref={`/profiles/${username}/books`}
               />
 
