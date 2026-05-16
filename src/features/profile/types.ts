@@ -56,6 +56,15 @@ export type ReadListBook = {
   updatedAt: string;
 };
 
+export type WishlistPreviewEntry = {
+  bookId: string;
+  slug: string | null;
+  title: string;
+  author: string;
+  coverUrl: string | null;
+  addedAt: string;
+};
+
 export type ProfileDashboard = {
   userId: string;
   username: string | null;
@@ -72,5 +81,7 @@ export type ProfileDashboard = {
   topBooks: TopBook[];
   recentActivities: RecentActivity[];
   readList: ReadListBook[];
+  wishlistPreview: WishlistPreviewEntry[];
+  wishlistTotal: number;
 };
 

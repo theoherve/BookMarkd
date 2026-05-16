@@ -32,6 +32,12 @@ type Props = {
 
 const VISIBLE_STACK = 3;
 
+// Durée d'animation de fermeture du SheetContent (Radix Dialog).
+// Doit rester aligné avec `data-[state=closed]:duration-300` dans components/ui/sheet.tsx
+// (+ marge pour absorber la latence du runtime). Utilisé pour nettoyer
+// `pointer-events:none` que Radix laisse parfois sur <body> après close.
+const RADIX_CLOSE_ANIMATION_MS = 350;
+
 export const DiscoverDeck = ({ initialCandidates, follows }: Props) => {
   const [queue, setQueue] = useState<DiscoverCandidate[]>(initialCandidates);
   const [exitMap, setExitMap] = useState<Record<string, SwipeDirection>>({});
@@ -60,6 +66,14 @@ export const DiscoverDeck = ({ initialCandidates, follows }: Props) => {
     startTransition(async () => {
       const res = await addToDiscoverWishlist(book.id);
       if (!res.success) {
+        // Rollback: ré-injecter le livre en tête de queue pour permettre une nouvelle action
+        setQueue((q) => (q.some((b) => b.id === book.id) ? q : [book, ...q]));
+        setExitMap((m) => {
+          if (!m[book.id]) return m;
+          const next = { ...m };
+          delete next[book.id];
+          return next;
+        });
         setToast({ id: book.id, label: res.message, undoBook: null });
       }
     });
@@ -93,25 +107,23 @@ export const DiscoverDeck = ({ initialCandidates, follows }: Props) => {
       }
       if (dir === "up") {
         setShowDetails(book);
-        // Reset position si user ferme panel: ne pas advance
-        window.setTimeout(() => {
-          setExitMap((m) => {
-            const next = { ...m };
-            delete next[book.id];
-            return next;
-          });
-        }, 50);
+        // up/down ne sortent pas la carte: nettoyer exitMap pour cohérence
+        setExitMap((m) => {
+          if (!m[book.id]) return m;
+          const next = { ...m };
+          delete next[book.id];
+          return next;
+        });
         return;
       }
       if (dir === "down") {
         setShowActions(book);
-        window.setTimeout(() => {
-          setExitMap((m) => {
-            const next = { ...m };
-            delete next[book.id];
-            return next;
-          });
-        }, 50);
+        setExitMap((m) => {
+          if (!m[book.id]) return m;
+          const next = { ...m };
+          delete next[book.id];
+          return next;
+        });
       }
     },
     [advance, handleWishlist, reduceMotion],
@@ -124,10 +136,6 @@ export const DiscoverDeck = ({ initialCandidates, follows }: Props) => {
     return () => window.clearTimeout(t);
   }, [toast]);
 
-  // Prefetch suivants — TODO phase 2 (API route /api/discover/candidates)
-  // pour l'instant on charge un batch initial unique
-
-  // Empty state
   if (queue.length === 0) {
     return <DiscoverEmpty />;
   }
@@ -136,23 +144,21 @@ export const DiscoverDeck = ({ initialCandidates, follows }: Props) => {
 
   return (
     <div className="relative mx-auto flex min-h-0 w-full max-w-md flex-1 flex-col items-center gap-2 pt-1">
-      {/* Deck zone — fills remaining vertical space, stays centered */}
-      <div className="relative min-h-0 w-full flex-1 pb-4">
-        <div className="absolute inset-0 mx-auto flex items-center justify-center">
-          <div className="relative aspect-[3/4.2] h-full max-h-[calc(100%-1rem)] w-auto max-w-full">
-            <AnimatePresence>
-              {visibleStack.map((book, index) => (
-                <DiscoverCard
-                  key={book.id}
-                  book={book}
-                  stackIndex={index}
-                  isTop={index === 0}
-                  onSwipe={(dir) => handleSwipe(book, dir)}
-                  exitDirection={exitMap[book.id] ?? null}
-                />
-              ))}
-            </AnimatePresence>
-          </div>
+      {/* Deck zone — carte centrée, ratio fixe, prend tout l'espace dispo */}
+      <div className="flex min-h-0 w-full flex-1 items-center justify-center pb-4">
+        <div className="relative aspect-[3/4.2] h-full max-h-[calc(100%-1rem)] w-auto max-w-full">
+          <AnimatePresence>
+            {visibleStack.map((book, index) => (
+              <DiscoverCard
+                key={book.id}
+                book={book}
+                stackIndex={index}
+                isTop={index === 0}
+                onSwipe={(dir) => handleSwipe(book, dir)}
+                exitDirection={exitMap[book.id] ?? null}
+              />
+            ))}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -207,7 +213,7 @@ export const DiscoverDeck = ({ initialCandidates, follows }: Props) => {
                 <button
                   type="button"
                   onClick={() => toast.undoBook && handleUndo(toast.undoBook)}
-                  className="ml-2 rounded-full border border-amber-100/30 px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest text-amber-100 hover:bg-amber-100/10"
+                  className="ml-2 cursor-pointer rounded-full border border-amber-100/30 px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest text-amber-100 hover:bg-amber-100/10"
                 >
                   Annuler
                 </button>
@@ -221,7 +227,10 @@ export const DiscoverDeck = ({ initialCandidates, follows }: Props) => {
       <DiscoverDetailsPanel
         book={showDetails}
         open={!!showDetails}
-        onClose={() => setShowDetails(null)}
+        onClose={() => {
+          setShowDetails(null);
+          restoreBodyPointerEvents();
+        }}
         onOpenActions={(book) => {
           setShowDetails(null);
           setShowActions(book);
@@ -231,14 +240,32 @@ export const DiscoverDeck = ({ initialCandidates, follows }: Props) => {
         book={showActions}
         open={!!showActions}
         follows={follows}
-        onClose={() => setShowActions(null)}
+        onClose={() => {
+          setShowActions(null);
+          restoreBodyPointerEvents();
+        }}
         onSaved={(book) => {
           setShowActions(null);
+          restoreBodyPointerEvents();
           setQueue((q) => q.filter((b) => b.id !== book.id));
         }}
       />
     </div>
   );
+};
+
+/**
+ * Workaround bug Radix Dialog: après close, `pointer-events: none` peut
+ * rester sur <body>, gelant les interactions sur la carte derrière.
+ * On force le retrait après l'animation de fermeture.
+ */
+const restoreBodyPointerEvents = () => {
+  if (typeof window === "undefined") return;
+  window.setTimeout(() => {
+    if (document.body.style.pointerEvents === "none") {
+      document.body.style.pointerEvents = "";
+    }
+  }, RADIX_CLOSE_ANIMATION_MS);
 };
 
 type ActionButtonProps = {
@@ -273,7 +300,7 @@ const ActionButton = ({
       aria-label={label}
       onClick={onClick}
       disabled={disabled}
-      className={`group inline-flex ${
+      className={`group inline-flex cursor-pointer ${
         isPrimary ? "size-12" : "size-11"
       } items-center justify-center rounded-full border-2 bg-[#fdfaf5] dark:bg-[#1a1612] transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${toneMap[tone]}`}
     >

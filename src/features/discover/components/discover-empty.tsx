@@ -23,13 +23,13 @@ export const DiscoverEmpty = () => {
       <div className="mt-7 flex flex-col gap-2 sm:flex-row">
         <Link
           href="/tendances"
-          className="inline-flex items-center justify-center rounded-full bg-[#1f140d] px-5 py-3 text-sm font-medium text-amber-50 transition hover:bg-[#2f1c11] dark:bg-[#f7f1ea] dark:text-[#1f140d]"
+          className="inline-flex cursor-pointer items-center justify-center rounded-full bg-[#1f140d] px-5 py-3 text-sm font-medium text-[#fdfaf5] transition hover:bg-[#2f1c11] dark:bg-[#f7f1ea] dark:text-[#1f140d]"
         >
           Voir les tendances
         </Link>
         <Link
           href="/search"
-          className="inline-flex items-center justify-center rounded-full border border-amber-900/30 px-5 py-3 text-sm font-medium text-[#1f140d] transition hover:bg-amber-900/5 dark:border-amber-100/25 dark:text-[#f7f1ea]"
+          className="inline-flex cursor-pointer items-center justify-center rounded-full border border-amber-900/30 px-5 py-3 text-sm font-medium text-[#1f140d] transition hover:bg-amber-900/5 dark:border-amber-100/25 dark:text-[#f7f1ea]"
         >
           Rechercher un livre
         </Link>

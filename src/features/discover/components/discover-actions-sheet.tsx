@@ -14,6 +14,10 @@ import {
 import { saveBookFromDiscover } from "@/server/actions/discover";
 
 import type { DiscoverCandidate } from "../types";
+import {
+  isDiscoverActionsFormDirty,
+  toggleArrayMember,
+} from "../form-helpers";
 
 type FollowOption = {
   id: string;
@@ -119,9 +123,7 @@ const DiscoverActionsForm = ({ book, follows, onClose, onSaved }: FormProps) => 
   };
 
   const handleClose = () => {
-    const dirty =
-      rating > 0 || reviewContent.trim().length > 0 || recommendIds.length > 0;
-    if (dirty) {
+    if (isDiscoverActionsFormDirty({ rating, reviewContent, recommendIds })) {
       const confirmed = window.confirm(
         "Abandonner les modifications ? Vos saisies ne seront pas conservées.",
       );
@@ -131,11 +133,7 @@ const DiscoverActionsForm = ({ book, follows, onClose, onSaved }: FormProps) => 
   };
 
   const toggleRecommend = (userId: string) => {
-    setRecommendIds((prev) =>
-      prev.includes(userId)
-        ? prev.filter((id) => id !== userId)
-        : [...prev, userId],
-    );
+    setRecommendIds((prev) => toggleArrayMember(prev, userId));
   };
 
   return (
@@ -173,7 +171,7 @@ const DiscoverActionsForm = ({ book, follows, onClose, onSaved }: FormProps) => 
             type="button"
             onClick={handleClose}
             aria-label="Fermer"
-            className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-amber-900/15 text-amber-900 transition hover:bg-amber-900/10 dark:border-amber-100/15 dark:text-amber-100"
+            className="inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full border border-amber-900/15 text-amber-900 transition hover:bg-amber-900/10 dark:border-amber-100/15 dark:text-amber-100"
           >
             <X className="size-4" />
           </button>
@@ -193,7 +191,7 @@ const DiscoverActionsForm = ({ book, follows, onClose, onSaved }: FormProps) => 
                   type="button"
                   onClick={() => setStatus(opt.value)}
                   aria-pressed={status === opt.value}
-                  className={`flex min-h-[44px] flex-col items-center justify-center rounded-lg border-2 px-2 py-1.5 text-center transition ${
+                  className={`flex min-h-[44px] cursor-pointer flex-col items-center justify-center rounded-lg border-2 px-2 py-1.5 text-center transition ${
                     status === opt.value
                       ? "border-orange-700 bg-orange-700/10 text-orange-900 dark:border-orange-300 dark:bg-orange-300/10 dark:text-orange-100"
                       : "border-amber-900/15 text-[#1f140d]/70 hover:border-amber-900/30 dark:border-amber-100/15 dark:text-[#f7f1ea]/70"
@@ -217,7 +215,7 @@ const DiscoverActionsForm = ({ book, follows, onClose, onSaved }: FormProps) => 
                   onClick={() => setRating(star === rating ? 0 : star)}
                   aria-label={`${star} étoile${star > 1 ? "s" : ""}`}
                   aria-pressed={star <= rating}
-                  className="inline-flex size-9 items-center justify-center rounded-md transition hover:scale-110 active:scale-95"
+                  className="inline-flex size-9 cursor-pointer items-center justify-center rounded-md transition hover:scale-110 active:scale-95"
                 >
                   <Star
                     className={`size-6 transition ${
@@ -264,9 +262,9 @@ const DiscoverActionsForm = ({ book, follows, onClose, onSaved }: FormProps) => 
                     type="button"
                     onClick={() => setVisibility(opt.value)}
                     aria-pressed={visibility === opt.value}
-                    className={`rounded-full px-2.5 py-0.5 text-[9px] uppercase tracking-wider transition ${
+                    className={`cursor-pointer rounded-full px-2.5 py-0.5 text-[9px] uppercase tracking-wider transition ${
                       visibility === opt.value
-                        ? "bg-[#1f140d] text-amber-50 dark:bg-[#f7f1ea] dark:text-[#1f140d]"
+                        ? "bg-[#1f140d] text-[#fdfaf5] dark:bg-[#f7f1ea] dark:text-[#1f140d]"
                         : "text-amber-900/70 dark:text-amber-100/60"
                     }`}
                   >
@@ -296,7 +294,7 @@ const DiscoverActionsForm = ({ book, follows, onClose, onSaved }: FormProps) => 
                     type="button"
                     onClick={() => toggleRecommend(user.id)}
                     aria-pressed={active}
-                    className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition ${
+                    className={`inline-flex cursor-pointer items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition ${
                       active
                         ? "border-emerald-700 bg-emerald-700/10 text-emerald-900 dark:border-emerald-300 dark:bg-emerald-300/10 dark:text-emerald-100"
                         : "border-amber-900/15 text-[#1f140d]/70 hover:border-amber-900/30 dark:border-amber-100/15 dark:text-[#f7f1ea]/70"
@@ -326,14 +324,14 @@ const DiscoverActionsForm = ({ book, follows, onClose, onSaved }: FormProps) => 
             type="button"
             onClick={handleSubmit}
             disabled={isPending}
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[#1f140d] px-5 py-2.5 text-sm font-medium text-amber-50 transition hover:bg-[#2f1c11] disabled:opacity-50 dark:bg-[#f7f1ea] dark:text-[#1f140d] dark:hover:bg-amber-50"
+            className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-full bg-[#1f140d] px-5 py-2.5 text-sm font-medium text-[#fdfaf5] transition hover:bg-[#2f1c11] disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#f7f1ea] dark:text-[#1f140d] dark:hover:bg-amber-50"
           >
             {isPending ? "Enregistrement…" : "Enregistrer"}
           </button>
           {book.slug ? (
             <Link
               href={`/books/${book.slug}`}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-amber-900/30 px-5 py-2.5 text-sm font-medium text-[#1f140d] transition hover:bg-amber-900/5 dark:border-amber-100/25 dark:text-[#f7f1ea] dark:hover:bg-amber-100/5"
+              className="inline-flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-full border border-amber-900/30 px-5 py-2.5 text-sm font-medium text-[#1f140d] transition hover:bg-amber-900/5 dark:border-amber-100/25 dark:text-[#f7f1ea] dark:hover:bg-amber-100/5"
             >
               Page complète
               <ArrowRight className="size-4" />

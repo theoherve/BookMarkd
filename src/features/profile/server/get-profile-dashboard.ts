@@ -1,6 +1,7 @@
 import db from "@/lib/supabase/db";
 import { generateBookSlug } from "@/lib/slug";
 import { getUserAvatarUrl } from "@/lib/storage/avatars";
+import { getBookCoverUrl } from "@/lib/storage/covers";
 
 import type {
   ProfileDashboard,
@@ -8,6 +9,7 @@ import type {
   TopBook,
   RecentActivity,
   ReadListBook,
+  WishlistPreviewEntry,
 } from "../types";
 
 const buildReadingStats = (
@@ -148,6 +150,8 @@ export const getProfileDashboard = async (
       follows,
       topBooksUpdates,
       readListData,
+      wishlistData,
+      wishlistTotal,
     ] = await Promise.all([
       getUserAvatarUrl(userId, user.avatarUrl),
       db.client
@@ -411,6 +415,33 @@ export const getProfileDashboard = async (
             }>
           >(r.data ?? [])
         ),
+      db.client
+        .from("discover_wishlist")
+        .select(
+          "created_at, book:book_id ( id, slug, title, author, cover_url )",
+        )
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(6)
+        .then((r) =>
+          db.toCamel<
+            Array<{
+              createdAt: string;
+              book?: {
+                id: string;
+                slug: string | null;
+                title: string;
+                author: string;
+                coverUrl: string | null;
+              };
+            }>
+          >(r.data ?? [])
+        ),
+      db.client
+        .from("discover_wishlist")
+        .select("book_id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .then((r) => r.count ?? 0),
     ]);
 
     const listsForActivities = ownedListsIds;
@@ -702,6 +733,20 @@ export const getProfileDashboard = async (
         updatedAt: item.updatedAt,
       }));
 
+    const wishlistPreview: WishlistPreviewEntry[] = [];
+    for (const item of wishlistData) {
+      if (!item.book) continue;
+      const coverUrl = await getBookCoverUrl(item.book.id, item.book.coverUrl);
+      wishlistPreview.push({
+        bookId: item.book.id,
+        slug: item.book.slug,
+        title: item.book.title,
+        author: item.book.author,
+        coverUrl,
+        addedAt: item.createdAt,
+      });
+    }
+
     return {
       userId,
       username: user.username ?? null,
@@ -718,6 +763,8 @@ export const getProfileDashboard = async (
       topBooks,
       recentActivities,
       readList,
+      wishlistPreview,
+      wishlistTotal,
     };
   } catch (error) {
     throw error;
