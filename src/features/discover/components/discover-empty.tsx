@@ -13,7 +13,7 @@ export const DiscoverEmpty = () => {
           />
         </div>
       </div>
-      <h2 className="font-display text-3xl font-medium italic text-[#1f140d] dark:text-[#f7f1ea]">
+      <h2 className="text-3xl font-semibold text-[#1f140d] dark:text-[#f7f1ea]">
         Plus rien à découvrir
       </h2>
       <p className="mt-3 text-sm text-amber-900/70 dark:text-amber-100/65">

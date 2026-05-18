@@ -197,11 +197,11 @@ const AppShell = ({ children }: AppShellProps) => {
                 <SheetHeader className="border-b border-border/60 px-6 pt-7 pb-5">
                   <SheetTitle className="sr-only">Menu BookMarkd</SheetTitle>
                   <div className="flex items-baseline gap-2">
-                    <span className="font-display text-2xl font-semibold tracking-tight text-foreground">
+                    <span className="text-2xl font-semibold tracking-tight text-foreground">
                       BookMarkd
                     </span>
                   </div>
-                  <p className="font-display text-sm italic text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     Votre bibliothèque, partagée.
                   </p>
                 </SheetHeader>
@@ -245,7 +245,7 @@ const AppShell = ({ children }: AppShellProps) => {
                     </Link>
                   ) : (
                     <div className="flex flex-col gap-2 rounded-2xl border border-border/70 bg-card/70 p-4 shadow-sm">
-                      <p className="font-display text-sm italic text-foreground">
+                      <p className="text-sm text-foreground">
                         Rejoins la communauté de lecteur·rice·s.
                       </p>
                       <div className="flex gap-2">

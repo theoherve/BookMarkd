@@ -161,7 +161,7 @@ const DiscoverActionsForm = ({ book, follows, onClose, onSaved }: FormProps) => 
             <div className="font-mono text-[9px] uppercase tracking-[0.3em] text-amber-900/55 dark:text-amber-100/50">
               Ranger ce livre
             </div>
-            <SheetTitle className="mt-0.5 font-display text-lg font-medium italic leading-tight text-[#1f140d] dark:text-[#f7f1ea] truncate">
+            <SheetTitle className="mt-0.5 text-lg font-semibold leading-tight text-[#1f140d] dark:text-[#f7f1ea] truncate">
               {book.title}
             </SheetTitle>
             <SheetDescription className="font-mono text-[10px] uppercase tracking-[0.2em] text-amber-900/65 dark:text-amber-100/55 truncate">

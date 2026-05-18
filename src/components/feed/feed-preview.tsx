@@ -1,6 +1,8 @@
 "use client";
 
 import { ReactNode, useCallback, useRef, useEffect, forwardRef } from "react";
+import Link from "next/link";
+import { Activity, ArrowRight, Sparkles } from "lucide-react";
 
 import ActivityCard from "@/components/feed/activity-card";
 import BookFeedCard from "@/components/feed/book-feed-card";
@@ -94,46 +96,52 @@ const FeedPreview = () => {
     <div className="space-y-6">
 
       {/* ── Activités ──────────────────────────────────────────────────── */}
-      <PreviewSection
+      <ActivitySection
         title={isCommunityMode ? "Dans la communauté" : "Activités récentes"}
         description={
           isCommunityMode
             ? "Ce que lisent et partagent les lecteur·ices BookMarkd en ce moment."
             : "Les derniers partages de votre cercle de lecture."
         }
+        count={activities.length}
+        isCommunity={isCommunityMode}
       >
         {activities.length === 0 ? (
-          <EmptyPreview message="Aucune activité récente pour le moment." />
+          <ActivityEmptyState isCommunity={isCommunityMode} />
         ) : (
-          <PreviewRow ref={activitiesScrollRef}>
-            {activities.map((activity) => (
-              <PreviewItem key={activity.id}>
-                <ActivityCard item={activity} />
-              </PreviewItem>
-            ))}
-            {hasMoreActivities && (
-              <PreviewItem>
-                {isLoadingMore ? (
-                  <div className="flex min-h-[200px] w-[280px] shrink-0 items-center justify-center rounded-xl border border-dashed border-border/60 bg-card/50 p-8">
-                    <BookLoader size="lg" text="Chargement..." />
-                  </div>
-                ) : (
-                  <div className="flex min-h-[200px] w-[280px] shrink-0 items-center justify-center rounded-xl border border-dashed border-border/60 bg-card/50">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={loadMore}
-                      aria-label="Charger plus d'activités"
-                    >
-                      Charger plus
-                    </Button>
-                  </div>
-                )}
-              </PreviewItem>
-            )}
-          </PreviewRow>
+          <ScrollFadeWrapper>
+            <PreviewRow ref={activitiesScrollRef}>
+              {activities.map((activity, index) => (
+                <PreviewItem key={activity.id} index={index}>
+                  <ActivityCard item={activity} />
+                </PreviewItem>
+              ))}
+              {hasMoreActivities && (
+                <PreviewItem index={activities.length}>
+                  {isLoadingMore ? (
+                    <div className="flex h-full min-h-[220px] w-[280px] shrink-0 items-center justify-center rounded-xl border border-dashed border-border/60 bg-card/50 p-8">
+                      <BookLoader size="lg" text="Chargement..." />
+                    </div>
+                  ) : (
+                    <div className="flex h-full min-h-[220px] w-[280px] shrink-0 items-center justify-center rounded-xl border border-dashed border-border/60 bg-card/50 transition-colors hover:border-accent/60 hover:bg-card">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={loadMore}
+                        aria-label="Charger plus d'activités"
+                        className="gap-2"
+                      >
+                        Charger plus
+                        <ArrowRight className="size-4" aria-hidden />
+                      </Button>
+                    </div>
+                  )}
+                </PreviewItem>
+              )}
+            </PreviewRow>
+          </ScrollFadeWrapper>
         )}
-      </PreviewSection>
+      </ActivitySection>
 
       {/* ── Livres des amis OU tendances communautaires ─────────────────── */}
       {showTrending ? (
@@ -240,6 +248,79 @@ const PreviewSection = ({
   );
 };
 
+const ActivitySection = ({
+  title,
+  description,
+  count,
+  isCommunity,
+  children,
+}: {
+  title: string;
+  description: string;
+  count: number;
+  isCommunity: boolean;
+  children: ReactNode;
+}) => {
+  return (
+    <Card className="overflow-hidden border-border/60 bg-card/80 backdrop-blur">
+      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <span
+            aria-hidden
+            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent-foreground"
+          >
+            <Activity className="size-[18px]" />
+          </span>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <CardTitle className="m-0 text-lg font-semibold text-foreground">
+                {title}
+              </CardTitle>
+              {count > 0 && (
+                <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-secondary-foreground">
+                  {count}
+                </span>
+              )}
+            </div>
+            <CardDescription className="mt-0.5 text-sm text-muted-foreground">
+              {description}
+            </CardDescription>
+          </div>
+        </div>
+        <Link
+          href="/feed"
+          aria-label={
+            isCommunity
+              ? "Voir toute l'activité de la communauté"
+              : "Voir tout votre fil"
+          }
+          className="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-accent/15 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          <span className="hidden sm:inline">Voir tout</span>
+          <ArrowRight className="size-3.5" aria-hidden />
+        </Link>
+      </CardHeader>
+      <CardContent className="pt-0">{children}</CardContent>
+    </Card>
+  );
+};
+
+const ScrollFadeWrapper = ({ children }: { children: ReactNode }) => {
+  return (
+    <div className="relative -mx-2 px-2">
+      {children}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-card to-transparent"
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-card to-transparent"
+      />
+    </div>
+  );
+};
+
 const PreviewRow = forwardRef<
   HTMLDivElement,
   { children: ReactNode }
@@ -247,20 +328,57 @@ const PreviewRow = forwardRef<
   return (
     <div
       ref={ref}
-      className="flex items-stretch gap-4 overflow-x-auto py-2"
+      className="flex items-stretch gap-4 overflow-x-auto py-2 horizontal-scroll [scroll-snap-type:x_mandatory] [scrollbar-gutter:stable]"
     >
       {children}
     </div>
   );
 });
 
-const PreviewItem = ({ children }: { children: ReactNode }) => {
+const PreviewItem = ({
+  children,
+  index = 0,
+}: {
+  children: ReactNode;
+  index?: number;
+}) => {
   return (
-    <div className="flex h-min-[300px] w-[280px] shrink-0 *:min-w-full">
+    <div
+      style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
+      className="flex min-h-[220px] w-[280px] shrink-0 [scroll-snap-align:start] motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:duration-300 motion-safe:fill-mode-both *:min-w-full"
+    >
       {children}
     </div>
   );
 };
+
+const ActivityEmptyState = ({ isCommunity }: { isCommunity: boolean }) => (
+  <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/60 bg-muted/30 px-6 py-10 text-center">
+    <span
+      aria-hidden
+      className="flex size-12 items-center justify-center rounded-full bg-accent/15 text-accent-foreground"
+    >
+      <Sparkles className="size-5" />
+    </span>
+    <div className="space-y-1">
+      <p className="text-sm font-semibold text-foreground">
+        {isCommunity
+          ? "Personne n'a encore partagé"
+          : "Pas encore d'activité dans votre cercle"}
+      </p>
+      <p className="text-sm text-muted-foreground">
+        {isCommunity
+          ? "Revenez bientôt — la communauté lit en ce moment."
+          : "Ajoutez des ami·e·s pour voir leurs lectures apparaître ici."}
+      </p>
+    </div>
+    <Button asChild variant="outline" size="sm" className="mt-1">
+      <Link href={isCommunity ? "/discover" : "/profiles"}>
+        {isCommunity ? "Découvrir des livres" : "Trouver des lecteur·ices"}
+      </Link>
+    </Button>
+  </div>
+);
 
 const EmptyPreview = ({ message }: { message: string }) => (
   <p className="rounded-lg border border-dashed border-border/60 bg-card/50 px-4 py-6 text-sm text-muted-foreground">
