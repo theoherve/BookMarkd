@@ -1,21 +1,24 @@
+import Image from "next/image";
 import Link from "next/link";
-import { Star, StarHalf } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  BookOpen,
+  ListPlus,
+  MessageSquare,
+  Star,
+  StarHalf,
+  UserPlus,
+} from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { formatRelativeTimeFromNow } from "@/lib/datetime";
-import { formatRating } from "@/lib/utils";
 import { generateBookSlug } from "@/lib/slug";
+import { cn, formatRating, getInitials } from "@/lib/utils";
 import type { FeedActivity } from "@/features/feed/types";
 
 type ActivityCardProps = {
@@ -24,9 +27,14 @@ type ActivityCardProps = {
 
 const TITLE_MAX_LENGTH = 50;
 
-const truncateTitle = (title: string | null | undefined, maxLength = TITLE_MAX_LENGTH): string => {
+const truncateTitle = (
+  title: string | null | undefined,
+  maxLength = TITLE_MAX_LENGTH,
+): string => {
   if (!title) return "Nouvelle activité";
-  return title.length > maxLength ? `${title.slice(0, maxLength).trim()}...` : title;
+  return title.length > maxLength
+    ? `${title.slice(0, maxLength).trim()}...`
+    : title;
 };
 
 const actionLabels: Record<FeedActivity["type"], string> = {
@@ -37,91 +45,183 @@ const actionLabels: Record<FeedActivity["type"], string> = {
   follow: "a suivi un profil",
 };
 
+type TypeMeta = {
+  icon: typeof Star;
+  label: string;
+  iconClass: string;
+  pillClass: string;
+  accentClass: string;
+};
+
+const typeMeta: Record<FeedActivity["type"], TypeMeta> = {
+  rating: {
+    icon: Star,
+    label: "Note",
+    iconClass: "text-yellow-600 dark:text-yellow-400",
+    pillClass:
+      "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-300",
+    accentClass: "bg-yellow-400/70 dark:bg-yellow-400/60",
+  },
+  review: {
+    icon: MessageSquare,
+    label: "Critique",
+    iconClass: "text-accent-foreground",
+    pillClass: "bg-accent/40 text-accent-foreground",
+    accentClass: "bg-accent",
+  },
+  status_change: {
+    icon: BookOpen,
+    label: "Statut",
+    iconClass: "text-foreground/80",
+    pillClass: "bg-secondary text-secondary-foreground",
+    accentClass: "bg-primary/60 dark:bg-primary/70",
+  },
+  list_update: {
+    icon: ListPlus,
+    label: "Liste",
+    iconClass: "text-chart-2",
+    pillClass: "bg-chart-2/15 text-chart-2",
+    accentClass: "bg-chart-2/70",
+  },
+  follow: {
+    icon: UserPlus,
+    label: "Abonnement",
+    iconClass: "text-chart-3",
+    pillClass: "bg-chart-3/15 text-chart-3",
+    accentClass: "bg-chart-3/70",
+  },
+};
+
+const AvatarBubble = ({
+  name,
+  url,
+}: {
+  name: string;
+  url?: string | null;
+}) => {
+  if (url) {
+    return (
+      <Image
+        src={url}
+        alt=""
+        width={36}
+        height={36}
+        className="size-9 shrink-0 rounded-full object-cover ring-2 ring-border"
+      />
+    );
+  }
+  return (
+    <span
+      aria-hidden
+      className="flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground ring-2 ring-border"
+    >
+      {getInitials(name)}
+    </span>
+  );
+};
+
+const RatingStars = ({ rating }: { rating: number }) => {
+  const full = Math.floor(rating);
+  const hasHalf = rating % 1 >= 0.5;
+  const empty = 5 - full - (hasHalf ? 1 : 0);
+  return (
+    <span className="inline-flex items-center gap-0.5" aria-hidden="true">
+      {Array.from({ length: full }, (_, i) => (
+        <Star
+          key={`full-${i}`}
+          className="size-3.5 fill-yellow-500 text-yellow-500"
+        />
+      ))}
+      {hasHalf && (
+        <span className="relative inline-block size-3.5">
+          <Star className="absolute inset-0 size-3.5 text-yellow-500" />
+          <StarHalf className="absolute inset-0 size-3.5 fill-yellow-500 text-yellow-500" />
+        </span>
+      )}
+      {Array.from({ length: empty }, (_, i) => (
+        <Star key={`empty-${i}`} className="size-3.5 text-yellow-500/40" />
+      ))}
+    </span>
+  );
+};
+
 const ActivityCard = ({ item }: ActivityCardProps) => {
-  const ratingStarsEl =
-    typeof item.rating === "number" && item.rating > 0
-      ? (() => {
-          const full = Math.floor(item.rating);
-          const hasHalf = item.rating % 1 >= 0.5;
-          const empty = 5 - full - (hasHalf ? 1 : 0);
-          return (
-            <span className="inline-flex items-center gap-0.5">
-              {Array.from({ length: full }, (_, i) => (
-                <Star key={`full-${i}`} className="h-4 w-4 fill-yellow-500 text-yellow-500" />
-              ))}
-              {hasHalf && (
-                <span className="relative h-4 w-4">
-                  <Star className="absolute h-4 w-4 text-yellow-500" />
-                  <StarHalf className="absolute h-4 w-4 fill-yellow-500 text-yellow-500" />
-                </span>
-              )}
-              {Array.from({ length: empty }, (_, i) => (
-                <Star key={`empty-${i}`} className="h-4 w-4 text-yellow-500" />
-              ))}
-            </span>
-          );
-        })()
-      : null;
-
   const occurredAtLabel = formatRelativeTimeFromNow(item.occurredAt);
+  const actionLabel = item.combinedAction ?? actionLabels[item.type];
+  const meta = typeMeta[item.type];
+  const Icon = meta.icon;
 
-  const bookHref =
-    item.bookId
-      ? `/books/${item.bookId}`
-      : item.bookTitle && item.bookAuthor
-        ? `/books/${generateBookSlug(item.bookTitle, item.bookAuthor)}`
-        : null;
+  const bookHref = item.bookId
+    ? `/books/${item.bookId}`
+    : item.bookTitle && item.bookAuthor
+      ? `/books/${generateBookSlug(item.bookTitle, item.bookAuthor)}`
+      : null;
 
   const isTitleTruncated =
     item.bookTitle != null && item.bookTitle.length > TITLE_MAX_LENGTH;
-
-  const actionLabel = item.combinedAction ?? actionLabels[item.type];
+  const hasRating = typeof item.rating === "number" && item.rating > 0;
 
   const card = (
     <Card
       role="article"
       tabIndex={bookHref ? 0 : undefined}
       aria-label={`${item.userName} ${actionLabel} ${item.bookTitle ?? "contenu"}`}
-      className="flex h-full w-full flex-col transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-accent"
+      className="group relative flex h-full w-full flex-col overflow-hidden border-border/60 bg-card transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
     >
-      <CardHeader className="flex flex-col gap-3">
-        <div className="flex items-baseline justify-between gap-2">
-          <p className="text-sm font-semibold text-foreground">
-            {item.userName}{" "}
-            <span className="font-normal text-muted-foreground">
-              {actionLabel}
-            </span>
-          </p>
-          <CardDescription className="text-xs text-muted-foreground">
-            {occurredAtLabel}
-          </CardDescription>
-        </div>
-        <CardTitle className="text-base font-semibold text-foreground">
-          {truncateTitle(item.bookTitle)}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-1 flex-col space-y-3 overflow-y-auto">
-        {typeof item.rating === "number" && item.rating > 0 ? (
-          <div className="flex flex-wrap items-center gap-2 text-sm">
+      <span
+        aria-hidden
+        className={cn("absolute inset-y-0 left-0 w-[3px]", meta.accentClass)}
+      />
+      <CardContent className="flex flex-1 flex-col gap-3 p-4">
+        <header className="flex items-start gap-3">
+          <AvatarBubble name={item.userName} url={item.userAvatarUrl} />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <p className="truncate text-sm font-semibold text-foreground">
+              {item.userName}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {occurredAtLabel}
+            </p>
+          </div>
+          <span
+            className={cn(
+              "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide",
+              meta.pillClass,
+            )}
+          >
+            <Icon className={cn("size-3", meta.iconClass)} aria-hidden />
+            {meta.label}
+          </span>
+        </header>
+
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          <span className="font-medium text-foreground/90">{actionLabel}</span>
+          {item.bookTitle ? (
+            <>
+              {" "}
+              <span className="font-semibold text-foreground">
+                « {truncateTitle(item.bookTitle)} »
+              </span>
+            </>
+          ) : null}
+        </p>
+
+        {hasRating ? (
+          <div className="flex flex-wrap items-center gap-2">
             <Badge
               variant="secondary"
-              aria-label={`Note ${formatRating(item.rating)} sur 5`}
-              className="rounded-full px-3 py-1 text-muted-foreground"
+              aria-label={`Note ${formatRating(item.rating!)} sur 5`}
+              className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
             >
-              {formatRating(item.rating)}/5
+              {formatRating(item.rating!)}/5
             </Badge>
-            <span aria-hidden="true">
-              {ratingStarsEl}
-            </span>
+            <RatingStars rating={item.rating!} />
           </div>
         ) : null}
+
         {item.note ? (
-          <p className="text-sm text-muted-foreground">{item.note}</p>
-        ) : null}
-        {!item.note && typeof item.rating !== "number" ? (
-          <p className="text-sm text-muted-foreground">
-            {item.userName} {actionLabel}{" "}
-            {item.bookTitle ? truncateTitle(item.bookTitle) : "ce contenu"}.
+          <p className="line-clamp-3 text-sm leading-relaxed text-muted-foreground">
+            “{item.note}”
           </p>
         ) : null}
       </CardContent>
@@ -134,7 +234,7 @@ const ActivityCard = ({ item }: ActivityCardProps) => {
       <TooltipContent
         side="top"
         align="center"
-        className="max-w-sm border border-border bg-popover text-popover-foreground text-center shadow-md"
+        className="max-w-sm border border-border bg-popover text-center text-popover-foreground shadow-md"
       >
         {item.bookTitle}
       </TooltipContent>
@@ -147,7 +247,7 @@ const ActivityCard = ({ item }: ActivityCardProps) => {
     return (
       <Link
         href={bookHref}
-        className="block h-full w-full min-w-0"
+        className="block h-full w-full min-w-0 rounded-xl focus-visible:outline-none"
         aria-label={`Voir la fiche du livre ${item.bookTitle ?? ""}`}
       >
         {cardContent}
@@ -159,4 +259,3 @@ const ActivityCard = ({ item }: ActivityCardProps) => {
 };
 
 export default ActivityCard;
-
