@@ -61,7 +61,7 @@ export const DiscoverDetailsPanel = ({
                 <div className="font-mono text-[9px] uppercase tracking-[0.3em] text-amber-900/55 dark:text-amber-100/50">
                   Détails du livre
                 </div>
-                <SheetTitle className="mt-0.5 font-display text-xl font-medium italic leading-tight text-[#1f140d] dark:text-[#f7f1ea] md:text-2xl">
+                <SheetTitle className="mt-0.5 text-xl font-semibold leading-tight text-[#1f140d] dark:text-[#f7f1ea] md:text-2xl">
                   {book.title}
                 </SheetTitle>
                 <SheetDescription className="mt-1 font-mono text-[10px] uppercase tracking-[0.22em] text-amber-900/70 dark:text-amber-100/60">

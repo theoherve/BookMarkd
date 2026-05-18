@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Geist, Geist_Mono, Fraunces } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 import AuthSessionProvider from "@/components/layout/session-provider";
@@ -20,14 +20,6 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
-});
-
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  style: ["normal", "italic"],
-  display: "swap",
 });
 
 const defaultTitle = "BookMarkd · Suivez, notez et partagez vos lectures";
@@ -87,7 +79,6 @@ const RootLayout = ({ children }: RootLayoutProps) => {
         className={[
           geistSans.variable,
           geistMono.variable,
-          fraunces.variable,
           "bg-background",
           "text-foreground",
           "min-h-screen",

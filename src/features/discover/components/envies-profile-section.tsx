@@ -20,7 +20,7 @@ export const EnviesProfileSection = ({ preview, total }: Props) => {
             <Heart className="size-3 fill-current" />
             Envies
           </div>
-          <h2 className="mt-2 font-display text-2xl font-medium italic text-foreground">
+          <h2 className="mt-2 text-2xl font-semibold text-foreground">
             {hasItems
               ? `${total} livre${total > 1 ? "s" : ""} en attente`
               : "Vos envies vous attendent"}

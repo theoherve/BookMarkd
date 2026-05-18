@@ -57,7 +57,7 @@ export const EnviesGrid = ({ entries }: Props) => {
             strokeWidth={1.5}
           />
         </div>
-        <h2 className="font-display text-xl font-medium italic text-[#1f140d] dark:text-[#f7f1ea]">
+        <h2 className="text-xl font-semibold text-[#1f140d] dark:text-[#f7f1ea]">
           Aucune envie pour le moment
         </h2>
         <p className="mt-2 max-w-sm text-sm text-amber-900/65 dark:text-amber-100/55">
@@ -137,7 +137,7 @@ export const EnviesGrid = ({ entries }: Props) => {
 
               <div className="flex flex-1 flex-col gap-2 p-3">
                 <div className="flex-1">
-                  <h3 className="font-display text-sm font-medium italic leading-tight text-[#1f140d] line-clamp-2 dark:text-[#f7f1ea]">
+                  <h3 className="text-sm font-semibold leading-tight text-[#1f140d] line-clamp-2 dark:text-[#f7f1ea]">
                     {entry.title}
                   </h3>
                   <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.2em] text-amber-900/65 dark:text-amber-100/55 truncate">

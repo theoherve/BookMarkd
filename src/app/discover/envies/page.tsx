@@ -37,7 +37,7 @@ const EnviesPage = async () => {
           <Heart className="size-3.5 fill-current" />
           Mes envies
         </div>
-        <h1 className="font-display text-3xl font-medium italic leading-tight text-[#1f140d] dark:text-[#f7f1ea] sm:text-4xl">
+        <h1 className="text-3xl font-semibold leading-tight text-[#1f140d] dark:text-[#f7f1ea] sm:text-4xl">
           {entries.length === 0
             ? "Pas encore d'envies"
             : `${entries.length} livre${entries.length > 1 ? "s" : ""} en attente`}

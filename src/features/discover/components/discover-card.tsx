@@ -208,10 +208,7 @@ export const DiscoverCard = ({
 
           {/* Title + author */}
           <div className="shrink-0 text-center">
-            <h2
-              className="font-display text-lg font-medium italic leading-tight text-[#1f140d] dark:text-[#f7f1ea] sm:text-xl line-clamp-2"
-              style={{ fontFeatureSettings: '"ss01"' }}
-            >
+            <h2 className="text-lg font-semibold leading-tight text-[#1f140d] dark:text-[#f7f1ea] sm:text-xl line-clamp-2">
               {book.title}
             </h2>
             <p className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.2em] text-amber-900/70 dark:text-amber-100/60 truncate">

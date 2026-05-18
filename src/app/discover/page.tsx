@@ -82,7 +82,7 @@ const DiscoverPage = async () => {
 
       <div className="mx-auto flex h-full w-full max-w-md flex-col">
         <header className="relative shrink-0">
-          <h1 className="text-center font-display text-lg font-medium italic leading-tight text-[#1f140d] dark:text-[#f7f1ea] sm:text-xl">
+          <h1 className="text-center text-lg font-semibold leading-tight text-[#1f140d] dark:text-[#f7f1ea] sm:text-xl">
             Votre prochaine lecture
           </h1>
           <Link
