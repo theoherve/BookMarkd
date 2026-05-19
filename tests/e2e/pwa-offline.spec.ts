@@ -185,11 +185,13 @@ test.describe("PWA Offline Mode", () => {
   });
 
   test("should cache static assets for offline use", async ({ page }) => {
-    await page.goto("/");
-    
-    // Vérifier que les assets sont chargés
-    await page.waitForLoadState("networkidle");
-    
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+
+    // Laisser le SW + cache se peupler sans bloquer sur networkidle
+    // (HMR/RSC streams empêchent networkidle d'être atteint)
+    await page.waitForLoadState("load");
+    await page.waitForTimeout(1000);
+
     // Activer le mode offline
     await page.context().setOffline(true);
     
