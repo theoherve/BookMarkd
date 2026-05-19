@@ -2,7 +2,7 @@
 
 import { ReactNode, useCallback, useRef, useEffect, forwardRef } from "react";
 import Link from "next/link";
-import { Activity, ArrowRight, Sparkles } from "lucide-react";
+import { Activity, ArrowRight, Compass, Sparkles, Users } from "lucide-react";
 
 import ActivityCard from "@/components/feed/activity-card";
 import BookFeedCard from "@/components/feed/book-feed-card";
@@ -20,6 +20,7 @@ import { BookLoader } from "@/components/ui/book-loader";
 import { useInfiniteFeedQuery } from "@/features/feed/api/use-feed-query";
 
 const MAX_ITEMS = 24;
+const MAX_RECO_ITEMS = 8;
 
 const FeedPreview = () => {
   const {
@@ -81,10 +82,10 @@ const FeedPreview = () => {
 
   const condensedActivities = condenseActivities(data.activities);
   const activities = condensedActivities.slice(0, MAX_ITEMS);
-  const friendsBooks = data.friendsBooks.slice(0, MAX_ITEMS);
-  const recommendations = data.recommendations.slice(0, MAX_ITEMS);
+  const friendsBooks = data.friendsBooks.slice(0, MAX_RECO_ITEMS);
+  const recommendations = data.recommendations.slice(0, MAX_RECO_ITEMS);
   const trendingBooks = (data.trendingBooks ?? []).slice(0, MAX_ITEMS);
-  const topRatedBooks = (data.topRatedBooks ?? []).slice(0, MAX_ITEMS);
+  const topRatedBooks = (data.topRatedBooks ?? []).slice(0, MAX_RECO_ITEMS);
   const recentBooks = (data.recentBooks ?? []).slice(0, MAX_ITEMS);
 
   // En mode communautaire, les sections amis sont remplacées par le contenu global
@@ -158,22 +159,25 @@ const FeedPreview = () => {
           </PreviewRow>
         </PreviewSection>
       ) : (
-        <PreviewSection
+        <FriendsSection
           title="Lectures des amis"
-          description="Les livres qui occupent vos ami·e·s cette semaine."
+          description="Les livres qui occupent votre cercle."
+          count={friendsBooks.length}
         >
           {friendsBooks.length === 0 ? (
-            <EmptyPreview message="Ajoutez des ami·e·s pour suivre leurs bibliothèques." />
+            <FriendsEmptyState />
           ) : (
-            <PreviewRow>
-              {friendsBooks.map((book) => (
-                <PreviewItem key={book.id}>
-                  <BookFeedCard item={book} />
-                </PreviewItem>
-              ))}
-            </PreviewRow>
+            <ScrollFadeWrapper>
+              <PreviewRow>
+                {friendsBooks.map((book, index) => (
+                  <RecoPreviewItem key={book.id} index={index}>
+                    <BookFeedCard item={book} />
+                  </RecoPreviewItem>
+                ))}
+              </PreviewRow>
+            </ScrollFadeWrapper>
           )}
-        </PreviewSection>
+        </FriendsSection>
       )}
 
       {/* ── Nouveautés (mode communautaire uniquement) ───────────────────── */}
@@ -194,35 +198,41 @@ const FeedPreview = () => {
 
       {/* ── Recommandations personnalisées OU mieux notés ───────────────── */}
       {showTopRated ? (
-        <PreviewSection
+        <RecommendationSection
           title="Les mieux notés"
-          description="Les livres les plus appréciés par la communauté BookMarkd."
+          description="Les livres les plus appréciés par la communauté."
+          count={topRatedBooks.length}
         >
-          <PreviewRow>
-            {topRatedBooks.map((book) => (
-              <PreviewItem key={book.id}>
-                <RecommendationCard item={book} />
-              </PreviewItem>
-            ))}
-          </PreviewRow>
-        </PreviewSection>
-      ) : (
-        <PreviewSection
-          title="Nous vous suggérons"
-          description="Des recommandations calculées à partir de vos goûts."
-        >
-          {recommendations.length === 0 ? (
-            <EmptyPreview message="Aucune recommandation pour le moment. Continuez de noter vos lectures !" />
-          ) : (
+          <ScrollFadeWrapper>
             <PreviewRow>
-              {recommendations.map((recommendation) => (
-                <PreviewItem key={recommendation.id}>
-                  <RecommendationCard item={recommendation} />
-                </PreviewItem>
+              {topRatedBooks.map((book, index) => (
+                <RecoPreviewItem key={book.id} index={index}>
+                  <RecommendationCard item={book} />
+                </RecoPreviewItem>
               ))}
             </PreviewRow>
+          </ScrollFadeWrapper>
+        </RecommendationSection>
+      ) : (
+        <RecommendationSection
+          title="Nous vous suggérons"
+          description="Calculé à partir de vos goûts."
+          count={recommendations.length}
+        >
+          {recommendations.length === 0 ? (
+            <RecommendationEmptyState />
+          ) : (
+            <ScrollFadeWrapper>
+              <PreviewRow>
+                {recommendations.map((recommendation, index) => (
+                  <RecoPreviewItem key={recommendation.id} index={index}>
+                    <RecommendationCard item={recommendation} />
+                  </RecoPreviewItem>
+                ))}
+              </PreviewRow>
+            </ScrollFadeWrapper>
           )}
-        </PreviewSection>
+        </RecommendationSection>
       )}
     </div>
   );
@@ -380,10 +390,167 @@ const ActivityEmptyState = ({ isCommunity }: { isCommunity: boolean }) => (
   </div>
 );
 
-const EmptyPreview = ({ message }: { message: string }) => (
-  <p className="rounded-lg border border-dashed border-border/60 bg-card/50 px-4 py-6 text-sm text-muted-foreground">
-    {message}
-  </p>
+const RecommendationSection = ({
+  title,
+  description,
+  count,
+  children,
+}: {
+  title: string;
+  description: string;
+  count: number;
+  children: ReactNode;
+}) => {
+  return (
+    <Card className="overflow-hidden border-border/60 bg-card/80 backdrop-blur">
+      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <span
+            aria-hidden
+            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent-foreground"
+          >
+            <Compass className="size-[18px]" />
+          </span>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <CardTitle className="m-0 text-lg font-semibold text-foreground">
+                {title}
+              </CardTitle>
+              {count > 0 && (
+                <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-secondary-foreground">
+                  {count}
+                </span>
+              )}
+            </div>
+            <CardDescription className="mt-0.5 text-sm text-muted-foreground">
+              {description}
+            </CardDescription>
+          </div>
+        </div>
+        <Link
+          href="/search"
+          aria-label="Explorer plus de livres"
+          className="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-accent/15 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          <span className="hidden sm:inline">Explorer</span>
+          <ArrowRight className="size-3.5" aria-hidden />
+        </Link>
+      </CardHeader>
+      <CardContent className="pt-0">{children}</CardContent>
+    </Card>
+  );
+};
+
+const RecoPreviewItem = ({
+  children,
+  index = 0,
+}: {
+  children: ReactNode;
+  index?: number;
+}) => {
+  return (
+    <div
+      style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
+      className="flex min-h-[260px] w-60 shrink-0 snap-start motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:duration-300 motion-safe:fill-mode-both sm:w-[260px] *:min-w-full"
+    >
+      {children}
+    </div>
+  );
+};
+
+const RecommendationEmptyState = () => (
+  <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/60 bg-muted/30 px-6 py-10 text-center">
+    <span
+      aria-hidden
+      className="flex size-12 items-center justify-center rounded-full bg-accent/15 text-accent-foreground"
+    >
+      <Compass className="size-5" />
+    </span>
+    <div className="space-y-1">
+      <p className="text-sm font-semibold text-foreground">
+        Pas encore de recommandation
+      </p>
+      <p className="text-sm text-muted-foreground">
+        Notez quelques lectures pour affiner les suggestions à vos goûts.
+      </p>
+    </div>
+    <Button asChild variant="outline" size="sm" className="mt-1">
+      <Link href="/search">Trouver un livre à noter</Link>
+    </Button>
+  </div>
+);
+
+const FriendsSection = ({
+  title,
+  description,
+  count,
+  children,
+}: {
+  title: string;
+  description: string;
+  count: number;
+  children: ReactNode;
+}) => {
+  return (
+    <Card className="overflow-hidden border-border/60 bg-card/80 backdrop-blur">
+      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <span
+            aria-hidden
+            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-chart-3/15 text-chart-3"
+          >
+            <Users className="size-[18px]" />
+          </span>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <CardTitle className="m-0 text-lg font-semibold text-foreground">
+                {title}
+              </CardTitle>
+              {count > 0 && (
+                <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-secondary-foreground">
+                  {count}
+                </span>
+              )}
+            </div>
+            <CardDescription className="mt-0.5 text-sm text-muted-foreground">
+              {description}
+            </CardDescription>
+          </div>
+        </div>
+        <Link
+          href="/profiles"
+          aria-label="Voir tous vos ami·e·s"
+          className="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-accent/15 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          <span className="hidden sm:inline">Mes ami·es</span>
+          <ArrowRight className="size-3.5" aria-hidden />
+        </Link>
+      </CardHeader>
+      <CardContent className="pt-0">{children}</CardContent>
+    </Card>
+  );
+};
+
+const FriendsEmptyState = () => (
+  <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/60 bg-muted/30 px-6 py-10 text-center">
+    <span
+      aria-hidden
+      className="flex size-12 items-center justify-center rounded-full bg-chart-3/15 text-chart-3"
+    >
+      <Users className="size-5" />
+    </span>
+    <div className="space-y-1">
+      <p className="text-sm font-semibold text-foreground">
+        Pas encore d&apos;ami·e dans votre cercle
+      </p>
+      <p className="text-sm text-muted-foreground">
+        Suivez d&apos;autres lecteur·ices pour voir leurs lectures apparaître ici.
+      </p>
+    </div>
+    <Button asChild variant="outline" size="sm" className="mt-1">
+      <Link href="/profiles">Trouver des lecteur·ices</Link>
+    </Button>
+  </div>
 );
 
 const FeedPreviewSkeleton = () => {

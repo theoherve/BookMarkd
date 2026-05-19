@@ -1,3 +1,9 @@
+export type BlogFeaturedCover = {
+  id: string;
+  title: string;
+  coverUrl: string;
+};
+
 export type BlogPost = {
   slug: string;
   title: string;
@@ -5,6 +11,10 @@ export type BlogPost = {
   publishedAt: Date;
   updatedAt?: Date;
   image?: string;
+  /** Book IDs (UUID) — used to render covers as article hero. */
+  featuredBooks?: string[];
+  /** Resolved covers (server-side enriched). Do NOT set in posts.ts. */
+  featuredCovers?: BlogFeaturedCover[];
   body: string;
 };
 

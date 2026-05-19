@@ -1,154 +1,179 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  Bookmark,
+  BookOpen,
+  CheckCircle2,
+  Users,
+  XCircle,
+} from "lucide-react";
+
+import AddToReadlistButton from "@/components/search/add-to-readlist-button";
+import { Card } from "@/components/ui/card";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import AddToReadlistButton from "@/components/search/add-to-readlist-button";
-import RatingForm from "@/components/books/rating-form";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { formatRelativeTimeFromNow } from "@/lib/datetime";
-import { formatRating } from "@/lib/utils";
 import { generateBookSlug } from "@/lib/slug";
+import { cn, formatRating, getInitials } from "@/lib/utils";
 import type { FeedFriendBook } from "@/features/feed/types";
 
 type BookFeedCardProps = {
   item: FeedFriendBook;
 };
 
-const TITLE_MAX_LENGTH = 50;
-
-const truncateTitle = (title: string, maxLength = TITLE_MAX_LENGTH): string => {
-  return title.length > maxLength ? `${title.slice(0, maxLength).trim()}...` : title;
+type StatusMeta = {
+  label: string;
+  icon: typeof BookOpen;
+  pillClass: string;
+  accentClass: string;
 };
 
-const statusLabels: Record<FeedFriendBook["status"], string> = {
-  to_read: "Dans la liste à lire",
-  reading: "Lecture en cours",
-  finished: "Lecture terminée",
-  dnf: "Abandonné",
+const statusMeta: Record<FeedFriendBook["status"], StatusMeta> = {
+  reading: {
+    label: "Lit",
+    icon: BookOpen,
+    pillClass: "bg-accent/30 text-accent-foreground",
+    accentClass: "bg-accent",
+  },
+  finished: {
+    label: "Terminé",
+    icon: CheckCircle2,
+    pillClass: "bg-chart-2/15 text-chart-2",
+    accentClass: "bg-chart-2/70",
+  },
+  to_read: {
+    label: "À lire",
+    icon: Bookmark,
+    pillClass: "bg-secondary text-secondary-foreground",
+    accentClass: "bg-primary/60 dark:bg-primary/70",
+  },
+  dnf: {
+    label: "Abandonné",
+    icon: XCircle,
+    pillClass: "bg-muted text-muted-foreground",
+    accentClass: "bg-muted-foreground/40",
+  },
 };
 
 const BookFeedCard = ({ item }: BookFeedCardProps) => {
   const updatedAtLabel = formatRelativeTimeFromNow(item.updatedAt);
   const bookSlug = generateBookSlug(item.title, item.author);
   const detailHref = `/books/${bookSlug}`;
-  const commentHref = `${detailHref}#reviews`;
-  const isTitleTruncated = item.title.length > TITLE_MAX_LENGTH;
-
-  const titleContent = (
-    <Link
-      href={detailHref}
-      className="hover:text-accent-foreground transition-colors"
-      aria-label={`Voir les détails de ${item.title}`}
-    >
-      {truncateTitle(item.title)}
-    </Link>
-  );
+  const meta = statusMeta[item.status];
+  const StatusIcon = meta.icon;
+  const hasRating = typeof item.averageRating === "number" && item.averageRating > 0;
 
   return (
     <Card
       role="article"
-      aria-label={`Carte livre ${item.title}`}
-      className="h-full border-border/80 bg-card/80 transition hover:shadow-md"
+      aria-label={`${item.readerName} — ${meta.label} — ${item.title}`}
+      className="group relative flex h-full w-full flex-col gap-3 overflow-hidden border-border/60 bg-card p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-lg focus-within:ring-2 focus-within:ring-accent focus-within:ring-offset-2"
     >
-      <CardHeader className="space-y-3">
-        <Badge
-          variant="secondary"
-          className="w-fit rounded-full bg-accent/20 px-3 py-1 text-[11px] uppercase tracking-[0.35em] text-accent"
-        >
-          {statusLabels[item.status]}
-        </Badge>
-        <div className="space-y-1">
-          <CardTitle className="text-lg font-semibold text-foreground">
-            {isTitleTruncated ? (
-              <Tooltip>
-                <TooltipTrigger asChild>{titleContent}</TooltipTrigger>
-                <TooltipContent
-                  side="top"
-                  align="center"
-                  className="max-w-sm border border-border bg-popover text-popover-foreground text-center shadow-md"
-                >
-                  {item.title}
-                </TooltipContent>
-              </Tooltip>
-            ) : (
-              titleContent
-            )}
-          </CardTitle>
-          <CardDescription className="text-sm text-muted-foreground">
-            par {item.author}
-          </CardDescription>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="text-sm text-muted-foreground">
-          {item.readerName} — {updatedAtLabel}
-        </p>
-        {typeof item.averageRating === "number" ? (
-          <p className="text-sm font-medium text-foreground">
-            Note moyenne : {formatRating(item.averageRating)}/5
-          </p>
-        ) : null}
-        <p className="text-sm text-muted-foreground">
-          {item.status === "finished"
-            ? `${item.readerName} vient d'achever cette lecture.`
-            : item.status === "reading"
-              ? `${item.readerName} est plongé·e dedans en ce moment.`
-              : `${item.readerName} a ajouté ce livre à sa pile à lire.`}
-        </p>
-      </CardContent>
-      <CardFooter className="flex flex-wrap items-center gap-2 sm:gap-3 pt-0">
-        <AddToReadlistButton bookId={item.bookId} />
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              aria-label={`Ouvrir la fenêtre pour noter ${item.title}`}
-              className="min-h-[48px] sm:min-h-0"
+      <span
+        aria-hidden
+        className={cn("absolute inset-y-0 left-0 w-[3px]", meta.accentClass)}
+      />
+
+      <Link
+        href={detailHref}
+        aria-label={`Voir la fiche de ${item.title}`}
+        className="flex gap-3 focus-visible:outline-none"
+      >
+        <div className="relative h-[88px] w-16 shrink-0 overflow-hidden rounded-md bg-muted ring-1 ring-border">
+          {item.coverUrl ? (
+            <Image
+              src={item.coverUrl}
+              alt=""
+              fill
+              sizes="64px"
+              className="object-cover transition-transform duration-200 group-hover:scale-[1.03]"
+              unoptimized
+            />
+          ) : (
+            <span
+              aria-hidden
+              className="flex h-full w-full items-center justify-center text-muted-foreground"
             >
-              Noter
-            </Button>
-          </DialogTrigger>
-          <DialogContent aria-label={`Noter ${item.title}`}>
-            <DialogHeader>
-              <DialogTitle>Noter &quot;{item.title}&quot;</DialogTitle>
-            </DialogHeader>
-            <RatingForm bookId={item.bookId} />
-          </DialogContent>
-        </Dialog>
-        <Link
-          href={commentHref}
-          aria-label={`Commenter ${item.title}`}
-          className="inline-flex"
-        >
-          <Button size="sm" className="min-h-[48px] sm:min-h-0">
-            Commenter
-          </Button>
-        </Link>
-      </CardFooter>
+              <BookOpen className="size-5" />
+            </span>
+          )}
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <span
+            className={cn(
+              "inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide",
+              meta.pillClass,
+            )}
+          >
+            <StatusIcon className="size-3" aria-hidden />
+            {meta.label}
+          </span>
+          <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
+            {item.title}
+          </h3>
+          <p className="line-clamp-1 text-xs text-muted-foreground">
+            {item.author}
+          </p>
+        </div>
+      </Link>
+
+      <div className="flex items-center gap-2">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/60 py-0.5 pl-0.5 pr-2 transition hover:bg-muted">
+              <span className="relative inline-flex size-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary ring-1 ring-border">
+                {item.readerAvatarUrl ? (
+                  <Image
+                    src={item.readerAvatarUrl}
+                    alt=""
+                    fill
+                    sizes="20px"
+                    className="object-cover"
+                    unoptimized
+                  />
+                ) : (
+                  <span className="text-[8px] font-semibold text-secondary-foreground">
+                    {getInitials(item.readerName)}
+                  </span>
+                )}
+              </span>
+              <span className="truncate text-[11px] font-medium text-foreground">
+                {item.readerName}
+              </span>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            {`${item.readerName} · ${updatedAtLabel}`}
+          </TooltipContent>
+        </Tooltip>
+        {hasRating ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-muted/50 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+                aria-label={`Note moyenne communauté ${formatRating(item.averageRating!)} sur 5`}
+              >
+                <Users className="size-2.5" aria-hidden />
+                {formatRating(item.averageRating!)}/5
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              Note moyenne de la communauté
+            </TooltipContent>
+          </Tooltip>
+        ) : null}
+      </div>
+
+      <div className="mt-auto pt-1">
+        <AddToReadlistButton bookId={item.bookId} compact />
+      </div>
     </Card>
   );
 };
 
 export default BookFeedCard;
-
