@@ -26,7 +26,7 @@ export const EnviesProfileSection = ({ preview, total }: Props) => {
               : "Vos envies vous attendent"}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Livres ajoutés via la découverte (swipe à droite).
+            livres ajoutés via la découverte. Rangez-les dans votre liste de lecture ou retirez-les.
           </p>
         </div>
         {hasItems ? (

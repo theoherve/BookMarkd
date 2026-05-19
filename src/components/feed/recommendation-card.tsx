@@ -1,229 +1,207 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { BookOpen, Sparkles, Users } from "lucide-react";
+
 import AddToReadlistButton from "@/components/search/add-to-readlist-button";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import RatingForm from "@/components/books/rating-form";
-import { generateBookSlug } from "@/lib/slug";
-import type { FeedRecommendation } from "@/features/feed/types";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { generateBookSlug } from "@/lib/slug";
+import { cn, getInitials } from "@/lib/utils";
+import type { FeedRecommendation } from "@/features/feed/types";
 
 type RecommendationCardProps = {
   item: FeedRecommendation;
 };
 
-const fallbackAvatarText = (name: string) => {
-  const segments = name.trim().split(" ").filter(Boolean);
-  if (segments.length === 0) return "U";
-  if (segments.length === 1) {
-    return segments[0]!.slice(0, 2).toUpperCase();
-  }
-  return `${segments[0]!.slice(0, 1)}${segments[segments.length - 1]!.slice(0, 1)}`.toUpperCase();
+const sourceMeta: Record<
+  FeedRecommendation["source"],
+  { label: string; tooltip: string; icon: typeof Sparkles; tone: string }
+> = {
+  friends: {
+    label: "Vos amis",
+    tooltip: "Calcul basé sur vos amis et leurs activités récentes.",
+    icon: Users,
+    tone: "bg-chart-3/15 text-chart-3",
+  },
+  global: {
+    label: "Tendances",
+    tooltip: "Titres les plus populaires sur BookMarkd cette semaine.",
+    icon: Sparkles,
+    tone: "bg-accent/30 text-accent-foreground",
+  },
+  similar: {
+    label: "Vos goûts",
+    tooltip:
+      "Score combinant tags en commun (50%), notes de vos amis (30%) et popularité (20%).",
+    icon: BookOpen,
+    tone: "bg-chart-2/15 text-chart-2",
+  },
 };
 
 const RecommendationCard = ({ item }: RecommendationCardProps) => {
-  const sourceLabel =
-    item.source === "friends"
-      ? "Recommandé par vos amis"
-      : item.source === "global"
-        ? "Tendances BookMarkd"
-        : "Basé sur vos lectures";
-
   const bookSlug = generateBookSlug(item.title, item.author);
   const bookHref = `/books/${bookSlug}`;
-  
-  // Pour les recommandations basées sur les tags (source "similar"), 
-  // utiliser la raison qui contient les tags en commun
-  const isTagBased = item.source === "similar" && (item.reason?.includes("tag") || item.reason?.includes("Basé sur"));
+  const meta = sourceMeta[item.source];
+  const SourceIcon = meta.icon;
+
+  const reason = item.reason ?? meta.tooltip;
+  const scoreLabel =
+    item.scoreLabel !== ""
+      ? item.scoreLabel ??
+        (item.score > 0 ? `Affinité ${item.score}%` : null)
+      : null;
+
+  const readers = item.readers?.slice(0, 4) ?? [];
+  const tags = item.tags?.slice(0, 3) ?? [];
 
   return (
     <Card
       role="article"
-      tabIndex={0}
       aria-label={`Recommandation ${item.title}`}
-      className="flex h-full w-full flex-col space-y-0 border border-dashed border-border/70 bg-card/60 transition hover:border-accent hover:shadow-sm"
+      className="group relative flex h-full w-full flex-col gap-3 overflow-hidden border-border/60 bg-card p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-lg focus-within:ring-2 focus-within:ring-accent focus-within:ring-offset-2"
     >
-      <CardHeader className="shrink-0 space-y-1.5">
-        <Badge
-          variant="outline"
-          className="w-fit rounded-full border-dashed px-3 py-1 text-[11px] uppercase tracking-[0.35em] text-muted-foreground"
-        >
-          Suggestion
-        </Badge>
-        <CardTitle className="text-base font-semibold text-foreground">
-          <Link
-            href={bookHref}
-            className="hover:text-accent-foreground transition-colors"
-            aria-label={`Voir les détails de ${item.title}`}
-          >
-            {item.title}
-          </Link>
-        </CardTitle>
-        <CardDescription className="text-sm text-muted-foreground">
-          par {item.author}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-1 flex-col space-y-4 overflow-y-auto">
-        <div className="flex flex-1 flex-col space-y-4">
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">
-              {item.reason ?? sourceLabel}
-            </p>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge
-                  variant="outline"
-                  className="w-full max-w-full cursor-help rounded-full border-dashed px-3 py-1 text-center text-[11px] uppercase tracking-[0.35em] text-muted-foreground wrap-break-word whitespace-normal"
-                  title={sourceLabel}
-                >
-                  {sourceLabel}
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                {item.source === "friends"
-                  ? "Calcul basé sur vos amis et leurs activités récentes."
-                  : item.source === "global"
-                    ? "Titres les plus populaires sur BookMarkd cette semaine."
-                    : "Score combinant tags en commun (50%), notes de vos amis (30%) et popularité (20%)."}
-              </TooltipContent>
-            </Tooltip>
-            {item.scoreLabel !== "" && (item.scoreLabel !== undefined || item.score > 0) ? (
-              <Badge
-                variant="secondary"
-                className="w-full max-w-full rounded-full bg-accent/20 px-3 py-1 text-center text-xs font-medium text-accent-foreground dark:text-foreground wrap-break-word whitespace-normal"
-                aria-label={item.scoreLabel ?? `Affinité estimée ${item.score} pour cent`}
-              >
-                {item.scoreLabel ?? `Affinité estimée : ${item.score}%`}
-              </Badge>
-            ) : null}
-          </div>
-          {item.friendCount ? (
-            <div className="space-y-2 rounded-2xl border border-border/40 bg-card/50 p-4 text-xs text-muted-foreground">
-              <p className="font-medium text-foreground">
-                {item.friendCount} ami·e(s) suivent ce livre :
-              </p>
-              <ul className="space-y-1">
-                {(item.friendHighlights ?? item.friendNames ?? [])
-                  .slice(0, 3)
-                  .map((highlight, index) => (
-                    <li key={`${item.id}-friend-${index}`}>• {highlight}</li>
-                  ))}
-              </ul>
-            </div>
-          ) : null}
-          {item.tags && item.tags.length > 0 ? (
-            <div className="space-y-2">
-              {isTagBased && (
-                <p className="text-xs font-medium text-muted-foreground">
-                  Tags communs avec vos lectures :
-                </p>
-              )}
-              <div className="flex flex-wrap gap-2">
-                {item.tags.slice(0, 4).map((tag) => (
-                  <Badge
-                    key={`${item.id}-${tag}`}
-                    variant={isTagBased ? "secondary" : "outline"}
-                    className="text-xs font-medium"
-                  >
-                    #{tag}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </div>
-        {item.readers && item.readers.length > 0 ? (
-          <div className="mt-auto flex flex-col gap-1.5 border-t border-border/40 pt-2">
-            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-              Lu par
-            </p>
-            <div className="flex flex-wrap items-center gap-2">
-              {item.readers.map((reader) => {
-                const readerHref = reader.username
-                  ? `/profiles/${reader.username}`
-                  : `/profiles/${reader.id}`;
-                const avatarInitials = fallbackAvatarText(reader.displayName);
-                return (
-                  <Link
-                    key={reader.id}
-                    href={readerHref}
-                    className="flex items-center gap-1.5 rounded-full bg-muted/60 px-2 py-1 transition hover:bg-muted"
-                    aria-label={`Voir le profil de ${reader.displayName}`}
-                  >
-                    <div className="relative h-5 w-5 shrink-0 overflow-hidden rounded-full border border-border/40 bg-background">
-                      {reader.avatarUrl ? (
-                        <Image
-                          src={reader.avatarUrl}
-                          alt={`Photo de profil de ${reader.displayName}`}
-                          fill
-                          sizes="20px"
-                          className="object-cover"
-                          unoptimized
-                        />
-                      ) : (
-                        <span className="flex h-full w-full items-center justify-center text-[9px] font-medium text-muted-foreground">
-                          {avatarInitials}
-                        </span>
-                      )}
-                    </div>
-                    <span className="line-clamp-1 text-[10px] font-medium text-foreground">
-                      {reader.displayName}
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        ) : null}
-      </CardContent>
-      <CardFooter className="flex shrink-0 flex-wrap items-center gap-3 border-t border-border/60 bg-card/40 p-4">
-        <AddToReadlistButton bookId={item.bookId} disabled={item.viewerHasInReadlist} />
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button
-              variant="outline"
-              aria-label={`Ouvrir la fenêtre pour noter ${item.title}`}
+      <Link
+        href={bookHref}
+        aria-label={`Voir la fiche de ${item.title}`}
+        className="flex gap-3 focus-visible:outline-none"
+      >
+        <div className="relative h-[88px] w-16 shrink-0 overflow-hidden rounded-md bg-muted ring-1 ring-border">
+          {item.coverUrl ? (
+            <Image
+              src={item.coverUrl}
+              alt=""
+              fill
+              sizes="64px"
+              className="object-cover transition-transform duration-200 group-hover:scale-[1.03]"
+              unoptimized
+            />
+          ) : (
+            <span
+              aria-hidden
+              className="flex h-full w-full items-center justify-center text-muted-foreground"
             >
-              Noter
-            </Button>
-          </DialogTrigger>
-          <DialogContent aria-label={`Noter ${item.title}`}>
-            <DialogHeader>
-              <DialogTitle>Noter “{item.title}”</DialogTitle>
-            </DialogHeader>
-            <RatingForm bookId={item.bookId} />
-          </DialogContent>
-        </Dialog>
-        <Link
-          href={`${bookHref}#reviews`}
-          aria-label={`Commenter ${item.title}`}
-          className="inline-flex"
-        >
-          <Button>Commenter</Button>
-        </Link>
-      </CardFooter>
+              <BookOpen className="size-5" />
+            </span>
+          )}
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                className={cn(
+                  "inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide",
+                  meta.tone,
+                )}
+              >
+                <SourceIcon className="size-3" aria-hidden />
+                {meta.label}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs">
+              {meta.tooltip}
+            </TooltipContent>
+          </Tooltip>
+          <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
+            {item.title}
+          </h3>
+          <p className="line-clamp-1 text-xs text-muted-foreground">
+            {item.author}
+          </p>
+        </div>
+      </Link>
+
+      {reason ? (
+        <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+          {reason}
+        </p>
+      ) : null}
+
+      {(scoreLabel || tags.length > 0) && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {scoreLabel && (
+            <Badge
+              variant="secondary"
+              className="rounded-full bg-accent/20 px-2 py-0.5 text-[10px] font-semibold text-accent-foreground dark:text-foreground"
+              aria-label={scoreLabel}
+            >
+              {scoreLabel}
+            </Badge>
+          )}
+          {tags.map((tag) => (
+            <Badge
+              key={`${item.id}-${tag}`}
+              variant="outline"
+              className="rounded-full px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+            >
+              #{tag}
+            </Badge>
+          ))}
+        </div>
+      )}
+
+      {readers.length > 0 ? (
+        <div className="flex items-center gap-2">
+          <div className="flex -space-x-1.5">
+            {readers.map((reader) => (
+              <Tooltip key={reader.id}>
+                <TooltipTrigger asChild>
+                  <Link
+                    href={
+                      reader.username
+                        ? `/profiles/${reader.username}`
+                        : `/profiles/${reader.id}`
+                    }
+                    aria-label={`Voir le profil de ${reader.displayName}`}
+                    className="relative inline-flex size-6 items-center justify-center overflow-hidden rounded-full bg-secondary ring-2 ring-card transition-transform hover:scale-110 hover:z-10"
+                  >
+                    {reader.avatarUrl ? (
+                      <Image
+                        src={reader.avatarUrl}
+                        alt=""
+                        fill
+                        sizes="24px"
+                        className="object-cover"
+                        unoptimized
+                      />
+                    ) : (
+                      <span className="text-[9px] font-semibold text-secondary-foreground">
+                        {getInitials(reader.displayName)}
+                      </span>
+                    )}
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  {reader.displayName}
+                </TooltipContent>
+              </Tooltip>
+            ))}
+          </div>
+          {item.friendCount && item.friendCount > readers.length ? (
+            <span className="text-[10px] text-muted-foreground">
+              +{item.friendCount - readers.length}
+            </span>
+          ) : (
+            <span className="text-[10px] text-muted-foreground">
+              {readers.length === 1 ? "1 lecteur" : `${readers.length} lecteurs`}
+            </span>
+          )}
+        </div>
+      ) : null}
+
+      <div className="mt-auto pt-1">
+        <AddToReadlistButton
+          bookId={item.bookId}
+          disabled={item.viewerHasInReadlist}
+          compact
+        />
+      </div>
     </Card>
   );
 };
 
 export default RecommendationCard;
-
