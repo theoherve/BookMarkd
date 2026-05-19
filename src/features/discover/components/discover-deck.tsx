@@ -254,16 +254,19 @@ export const DiscoverDeck = ({ initialCandidates, follows }: Props) => {
           <div
             role="status"
             aria-live="polite"
-            className="fixed bottom-24 left-1/2 z-40 -translate-x-1/2 rounded-full border border-emerald-700/30 bg-[#1a1612] px-4 py-2.5 text-sm text-amber-50 shadow-2xl"
+            className="fixed left-1/2 top-4 z-40 w-[min(92vw,28rem)] -translate-x-1/2 rounded-full border border-emerald-700/30 bg-[#1a1612] px-3 py-2 text-xs text-amber-50 shadow-2xl sm:top-6 sm:px-4 sm:py-2.5 sm:text-sm"
           >
-            <div className="flex items-center gap-3">
-              <span className="size-2 rounded-full bg-emerald-400" aria-hidden />
-              <span>{toast.label}</span>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <span
+                className="size-1.5 shrink-0 rounded-full bg-emerald-400 sm:size-2"
+                aria-hidden
+              />
+              <span className="min-w-0 flex-1 truncate">{toast.label}</span>
               {toast.undoBook ? (
                 <button
                   type="button"
                   onClick={() => toast.undoBook && handleUndo(toast.undoBook)}
-                  className="ml-2 cursor-pointer rounded-full border border-amber-100/30 px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest text-amber-100 hover:bg-amber-100/10"
+                  className="shrink-0 cursor-pointer rounded-full border border-amber-100/30 px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest text-amber-100 hover:bg-amber-100/10"
                 >
                   Annuler
                 </button>
