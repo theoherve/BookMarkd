@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import db from "@/lib/supabase/db";
 import { generateBookSlug } from "@/lib/slug";
+import { getPublishedYears } from "@/features/awards/server/queries";
 
 const BASE_URL = "https://bookmarkd.app";
 
@@ -121,12 +122,36 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error("[sitemap] Error fetching public lists:", error);
   }
 
+  let awardsEntries: MetadataRoute.Sitemap = [];
+  try {
+    const years = await getPublishedYears();
+    if (years.length > 0) {
+      awardsEntries = [
+        {
+          url: `${BASE_URL}/awards`,
+          lastModified: new Date(),
+          changeFrequency: "yearly" as const,
+          priority: 0.7,
+        },
+        ...years.map((year) => ({
+          url: `${BASE_URL}/awards/${year}`,
+          lastModified: new Date(),
+          changeFrequency: "yearly" as const,
+          priority: 0.8,
+        })),
+      ];
+    }
+  } catch (error) {
+    console.error("[sitemap] Error fetching awards years:", error);
+  }
+
   return [
     ...staticPages,
     ...blogEntries,
     ...bookEntries,
     ...profileEntries,
     ...listEntries,
+    ...awardsEntries,
   ];
 }
 
