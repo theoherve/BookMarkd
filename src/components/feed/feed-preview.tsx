@@ -16,7 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { BookLoader } from "@/components/ui/book-loader";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useInfiniteFeedQuery } from "@/features/feed/api/use-feed-query";
 
 const MAX_ITEMS = 24;
@@ -120,9 +120,7 @@ const FeedPreview = () => {
               {hasMoreActivities && (
                 <PreviewItem index={activities.length}>
                   {isLoadingMore ? (
-                    <div className="flex h-full min-h-[220px] w-[280px] shrink-0 items-center justify-center rounded-xl border border-dashed border-border/60 bg-card/50 p-8">
-                      <BookLoader size="lg" text="Chargement..." />
-                    </div>
+                    <SkeletonCard />
                   ) : (
                     <div className="flex h-full min-h-[220px] w-[280px] shrink-0 items-center justify-center rounded-xl border border-dashed border-border/60 bg-card/50 transition-colors hover:border-accent/60 hover:bg-card">
                       <Button
@@ -553,10 +551,64 @@ const FriendsEmptyState = () => (
   </div>
 );
 
+const SkeletonCard = ({
+  width = "w-[280px]",
+  height = "min-h-[220px]",
+}: {
+  width?: string;
+  height?: string;
+}) => (
+  <div
+    className={`flex ${height} ${width} shrink-0 flex-col gap-3 rounded-xl border border-border/60 bg-card/80 p-4`}
+  >
+    <div className="flex items-center gap-3">
+      <Skeleton className="size-9 rounded-full" />
+      <div className="flex-1 space-y-2">
+        <Skeleton className="h-3 w-2/3" />
+        <Skeleton className="h-2.5 w-1/3" />
+      </div>
+    </div>
+    <Skeleton className="h-24 w-full" />
+    <Skeleton className="h-3 w-1/2" />
+  </div>
+);
+
+const SkeletonSectionCard = ({
+  itemWidth = "w-[280px]",
+  itemHeight = "min-h-[220px]",
+  items = 4,
+}: {
+  itemWidth?: string;
+  itemHeight?: string;
+  items?: number;
+}) => (
+  <Card className="overflow-hidden border-border/60 bg-card/80 backdrop-blur">
+    <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-3">
+      <div className="flex min-w-0 items-start gap-3">
+        <Skeleton className="size-9 rounded-full" />
+        <div className="min-w-0 space-y-2">
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-3 w-56" />
+        </div>
+      </div>
+      <Skeleton className="h-7 w-20 rounded-full" />
+    </CardHeader>
+    <CardContent className="pt-0">
+      <div className="flex items-stretch gap-4 overflow-hidden py-2">
+        {Array.from({ length: items }).map((_, i) => (
+          <SkeletonCard key={i} width={itemWidth} height={itemHeight} />
+        ))}
+      </div>
+    </CardContent>
+  </Card>
+);
+
 const FeedPreviewSkeleton = () => {
   return (
-    <div className="flex min-h-[400px] items-center justify-center py-12">
-      <BookLoader size="lg" text="Chargement des activités..." />
+    <div className="space-y-6">
+      <SkeletonSectionCard itemWidth="w-[280px]" itemHeight="min-h-[220px]" items={4} />
+      <SkeletonSectionCard itemWidth="w-60 sm:w-[260px]" itemHeight="min-h-[260px]" items={4} />
+      <SkeletonSectionCard itemWidth="w-60 sm:w-[260px]" itemHeight="min-h-[260px]" items={4} />
     </div>
   );
 };
