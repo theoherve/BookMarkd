@@ -29,79 +29,121 @@ type YearRow = {
   updatedAt: string;
 };
 
-const isMissingTableError = (error: unknown): boolean => {
+const isTolerableError = (error: unknown): boolean => {
   if (!error || typeof error !== "object") return false;
   const code = (error as { code?: string }).code;
-  return code === "PGRST205" || code === "42P01";
+  // Missing table (migration not applied yet) or network failure (build-time
+  // with placeholder env vars in CI).
+  if (code === "PGRST205" || code === "42P01") return true;
+  const name = (error as { name?: string }).name;
+  if (name === "TypeError") return true;
+  const message = (error as { message?: string }).message ?? "";
+  return /fetch failed|ENOTFOUND|ECONNREFUSED|getaddrinfo/i.test(message);
+};
+
+const safeAwait = async <T>(
+  promise: Promise<{ data: T | null; error: unknown }>,
+  fallback: T,
+): Promise<T> => {
+  try {
+    const { data, error } = await promise;
+    if (error) {
+      if (isTolerableError(error)) return fallback;
+      throw error;
+    }
+    return (data ?? fallback) as T;
+  } catch (error) {
+    if (isTolerableError(error)) return fallback;
+    throw error;
+  }
 };
 
 export const listAwardsYears = async (): Promise<AwardsYear[]> => {
-  const { data, error } = await db.client
-    .from("awards_years")
-    .select("year, status, theme, intro, summary, published_at, created_at, updated_at")
-    .order("year", { ascending: false });
-  if (error) {
-    if (isMissingTableError(error)) return [];
-    throw error;
-  }
-  return (data ?? []).map((row) => db.toCamel<YearRow>(row));
+  const rows = await safeAwait<unknown[]>(
+    db.client
+      .from("awards_years")
+      .select("year, status, theme, intro, summary, published_at, created_at, updated_at")
+      .order("year", { ascending: false }) as unknown as Promise<{
+      data: unknown[] | null;
+      error: unknown;
+    }>,
+    [],
+  );
+  return rows.map((row) => db.toCamel<YearRow>(row));
 };
 
 export const getAwardsYear = async (
   year: number,
 ): Promise<AwardsYear | null> => {
-  const { data, error } = await db.client
-    .from("awards_years")
-    .select("year, status, theme, intro, summary, published_at, created_at, updated_at")
-    .eq("year", year)
-    .maybeSingle();
-  if (error) {
-    if (isMissingTableError(error)) return null;
+  try {
+    const { data, error } = await db.client
+      .from("awards_years")
+      .select("year, status, theme, intro, summary, published_at, created_at, updated_at")
+      .eq("year", year)
+      .maybeSingle();
+    if (error) {
+      if (isTolerableError(error)) return null;
+      throw error;
+    }
+    if (!data) return null;
+    return db.toCamel<YearRow>(data);
+  } catch (error) {
+    if (isTolerableError(error)) return null;
     throw error;
   }
-  if (!data) return null;
-  return db.toCamel<YearRow>(data);
 };
 
 export const getWinnersForYear = async (
   year: number,
 ): Promise<AwardWinner[]> => {
-  const { data, error } = await db.client
-    .from("awards_winners")
-    .select("id, year, category, rank, winner_type, winner_id, snapshot, score, metadata, created_at")
-    .eq("year", year)
-    .order("category", { ascending: true })
-    .order("rank", { ascending: true });
-  if (error) {
-    if (isMissingTableError(error)) return [];
-    throw error;
-  }
-  return (data ?? []).map((row) => db.toCamel<WinnerRow>(row));
+  const rows = await safeAwait<unknown[]>(
+    db.client
+      .from("awards_winners")
+      .select("id, year, category, rank, winner_type, winner_id, snapshot, score, metadata, created_at")
+      .eq("year", year)
+      .order("category", { ascending: true })
+      .order("rank", { ascending: true }) as unknown as Promise<{
+      data: unknown[] | null;
+      error: unknown;
+    }>,
+    [],
+  );
+  return rows.map((row) => db.toCamel<WinnerRow>(row));
 };
 
 export const getPublishedYears = async (): Promise<number[]> => {
-  const { data, error } = await db.client
-    .from("awards_years")
-    .select("year")
-    .eq("status", "published")
-    .order("year", { ascending: false });
-  if (error) {
-    if (isMissingTableError(error)) return [];
+  try {
+    const { data, error } = await db.client
+      .from("awards_years")
+      .select("year")
+      .eq("status", "published")
+      .order("year", { ascending: false });
+    if (error) {
+      if (isTolerableError(error)) return [];
+      throw error;
+    }
+    return (data ?? []).map((row) => row.year as number);
+  } catch (error) {
+    if (isTolerableError(error)) return [];
     throw error;
   }
-  return (data ?? []).map((row) => row.year as number);
 };
 
 export const getDraftYearsCount = async (): Promise<number> => {
-  const { count, error } = await db.client
-    .from("awards_years")
-    .select("year", { count: "exact", head: true })
-    .eq("status", "draft");
-  if (error) {
-    if (isMissingTableError(error)) return 0;
+  try {
+    const { count, error } = await db.client
+      .from("awards_years")
+      .select("year", { count: "exact", head: true })
+      .eq("status", "draft");
+    if (error) {
+      if (isTolerableError(error)) return 0;
+      throw error;
+    }
+    return count ?? 0;
+  } catch (error) {
+    if (isTolerableError(error)) return 0;
     throw error;
   }
-  return count ?? 0;
 };
 
 export const groupWinnersByCategory = (

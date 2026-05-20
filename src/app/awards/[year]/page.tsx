@@ -19,8 +19,16 @@ type Props = {
 };
 
 export const generateStaticParams = async () => {
-  const years = await getPublishedYears();
-  return years.map((year) => ({ year: String(year) }));
+  try {
+    const years = await getPublishedYears();
+    return years.map((year) => ({ year: String(year) }));
+  } catch (error) {
+    console.warn(
+      "[awards] generateStaticParams: skipping static prerender (DB unreachable).",
+      error,
+    );
+    return [];
+  }
 };
 
 export const generateMetadata = async ({
