@@ -10,6 +10,7 @@ import { WebsiteJsonLd } from "@/components/seo/website-json-ld";
 import { Badge } from "@/components/ui/badge";
 import { getPublishedEditorialLists } from "@/features/editorial/server/get-published-editorial-lists";
 import { getPublicLists } from "@/features/lists/server/get-public-lists";
+import { getModulesEnabledMap } from "@/features/modules/server/queries";
 import { getInitials } from "@/lib/utils";
 
 const SectionSkeleton = () => (
@@ -121,7 +122,8 @@ const PublicListsSection = async () => {
   );
 };
 
-const HomePage = () => {
+const HomePage = async () => {
+  const modules = await getModulesEnabledMap();
   return (
     <>
       <WebsiteJsonLd />
@@ -142,45 +144,53 @@ const HomePage = () => {
           <HomeSearchBar />
         </section>
 
-        <section className="space-y-4">
-          <header className="flex flex-col gap-1">
-            <h2 className="text-2xl font-semibold text-foreground">Aperçu du fil</h2>
-            <p className="text-sm text-muted-foreground">
-              Un extrait de votre activité récente pour rester informé·e en un clin d’œil.
-            </p>
-          </header>
-          <FeedPreview />
-        </section>
-
-        <Suspense fallback={<SectionSkeleton />}>
-          <EditorialSection />
-        </Suspense>
-
-        <Suspense fallback={<SectionSkeleton />}>
-          <PublicListsSection />
-        </Suspense>
-
-        <section className="space-y-4">
-          <header className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="text-2xl font-semibold text-foreground">
-                Derniers articles du blog
-              </h2>
-              <p className="mt-0.5 text-sm text-muted-foreground">
-                Conseils lecture, tops communauté et actualités BookMarkd.
+        {modules.home_feed_preview && (
+          <section className="space-y-4">
+            <header className="flex flex-col gap-1">
+              <h2 className="text-2xl font-semibold text-foreground">Aperçu du fil</h2>
+              <p className="text-sm text-muted-foreground">
+                Un extrait de votre activité récente pour rester informé·e en un clin d’œil.
               </p>
-            </div>
-            <Link
-              href="/blog"
-              aria-label="Voir tous les articles du blog"
-              className="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-accent/15 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              <span className="hidden sm:inline">Voir tout</span>
-              <ArrowRight className="size-3.5" aria-hidden />
-            </Link>
-          </header>
-          <BlogPreview />
-        </section>
+            </header>
+            <FeedPreview />
+          </section>
+        )}
+
+        {modules.home_editorial && (
+          <Suspense fallback={<SectionSkeleton />}>
+            <EditorialSection />
+          </Suspense>
+        )}
+
+        {modules.home_public_lists && (
+          <Suspense fallback={<SectionSkeleton />}>
+            <PublicListsSection />
+          </Suspense>
+        )}
+
+        {modules.home_blog_preview && (
+          <section className="space-y-4">
+            <header className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="text-2xl font-semibold text-foreground">
+                  Derniers articles du blog
+                </h2>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  Conseils lecture, tops communauté et actualités BookMarkd.
+                </p>
+              </div>
+              <Link
+                href="/blog"
+                aria-label="Voir tous les articles du blog"
+                className="inline-flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-accent/15 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <span className="hidden sm:inline">Voir tout</span>
+                <ArrowRight className="size-3.5" aria-hidden />
+              </Link>
+            </header>
+            <BlogPreview />
+          </section>
+        )}
       </div>
     </>
   );

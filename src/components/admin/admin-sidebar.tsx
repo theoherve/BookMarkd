@@ -14,6 +14,7 @@ import {
   ArrowLeft,
   TrendingUp,
   Trophy,
+  ToggleLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -35,6 +36,7 @@ const BASE_NAV_ITEMS = [
   { label: "Blog", href: "/admin/blog", icon: FileText, badge: null },
   { label: "Tendances", href: "/admin/tendances", icon: TrendingUp, badge: null as number | null },
   { label: "Awards", href: "/admin/awards", icon: Trophy, badge: null as number | null },
+  { label: "Modules", href: "/admin/modules", icon: ToggleLeft, badge: null },
   { label: "Santé système", href: "/admin/system", icon: Activity, badge: null },
 ];
 
