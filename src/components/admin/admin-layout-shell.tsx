@@ -8,9 +8,11 @@ import { AdminHeader } from "@/components/admin/admin-header";
 export const AdminLayoutShell = ({
   children,
   pendingEditorialCount = 0,
+  pendingAwardsCount = 0,
 }: {
   children: React.ReactNode;
   pendingEditorialCount?: number;
+  pendingAwardsCount?: number;
 }) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const pathname = usePathname();
@@ -23,6 +25,7 @@ export const AdminLayoutShell = ({
         pathname={pathname}
         className="hidden md:flex"
         pendingEditorialCount={pendingEditorialCount}
+        pendingAwardsCount={pendingAwardsCount}
       />
 
       {/* Main area */}

@@ -15,6 +15,8 @@ import ProfileEditButton from "@/components/profile/profile-edit-button";
 import UserFeedbacksSection from "@/components/profile/user-feedbacks-section";
 import ProfileHeaderStats from "@/components/profile/profile-header-stats";
 import { EnviesProfileSection } from "@/features/discover/components/envies-profile-section";
+import { UserAwardBadges } from "@/components/awards/user-award-badge";
+import { getAwardBadgesForUser } from "@/features/awards/server/get-user-badges";
 
 import { getCurrentSession } from "@/lib/auth/session";
 import { resolveSessionUserId } from "@/lib/auth/user";
@@ -57,7 +59,10 @@ const ProfilePage = async () => {
     redirect("/login?callbackUrl=/profiles/me");
   }
 
-  const dashboard = await getProfileDashboard(userId);
+  const [dashboard, awardBadges] = await Promise.all([
+    getProfileDashboard(userId),
+    getAwardBadgesForUser(userId),
+  ]);
   const avatarInitials = fallbackAvatarText(dashboard.displayName);
   const usernameOrId = dashboard.username ?? dashboard.userId;
   const booksReadHref = `/profiles/${usernameOrId}/books`;
@@ -121,6 +126,8 @@ const ProfilePage = async () => {
                 dnfCount={dashboard.readingStats.dnf}
                 booksHref={booksReadHref}
               />
+
+              <UserAwardBadges badges={awardBadges} />
 
               {dashboard.bio ? (
                 <p className="max-w-2xl text-sm leading-relaxed text-foreground/80">

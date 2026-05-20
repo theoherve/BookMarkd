@@ -15,7 +15,9 @@ export type NotificationType =
   | "review_like"
   | "review_comment"
   | "recommendation"
-  | "feedback_resolved";
+  | "feedback_resolved"
+  | "awards_announcement"
+  | "awards_winner";
 
 export type NotificationItem = {
   id: string;

@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   Bell,
   Inbox,
+  Trophy,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -48,6 +49,19 @@ const ICON_BY_TYPE: Record<string, IconBadge> = {
   follow_request_accepted: { Icon: CheckCircle2, tone: "emerald" },
   recommendation: { Icon: Sparkles, tone: "violet" },
   feedback_resolved: { Icon: CheckCircle2, tone: "emerald" },
+  awards_announcement: { Icon: Trophy, tone: "amber" },
+  awards_winner: { Icon: Trophy, tone: "amber" },
+};
+
+const AWARDS_CATEGORY_LABEL: Record<string, string> = {
+  book_of_the_year: "Livre de l'année",
+  reader_of_the_year: "Lecteur de l'année",
+  top_categories: "Catégories phares",
+  top_reviewer: "Critique de l'année",
+  most_loved_review: "Critique la plus aimée",
+  trending_wishlist: "Livre le plus convoité",
+  best_newcomer: "Révélation de l'année",
+  feeling_award: "Sentiment de l'année",
 };
 
 const TONE_CLASSES: Record<IconBadge["tone"], string> = {
@@ -172,6 +186,40 @@ const renderBody = (n: UiNotification) => {
     );
   }
 
+  if (n.type === "awards_announcement") {
+    const year = (n.payload.year as number) ?? null;
+    return (
+      <>
+        <p className="text-sm font-medium text-foreground">
+          BookMarkd Awards {year ?? ""}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          La cérémonie annuelle est publiée. Découvrez les meilleurs livres,
+          lecteurs et critiques de l’année.
+        </p>
+      </>
+    );
+  }
+
+  if (n.type === "awards_winner") {
+    const year = (n.payload.year as number) ?? null;
+    const category = (n.payload.category as string) ?? "";
+    const rank = (n.payload.rank as number) ?? null;
+    const label = AWARDS_CATEGORY_LABEL[category] ?? "Une catégorie";
+    return (
+      <>
+        <p className="text-sm font-medium text-foreground">
+          Bravo, vous êtes dans le palmarès !
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Vous êtes classé·e{rank ? ` #${rank}` : ""} dans la catégorie{" "}
+          <span className="font-medium text-foreground">« {label} »</span>{" "}
+          {year ? `de l’édition ${year}` : ""}.
+        </p>
+      </>
+    );
+  }
+
   if (n.type === "feedback_resolved") {
     const feedbackTitle = (n.payload.feedbackTitle as string) ?? "Votre feedback";
     return (
@@ -235,6 +283,12 @@ const getClickableUrl = (n: UiNotification): { href: string | null; label: strin
         href: `/books/${generateBookSlug(bookTitle, bookAuthor)}`,
         label: `Voir ${bookTitle}`,
       };
+    }
+  }
+  if (n.type === "awards_announcement" || n.type === "awards_winner") {
+    const year = (n.payload.year as number) ?? null;
+    if (year) {
+      return { href: `/awards/${year}`, label: `Voir les Awards ${year}` };
     }
   }
   return { href: null, label: "" };

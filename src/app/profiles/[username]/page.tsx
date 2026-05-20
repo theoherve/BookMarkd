@@ -24,6 +24,8 @@ import { getCurrentSession } from "@/lib/auth/session";
 import { resolveSessionUserId } from "@/lib/auth/user";
 import { generateBookSlug } from "@/lib/slug";
 import { ProfileJsonLd } from "@/components/seo/profile-json-ld";
+import { UserAwardBadges } from "@/components/awards/user-award-badge";
+import { getAwardBadgesForUser } from "@/features/awards/server/get-user-badges";
 
 type ProfilePageProps = {
   params: Promise<{
@@ -120,6 +122,8 @@ const PublicProfilePage = async ({ params }: ProfilePageProps) => {
         )
       : null;
 
+  const awardBadges = await getAwardBadgesForUser(profile.id);
+
   return (
     <>
       <div className="mb-6">
@@ -177,6 +181,8 @@ const PublicProfilePage = async ({ params }: ProfilePageProps) => {
                 dnfCount={profile.stats.booksDnf}
                 booksHref={`/profiles/${username}/books`}
               />
+
+              <UserAwardBadges badges={awardBadges} />
 
               <p className="max-w-2xl text-sm leading-relaxed text-foreground/80">
                 {profile.bio ?? "Aucune bio disponible."}

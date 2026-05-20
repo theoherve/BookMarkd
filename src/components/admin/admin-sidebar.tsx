@@ -13,6 +13,7 @@ import {
   Activity,
   ArrowLeft,
   TrendingUp,
+  Trophy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -33,6 +34,7 @@ const BASE_NAV_ITEMS = [
   { label: "Emails", href: "/admin/emails", icon: Mail, badge: null },
   { label: "Blog", href: "/admin/blog", icon: FileText, badge: null },
   { label: "Tendances", href: "/admin/tendances", icon: TrendingUp, badge: null as number | null },
+  { label: "Awards", href: "/admin/awards", icon: Trophy, badge: null as number | null },
   { label: "Santé système", href: "/admin/system", icon: Activity, badge: null },
 ];
 
@@ -41,6 +43,7 @@ type AdminSidebarProps = {
   pathname: string;
   className?: string;
   pendingEditorialCount?: number;
+  pendingAwardsCount?: number;
 };
 
 const isActive = (pathname: string, href: string) => {
@@ -53,12 +56,17 @@ export const AdminSidebar = ({
   pathname,
   className,
   pendingEditorialCount = 0,
+  pendingAwardsCount = 0,
 }: AdminSidebarProps) => {
-  const navItems = BASE_NAV_ITEMS.map((item) =>
-    item.href === "/admin/tendances"
-      ? { ...item, badge: pendingEditorialCount > 0 ? pendingEditorialCount : null }
-      : item
-  );
+  const navItems = BASE_NAV_ITEMS.map((item) => {
+    if (item.href === "/admin/tendances") {
+      return { ...item, badge: pendingEditorialCount > 0 ? pendingEditorialCount : null };
+    }
+    if (item.href === "/admin/awards") {
+      return { ...item, badge: pendingAwardsCount > 0 ? pendingAwardsCount : null };
+    }
+    return item;
+  });
 
   return (
     <TooltipProvider delayDuration={0}>
